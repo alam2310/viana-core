@@ -87,3 +87,11 @@ Plaintext
 ✅ OpenCV CUDA: 1 Devices
 ✅ PyTorch CUDA: NVIDIA GeForce RTX 3060
 ✅ Matrix Mul: SUCCESS
+
+
+Action,             Command (Run from Host)
+Start Work,         docker compose up -d
+Enter Container,    docker compose exec dev bash
+Stop Work,          docker compose down
+Rebuild (change),   docker compose build
+View Logs,          docker compose logs -f

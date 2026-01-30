@@ -61,8 +61,14 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
 RUN pip3 install --no-cache-dir --default-timeout=100 \
     "huggingface_hub[cli]" \
     hf_transfer \
+    tqdm \
+    pytest \
+    "numpy<2"\
+    pandas \ 
     pyyaml \
-    tqdm
+    opencv-python \
+    matplotlib \
+    seaborn
 
 # 4. Copy Compiled OpenCV Artifacts
 COPY --from=builder /usr/local/lib /usr/local/lib
@@ -71,6 +77,16 @@ COPY --from=builder /usr/local/lib/python3.10 /usr/local/lib/python3.10
 
 # 5. Setup Paths
 RUN ldconfig
+# [NEW] Fix for Absolute Symlinks in Dataset
+# Creates a bridge so links pointing to '/root/Work/ViAna' 
+# automatically redirect to the container mount '/app/ViAna'
+RUN mkdir -p /root/Work && \
+    ln -s /app/ViAna /root/Work/ViAna
+
 ENV PYTHONPATH=/usr/local/lib/python3.10/site-packages:/usr/local/lib/python3.10/dist-packages
 
 CMD ["/bin/bash"]
+
+
+
+

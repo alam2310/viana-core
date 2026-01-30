@@ -1,0 +1,35 @@
+services:
+  dev:
+    # Use the image you just built
+    image: itva-base:stable
+    
+    # or build it on the fly:
+    # build: .
+    
+    container_name: viana_core
+    
+    # 1. Volume Mounts (The "Live Link")
+    # Maps current directory (.) to /app/ViAna inside container
+    volumes:
+      - .:/app/ViAna
+    
+    # 2. Working Directory
+    working_dir: /app/ViAna
+    
+    # 3. GPU Configuration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # 4. Interactive Mode Settings
+    # Keeps the container running so you can log in
+    stdin_open: true # equivalent to -i
+    tty: true        # equivalent to -t
+    command: /bin/bash
+    
+    # 5. Shared Memory (Crucial for PyTorch/Dataloaders)
+    shm_size: '8gb'

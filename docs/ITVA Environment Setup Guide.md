@@ -1,288 +1,188 @@
-# **🛠️ ITVA Environment Setup Guide: "Golden Master"**
+# 🛠️ ITVA Environment Setup Guide: "Golden Master" v3.0
 
-**Version: 2.0 (Verified) Date: January 28, 2026 Status: ✅ Production Ready**
+**Version:** 3.0 (Finalized)
+**Target Audience:** Engineering Team (Entry Level +)
+**Status:** ✅ Production Ready
+**Objective:** Set up a GPU-accelerated Computer Vision environment (ViAna) from scratch.
 
-**Target Stack:**
+## **1. The Target Stack Strategy**
+To achieve high-throughput Video Analytics (ViAna), we architected a custom stack that minimizes CPU bottlenecks and maximizes GPU throughput.
 
-* **Host: Ubuntu 24.04 \+ NVIDIA Driver 590**  
-* **Container: Ubuntu 22.04 \+ CUDA 12.4 \+ cuDNN 9**  
-* **Vision: OpenCV 4.10.0 (CUDA-Enabled, No NVCUVID)**  
-* **AI Core: PyTorch 2.6 \+ torchvision (Pinned to CUDA 12.4)**  
-* **Decoding: NVIDIA DALI / FFmpeg**
+* **Host Layer:** Ubuntu 24.04 + NVIDIA Driver 590 (Bleeding edge host)
+* **Container Base:** Ubuntu 22.04 LTS (Stable production base)
+* **Compute Core:** CUDA 12.4 + cuDNN 9 (Pinned for stability)
+* **Vision Engine:** OpenCV 4.10.0 (Custom compiled for CUDA)
+* **AI Framework:** PyTorch 2.6 (Pinned explicitly to CUDA 12.4)
+* **Data Layer:** Symlink-bridged UVH-26 Dataset
 
 ---
 
-## **1\. Docker Build (The "Safe Landing" Image)**
-
-***Create a file named `Dockerfile` and paste the content below. I have added the PyTorch installation directly into the file so it is automatic in future builds.***
-
-**Dockerfile**
-
-**\# \==============================================================================**
-
-**\# STAGE 1: The Builder (OpenCV Compilation)**
-
-**\# \==============================================================================**
-
-**FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS builder**
-
-**ENV DEBIAN\_FRONTEND=noninteractive**
-
-**WORKDIR /workspace**
-
-**\# 1\. Install Build Dependencies**
-
-**RUN apt-get update && apt-get install \-y \\**
-
-    **build-essential cmake git pkg-config python3-dev python3-numpy python3-pip \\**
-
-    **libavcodec-dev libavformat-dev libswscale-dev \\**
-
-    **libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev \\**
-
-    **libgl1 libglib2.0-0 libprotobuf-dev protobuf-compiler \\**
-
-    **libjpeg-dev libpng-dev libtiff-dev \\**
-
-    **&& rm \-rf /var/lib/apt/lists/\***
-
-**\# 2\. Clone OpenCV (v4.10.0)**
-
-**RUN git clone \--depth 1 \--branch 4.10.0 https://github.com/opencv/opencv.git && \\**
-
-    **git clone \--depth 1 \--branch 4.10.0 https://github.com/opencv/opencv\_contrib.git**
-
-**\# 3\. Configure & Compile (CUDA ON, NVCUVID OFF)**
-
-**RUN mkdir \-p opencv/build && cd opencv/build && \\**
-
-    **cmake \\**
-
-    **\-D CMAKE\_BUILD\_TYPE=RELEASE \\**
-
-    **\-D CMAKE\_INSTALL\_PREFIX=/usr/local \\**
-
-    **\-D OPENCV\_EXTRA\_MODULES\_PATH=../../opencv\_contrib/modules \\**
-
-    **\-D WITH\_CUDA=ON \-D WITH\_CUDNN=ON \-D OPENCV\_DNN\_CUDA=ON \-D WITH\_CUBLAS=ON \\**
-
-    **\-D CUDA\_ARCH\_BIN=8.6 \-D ENABLE\_FAST\_MATH=1 \-D CUDA\_FAST\_MATH=1 \\**
-
-    **\-D WITH\_OPENGL=ON \-D BUILD\_opencv\_python3=ON \-D OPENCV\_GENERATE\_PKGCONFIG=ON \\**
-
-    **\-D OPENCV\_ENABLE\_NONFREE=ON \\**
-
-    **\-D BUILD\_PROTOBUF=OFF \-D PROTOBUF\_UPDATE\_FILES=ON \\**
-
-    **\-D BUILD\_examples=OFF \-D BUILD\_tests=OFF \-D BUILD\_perf\_tests=OFF \\**
-
-    **.. && \\**
-
-    **make \-j$(nproc) && \\**
-
-    **make install**
-
-**\# \==============================================================================**
-
-**\# STAGE 2: The Runtime (Production Ready)**
-
-**\# \==============================================================================**
-
-**FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04**
-
-**WORKDIR /workspace/ViAna**
-
-**ENV DEBIAN\_FRONTEND=noninteractive**
-
-**\# 1\. Install Runtime Dependencies**
-
-**RUN apt-get update && apt-get install \-y \\**
-
-    **python3 python3-pip python3-numpy \\**
-
-    **libgl1 libglib2.0-0 libgomp1 libprotobuf-dev \\**
-
-    **libjpeg-dev libpng-dev libtiff-dev \\**
-
-    **libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \\**
-
-    **libavcodec58 libavformat58 libswscale5 \\**
-
-    **&& rm \-rf /var/lib/apt/lists/\***
-
-**\# 2\. Install PyTorch (Pinned to CUDA 12.4)**
-
-**\# This ensures strict compatibility with the container's CUDA drivers.**
-
-**RUN pip3 install torch torchvision torchaudio \--index-url https://download.pytorch.org/whl/cu124**
-
-**\# 3\. Copy Compiled OpenCV Artifacts**
-
-**COPY \--from=builder /usr/local/lib /usr/local/lib**
-
-**COPY \--from=builder /usr/local/include/opencv4 /usr/local/include/opencv4**
-
-**COPY \--from=builder /usr/local/lib/python3.10 /usr/local/lib/python3.10**
-
-**\# 4\. Setup Paths**
-
-**RUN ldconfig**
-
-**ENV PYTHONPATH=/usr/local/lib/python3.10/site-packages:/usr/local/lib/python3.10/dist-packages**
-
-**CMD \["/bin/bash"\]**
-
----
-
-## **2\. Build & Launch**
-
-**Run these commands to build the image and tag it correctly.**
-
-**Bash**
-
-**\# 1\. Build the image (Approx 20 mins)**
-
-**docker build \-t itva-base:stable .**
-
-**\# 2\. (Optional) Remove old build artifacts if re-building**
-
-**docker image prune \-f**
-
----
-
-## **3\. The "Smoke Test" (Verification)**
-
-**This is the mandatory acceptance test. It validates that the OS, Python, OpenCV, and PyTorch all agree on the GPU status.**
-
-**Run this command block exactly as written:**
-
-**Bash**
-
-**docker run \--rm \--runtime=nvidia \--gpus all itva-base:stable python3 \-c '**
-
-**import cv2**
-
-**import torch**
-
-**import sys**
-
-**import numpy as np**
-
-**print("========== ITVA ENVIRONMENT DIAGNOSTIC \==========")**
-
-**\# 1\. Check OS & Python**
-
-**print(f"✅ Python Version: {sys.version.split()\[0\]}")**
-
-**\# 2\. Check OpenCV CUDA**
-
-**try:**
-
-    **cv\_count \= cv2.cuda.getCudaEnabledDeviceCount()**
-
-    **if cv\_count \> 0:**
-
-        **print(f"✅ OpenCV CUDA:   ACTIVE ({cv\_count} Devices)")**
-
-    **else:**
-
-        **print("❌ OpenCV CUDA:   FAILED (0 Devices)")**
-
-        **sys.exit(1)**
-
-**except Exception as e:**
-
-    **print(f"❌ OpenCV CUDA:   CRASHED ({e})")**
-
-    **sys.exit(1)**
-
-**\# 3\. Check PyTorch CUDA**
-
-**try:**
-
-    **if torch.cuda.is\_available():**
-
-        **gpu\_name \= torch.cuda.get\_device\_name(0)**
-
-        **print(f"✅ PyTorch CUDA:  ACTIVE ({gpu\_name})")**
-
-    **else:**
-
-        **print("❌ PyTorch CUDA:  FAILED")**
-
-        **sys.exit(1)**
-
-**except Exception as e:**
-
-    **print(f"❌ PyTorch CUDA:  CRASHED ({e})")**
-
-    **sys.exit(1)**
-
-**print("\\n========== STRESS TEST (LOAD CHECK) \==========")**
-
-**\# 4\. PyTorch Matrix Multiplication Test**
-
-**print("\[1/2\] PyTorch Matrix Mul...", end=" ")**
-
-**try:**
-
-    **a \= torch.randn(5000, 5000, device="cuda:0")**
-
-    **b \= torch.randn(5000, 5000, device="cuda:0")**
-
-    **\_ \= torch.matmul(a, b)**
-
-    **print("SUCCESS ✅")**
-
-**except Exception as e:**
-
-    **print(f"FAILED ❌ ({e})")**
-
-**\# 5\. OpenCV GpuMat Upload Test**
-
-**print("\[2/2\] OpenCV GpuMat Upload...", end=" ")**
-
-**try:**
-
-    **src\_host \= np.random.randint(0, 255, (2000, 2000, 3), dtype=np.uint8)**
-
-    **src\_gpu \= cv2.cuda\_GpuMat()**
-
-    **src\_gpu.upload(src\_host)**
-
-    **dst \= cv2.cuda.resize(src\_gpu, (1000, 1000))**
-
-    **print("SUCCESS ✅")**
-
-**except Exception as e:**
-
-    **print(f"FAILED ❌ ({e})")**
-
-**print("\\n🚀 RESULT: ENVIRONMENT IS VERIFIED & READY FOR PHASE 1.")**
-
-**'**
-
----
-
-### **4\. Expected Output**
-
-**If your environment is healthy, the output will look exactly like this:**
-
-**Plaintext**
-
-**\========== ITVA ENVIRONMENT DIAGNOSTIC \==========**
-
-**✅ Python Version: 3.10.12**
-
-**✅ OpenCV CUDA:   ACTIVE (2 Devices)**
-
-**✅ PyTorch CUDA:  ACTIVE (NVIDIA GeForce RTX 3060\)**
-
-**\========== STRESS TEST (LOAD CHECK) \==========**
-
-**\[1/2\] PyTorch Matrix Mul... SUCCESS ✅**
-
-**\[2/2\] OpenCV GpuMat Upload... SUCCESS ✅**
-
-**🚀 RESULT: ENVIRONMENT IS VERIFIED & READY FOR PHASE 1\.**
-
+## **2. Construction Steps (The "Recipe")**
+These are the specific engineering steps taken to build the environment from scratch.
+
+### **Step A: The GPU Foundation (CUDA & Drivers)**
+We deliberately avoided standard package managers (`apt install python3-opencv`) because they lack GPU support.
+1.  **Base Image:** We utilized `nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04` to gain access to the full NVIDIA compiler toolchain (`nvcc`) required for compiling custom libraries.
+2.  **Driver Compatibility:** We verified the Host Driver (v590) backward compatibility with the Container's CUDA Toolkit (v12.4) to ensure seamless GPU passthrough.
+
+### **Step B: Custom OpenCV Compilation (The Heavy Lift)**
+Standard OpenCV does not support NVIDIA GPUs out of the box. To fix this, we implemented a **Multi-Stage Docker Build** to compile OpenCV from source:
+* **Source:** Cloned OpenCV & OpenCV Contrib v4.10.0.
+* **Key Build Flags Enabled:**
+    * `WITH_CUDA=ON`, `WITH_CUDNN=ON`, `OPENCV_DNN_CUDA=ON`: Activates the GPU backend.
+    * `CUDA_ARCH_BIN=8.6`: Optimizes binary specifically for Ampere architecture (RTX 3060).
+    * `ENABLE_FAST_MATH=1`: Trades negligible precision for significant speed gains.
+    * `WITH_CUBLAS=ON`: Leverages NVIDIA's optimized linear algebra libraries.
+* **Outcome:** A custom `cv2.so` Python binding that offloads image processing to the GPU.
+
+### **Step C: PyTorch Pinning**
+To prevent the common "PyTorch vs. System CUDA" version mismatch:
+* **Strategy:** We bypassed the default PyPi index.
+* **Action:** Installed PyTorch pointing explicitly to the NVIDIA CUDA 12.4 wheel index (`https://download.pytorch.org/whl/cu124`).
+* **Result:** PyTorch runtime exactly matches the container's CUDA drivers, eliminating "driver mismatch" errors.
+
+---------------------------------------------------------------------------------------------------
+### **STEPS BEGIN HERE**
+---------------------------------------------------------------------------------------------------
+
+## **Phase 1: Host Machine Preparation**
+*Before touching the project code, we must ensure the physical machine is ready to talk to the GPU.*
+
+### **Step 1.1: Verify NVIDIA Drivers**
+Ensure your host machine (Ubuntu 24.04) has the NVIDIA drivers installed and running.
+```bash
+# Run this command in your terminal
+nvidia-smi
+Success: You see a table listing your GPU (e.g., RTX 3060) and Driver Version (e.g., 590.x).
+
+Failure: If command not found, install drivers via sudo ubuntu-drivers autoinstall and reboot.
+
+Step 1.2: Install Docker & NVIDIA Container Toolkit
+Docker needs a special toolkit to access your GPU. Standard Docker installation is not enough.
+
+Bash
+# 1. Install Docker Engine
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-plugin
+
+# 2. Add NVIDIA Container Toolkit Repository
+curl -fsSL [https://nvidia.github.io/libnvidia-container/gpgkey](https://nvidia.github.io/libnvidia-container/gpgkey) | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -s -L [https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list](https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list) | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+# 3. Install the Toolkit
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+
+# 4. Configure Docker to use GPU
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+Phase 2: Project Initialization
+Now we set up the codebase and directory structure.
+
+Step 2.1: Clone/Create Repository
+Set up the standard directory structure on your local machine.
+
+Bash
+# Create the project root
+mkdir -p ViAna/data/dataset
+mkdir -p ViAna/src/utils
+mkdir -p ViAna/configs
+mkdir -p ViAna/docs
+
+cd ViAna
+Step 2.2: Add Configuration Files
+Ensure the following files are present in the root directory (refer to the repository for file contents):
+
+Dockerfile (The build recipe)
+
+docker-compose.yml (The runtime manager)
+
+requirements.txt (If used locally, though we rely on Docker)
+
+Phase 3: Dataset Acquisition (Hugging Face)
+We use Hugging Face (HF) to manage our datasets. Since our dataset is private or gated, you need authentication.
+
+Step 3.1: Install HF CLI (Locally)
+You need the command-line tool to download data efficiently.
+
+Bash
+pip install -U "huggingface_hub[cli]"
+Step 3.2: Authenticate
+You will need your User Access Token from Hugging Face Settings.
+
+Bash
+huggingface-cli login
+# Paste your token when prompted (it will not show on screen).
+Step 3.3: Download the Dataset
+We download the data specifically to the data/ folder so it can be mounted into Docker later.
+
+Bash
+# Navigate to the data storage folder
+cd data/
+
+# Download the UVH-26 dataset (Replace 'Org/Repo' with actual ID if different)
+# --repo-type dataset: Specifies we are downloading data, not models
+# --local-dir .: Downloads contents directly to current folder
+huggingface-cli download visual-layer/uvh26 --repo-type dataset --local-dir ./dataset --local-dir-use-symlinks False
+
+# Return to root
+cd ..
+Note: We use --local-dir-use-symlinks False to ensure real files are downloaded, preventing permission issues.
+
+Phase 4: Docker Environment Setup
+This is where we compile the custom environment with CUDA support.
+
+Step 4.1: Build the "Golden Image"
+This step compiles OpenCV from source. It will take ~15-20 minutes. Do not interrupt it.
+
+Bash
+# Make sure you are in the folder containing 'Dockerfile'
+docker compose build
+Step 4.2: Launch the Environment
+Start the container in the background ("Detached" mode).
+
+Bash
+docker compose up -d
+Check status: Run docker ps. You should see a container named viana_core running.
+
+Step 4.3: Enter the Development Console
+Log in to your active development environment.
+
+Bash
+docker compose exec dev bash
+You are now inside the container. Your terminal prompt should change to root@viana_core:/workspace/ViAna#.
+
+Phase 5: Final Verification
+Run these commands INSIDE the container to verify the setup is successful.
+
+Step 5.1: Verify Directory Mounts
+Check if the dataset you downloaded in Phase 3 is visible here.
+
+Bash
+ls -F data/dataset/
+Success: You should see data.yaml, images/, labels/.
+
+Step 5.2: The "Smoke Test"
+Verify GPU acceleration for AI (PyTorch) and Vision (OpenCV).
+
+Bash
+python3 -c '
+import cv2, torch, sys
+print(f"✅ Python Version: {sys.version.split()[0]}")
+print(f"✅ OpenCV GPU Devices: {cv2.cuda.getCudaEnabledDeviceCount()}")
+print(f"✅ PyTorch GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else "FAILED"}")
+'
+Step 5.3: Verify Classification Logic
+Run the included classifier test to ensure code logic is working.
+
+Bash
+pytest tests/
+Cheatsheet: Daily Workflow
+Action	Command (Run from Host)
+Start Work	docker compose up -d
+Enter Container	docker compose exec dev bash
+Stop Work	docker compose down
+Rebuild (after Dockerfile change)	docker compose build
+View Logs	docker compose logs -f

@@ -1,0 +1,72 @@
+{
+  "hatchback": {
+    "category": "Passenger",
+    "class_type": "Light Fast",
+    "sub_class": "Car"
+  },
+  "sedan": {
+    "category": "Passenger",
+    "class_type": "Light Fast",
+    "sub_class": "Car"
+  },
+  "muv": {
+    "category": "Passenger",
+    "class_type": "Light Fast",
+    "sub_class": "Car"
+  },
+  "suv": {
+    "category": "Passenger",
+    "class_type": "Light Fast",
+    "sub_class": "Jeep"
+  },
+  "van": {
+    "category": "Passenger",
+    "class_type": "Light Fast",
+    "sub_class": "Van"
+  },
+  "tempo-traveller": {
+    "category": "Passenger",
+    "class_type": "Light Fast",
+    "sub_class": "Mini Bus"
+  },
+  "mini-bus": {
+    "category": "Passenger",
+    "class_type": "Light Fast",
+    "sub_class": "Mini Bus"
+  },
+  "bus": {
+    "category": "Passenger",
+    "class_type": "Heavy Fast",
+    "sub_class": "City Bus"
+  },
+  "three-wheeler": {
+    "category": "Passenger",
+    "class_type": "Light Fast",
+    "sub_class": "Auto"
+  },
+  "two-wheeler": {
+    "category": "Passenger",
+    "class_type": "Light Fast",
+    "sub_class": "MTW"
+  },
+  "cycle": {
+    "category": "Passenger",
+    "class_type": "Slow",
+    "sub_class": "Cycle"
+  },
+  "truck": {
+    "category": "Goods",
+    "class_type": "Heavy Fast",
+    "sub_class": "Truck"
+  },
+  "lcv": {
+    "category": "Goods",
+    "class_type": "Light Fast",
+    "sub_class": "LCV"
+  },
+  "other": {
+    "category": "Goods",
+    "class_type": "Light Fast",
+    "sub_class": "Others"
+  }
+}

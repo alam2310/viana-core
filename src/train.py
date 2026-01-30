@@ -9,7 +9,8 @@ PROJECT_ROOT = "/app/ViAna"
 DATA_YAML_PATH = os.path.join(PROJECT_ROOT, "src/utils/itva_phase1.yaml")
 EXPERIMENT_PROJECT = os.path.join(PROJECT_ROOT, "data/outputs/training")
 EXPERIMENT_NAME = "itva_phase1_1280p"
-MODEL_WEIGHTS = "yolo11l.pt"  # YOLO11-Large
+#MODEL_WEIGHTS = "yolo11l.pt"  # YOLO11-Large
+MODEL_WEIGHTS = "yolo11m.pt"  # YOLO11-Medium
 
 def run_training():
     """
@@ -45,7 +46,7 @@ def run_training():
         
         # --- Compute Strategy ---
         device=[0, 1],         # DDP: Use both RTX 3060s
-        batch=8,               # FIXED: Explicit batch size (4 per GPU) for 1280p resolution
+        batch=12,               # FIXED: Explicit batch size (4 per GPU) for 1280p resolution
         workers=8,             # High worker count to prevent DataLoader bottlenecks at 1280p
         
         # --- High-Resolution Config ---
@@ -54,7 +55,7 @@ def run_training():
 
         # --- OPTIMIZATION ---
         imgsz=1088,            # REDUCED: 1280 -> 1088 (28% faster, safe form OOM)
-        epochs=50,             # REDUCED: 100 -> 50 (Sufficient for baseline)
+        epochs=30,             # REDUCED: 100 -> 50 (Sufficient for baseline)
 
         # --- Anti-Overfitting Hyperparameters (The "Anti-Memory" Strategy) ---
         # These are crucial because we artificially duplicated 'Mini Bus' 20x.

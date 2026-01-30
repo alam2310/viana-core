@@ -95,3 +95,11 @@ Enter Container,    docker compose exec dev bash
 Stop Work,          docker compose down
 Rebuild (change),   docker compose build
 View Logs,          docker compose logs -f
+
+---- using SSH: ----
+
+Kill the GUI: 
+> sudo systemctl isolate multi-user.target
+
+How to get the GUI back
+> sudo systemctl isolate graphical.target

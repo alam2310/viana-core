@@ -1,0 +1,15 @@
+path: /app/ViAna/data/itva_phase1
+train: train.txt
+val: train.txt
+names:
+  0: Car
+  1: Jeep
+  2: Van
+  3: Mini Bus
+  4: MTW
+  5: Auto
+  6: City Bus
+  7: Truck
+  8: LCV
+  9: Cycle
+  10: Others

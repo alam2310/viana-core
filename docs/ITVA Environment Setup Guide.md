@@ -189,9 +189,11 @@ View Logs	docker compose logs -f
 
 ## Manifest Oversampling**. Multiplied rare classes (Mini Bus 20x, LCV 5x) in the training manifest.
 
-# 1. Update the JSON (Adds 'others')
+# 1. Update the vehicle tasonomy JSON (no need to run as updated mapping is comitted)
 python3 src/utils/sync_taxonomy.py
 
-# 2. Build the dataset (Should run to completion now)
+# 2. Phase 1.3: Manifest Oversampling
 python3 src/utils/build_itva_dataset.py
 
+Phase 1.4: Training dataset:
+python3 src/train.py

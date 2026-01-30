@@ -186,3 +186,12 @@ Enter Container	docker compose exec dev bash
 Stop Work	docker compose down
 Rebuild (after Dockerfile change)	docker compose build
 View Logs	docker compose logs -f
+
+## Manifest Oversampling**. Multiplied rare classes (Mini Bus 20x, LCV 5x) in the training manifest.
+
+# 1. Update the JSON (Adds 'others')
+python3 src/utils/sync_taxonomy.py
+
+# 2. Build the dataset (Should run to completion now)
+python3 src/utils/build_itva_dataset.py
+

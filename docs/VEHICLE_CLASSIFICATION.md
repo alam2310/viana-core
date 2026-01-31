@@ -27,3 +27,25 @@ This document defines the 3-level hierarchy used to classify vehicles detected b
 | **Other** | Goods | Light Fast | **Others** | Catch-all bucket. |
 
 > **Note:** "Pedestrian", "Intercity Bus", and "Rickshaw Trolley" are defined in our target requirements but are currently not detected by UVH-26.
+
+## Target Classification
+
+Category,Class Type,Target Sub-Class,Strategy Source,Implementation Logic (Phase 2)
+Passenger,Heavy Fast,City Bus,🤖 Direct AI,Default mapping for detection class Bus (ID 6).
+Passenger,Heavy Fast,Intercity Bus,📐 Logic (Future),"Phase 1: Map to City Bus.  Phase 2: If Color != Green/Blue, re-tag."
+Passenger,Light Fast,Mini Bus,🤖 Direct AI,Merged classes Mini-bus + Tempo-traveller → Mini Bus (ID 3).
+Passenger,Light Fast,Van,🤖 Direct AI,Direct detection of class Van (ID 2).
+Passenger,Light Fast,Car,🤖 Direct AI,"Merged classes Sedan, Hatchback, MUV → Car (ID 0)."
+Passenger,Light Fast,Jeep,🔄 Proxy,Map class SUV → Jeep (ID 1).
+Passenger,Light Fast,Taxi,📐 Logic,Detect Car. Extract crop. If Yellow Plate Region > Threshold → Re-tag Taxi.
+Passenger,Light Fast,MTW,🤖 Direct AI,"Merged classes Bike, Scooter → MTW (ID 4)."
+Passenger,Light Fast,Auto,🤖 Direct AI,Direct detection of Auto (ID 5).
+Passenger,Slow,Cycle,🤖 Direct AI,Direct detection of Cycle (ID 9).
+Passenger,Slow,Cycle Rickshaw,❌ Defer,No training data. Map to Others (ID 10) for Phase 1.
+Passenger,Slow,Pedestrian,👯 Sidecar,Run YOLO11-Nano (COCO). Filter Class 0 (Person). Merge into stream.
+Passenger,Slow,Others,🤖 Direct AI,Direct detection of Others (ID 10).
+Goods,Heavy Fast,Truck,🤖 Direct AI,Direct detection of Truck (ID 7).
+Goods,Heavy Fast,MCV,📐 Logic,Detect Truck. If Box Area < ThresholdMCV​ → Re-tag MCV.
+Goods,Heavy Fast,Trailers,📐 Logic,Detect Truck. If Aspect Ratio (W/H) > 2.5 → Re-tag Trailer.
+Goods,Light Fast,LCV,🤖 Direct AI,Direct detection of LCV (ID 8) (Tata Ace / Dost).
+Goods,Slow,Carts,❌ Defer,No training data. Map to Others (ID 10) or ignore.

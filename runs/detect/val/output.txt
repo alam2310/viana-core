@@ -1,0 +1,39 @@
+root@5dd49510c711:/app/ViAna# # 1. Create a validation script
+cat <<EOF > src/utils/validate_now.py
+from ultralytics import YOLO
+import sys
+
+# Load the best model trained so far
+model = YOLO('/app/ViAna/data/outputs/training/itva_phase1_1280p/weights/best.pt')
+
+# Run validation on the dataset
+# split='train' is used here because Phase 1 uses train set for validation
+results = model.val(data='/app/ViAna/src/utils/itva_phase1.yaml', split='train', imgsz=1088, batch=4)
+EOF
+
+# 2. Run it
+python3 src/utils/validate_now.py
+Ultralytics 8.4.9 🚀 Python-3.10.12 torch-2.6.0+cu124 CUDA:0 (NVIDIA GeForce RTX 3060, 11878MiB)
+YOLO11m summary (fused): 126 layers, 20,038,513 parameters, 0 gradients, 67.7 GFLOPs
+
+val: Fast image access ✅ (ping: 0.0±0.0 ms, read: 1821.1±1184.1 MB/s, size: 3497.2 KB)
+val: Scanning /app/ViAna/data/itva_phase1/labels/train.cache... 111361 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 111361/111361 27.5Git/s 0.0s
+                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 27841/27841 3.6it/s 2:09:41
+/usr/local/lib/python3.10/dist-packages/numpy/core/getlimits.py:549: UserWarning: The value of the smallest subnormal for <class 'numpy.float64'> type is zero.
+  setattr(self, word, getattr(machar, word).flat[0])
+/usr/local/lib/python3.10/dist-packages/numpy/core/getlimits.py:89: UserWarning: The value of the smallest subnormal for <class 'numpy.float64'> type is zero.
+  return self._float_to_str(self.smallest_subnormal)
+                   all     111361    1474975      0.888      0.881      0.929       0.85
+                   Car      86406     245476      0.902      0.925      0.966      0.914
+                  Jeep      40425      59678       0.84      0.861      0.918      0.869
+                   Van      30740      34860      0.878      0.975      0.968      0.925
+              Mini Bus      35840      40880       0.92      0.983      0.982       0.94
+                   MTW     103708     648491      0.923      0.935      0.974      0.854
+                  Auto      80238     236044      0.929      0.943      0.977      0.902
+              City Bus      28435      45574      0.915      0.931      0.972        0.9
+                 Truck      39217      51893      0.861      0.857      0.924      0.835
+                   LCV      64065     102060      0.878      0.899      0.949      0.868
+                 Cycle       7726       8383      0.862      0.811      0.878       0.76
+                Others       1504       1636      0.859      0.565      0.706       0.58
+Speed: 0.8ms preprocess, 41.5ms inference, 0.0ms loss, 7.5ms postprocess per image
+Results saved to /app/ViAna/runs/detect/val

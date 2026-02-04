@@ -52,7 +52,7 @@
         - [x] **Attempt 4 (Dual-GPU Isolation):** **Final Strategy.**
             - *Implementation:* Pushed Model A (Vehicles) to `cuda:0` and Model B (Pedestrians, **YOLO11-Medium**) to `cuda:1`.
             - *Outcome:* High accuracy (>0.75 confidence) with zero latency penalty on the main vehicle stream.
-- [ ] **Action 2.2: Logic-Based Classification Layer.**
+- [X] **Action 2.2: Logic-Based Classification Layer.**
     - *Problem:* UVH-26 lacks explicit labels for MCV, Trailers, and Taxis.
     - *Solution:* Implement Post-Processing Heuristics:
         - **MCV/Heavy Split:** Filter `Truck` class by Bounding Box Area ($Area < T_{mcv} \rightarrow MCV$).
@@ -60,7 +60,7 @@
         - **Taxi Split:** Filter `Car` by Color (Yellow Region Analysis).
 - [X] **Action 2.3: High-Speed Tracking.**
     - *Decision:* Use **ByteTrack** instead of BoT-SORT.
-- [ ] **Action 2.4: Counting Logic.**
+- [X] **Action 2.4: Counting Logic.**
     - *Implementation:* Vector-based Line Crossing (In/Out counts).
 
 ### Phase 3: Hardware Orchestration (Dual-GPU)

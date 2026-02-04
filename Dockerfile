@@ -69,7 +69,8 @@ RUN pip3 install --no-cache-dir --default-timeout=100 \
     opencv-python \
     matplotlib \
     seaborn \
-    ultralytics
+    ultralytics \
+    supervision
 
 # 4. Copy Compiled OpenCV Artifacts
 COPY --from=builder /usr/local/lib /usr/local/lib

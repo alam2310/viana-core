@@ -58,7 +58,7 @@
         - **MCV/Heavy Split:** Filter `Truck` class by Bounding Box Area ($Area < T_{mcv} \rightarrow MCV$).
         - **Trailer Split:** Filter `Truck` class by Aspect Ratio ($W/H > 2.5 \rightarrow Trailer$).
         - **Taxi Split:** Filter `Car` by Color (Yellow Region Analysis).
-- [ ] **Action 2.3: High-Speed Tracking.**
+- [X] **Action 2.3: High-Speed Tracking.**
     - *Decision:* Use **ByteTrack** instead of BoT-SORT.
 - [ ] **Action 2.4: Counting Logic.**
     - *Implementation:* Vector-based Line Crossing (In/Out counts).

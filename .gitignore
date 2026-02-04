@@ -5,8 +5,4 @@ __pycache__/
 venv/
 .env
 yolo*
-debug_ensemble_11n.mp4
 .gitignore
-.gitignore
-debug_logic_test_11s.mp4
-debug_logic_test_11m.mp4

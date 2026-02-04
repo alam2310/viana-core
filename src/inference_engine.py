@@ -1,3 +1,7 @@
+import warnings
+# [FIX] Suppress known harmless numpy warnings about subnormal floats
+warnings.filterwarnings("ignore", message="The value of the smallest subnormal")
+
 import cv2
 import torch
 import argparse
@@ -9,24 +13,34 @@ import supervision as sv
 PEDESTRIAN_CLASS_ID = 11
 SUPPRESSION_IOA_THRESHOLD = 0.3
 
-# [NEW] Angled Horizon Line Configuration
-# Coordinates are relative (0.0 to 1.0)
-# Example: Left point is higher (0.35), Right point is lower (0.45) for a slanted road
-HORIZON_POINT_LEFT = (0.0, 0.35)   # (x=0%, y=35%)
-HORIZON_POINT_RIGHT = (1.0, 0.35)  # (x=100%, y=35%) - Keep same as Left for a flat line
+# Horizon Configuration
+HORIZON_POINT_LEFT = (0.0, 0.65)
+HORIZON_POINT_RIGHT = (1.0, 0.55)
+
+# --- LOGIC CONSTANTS (Action 2.2) ---
+# 1. Geometric Logic (Trucks)
+MCV_AREA_THRESHOLD = 35000       # Pixels (Adjust based on 1088p resolution)
+TRAILER_ASPECT_RATIO = 2.5       # Width / Height
+
+# 2. Color Logic (Taxis) - HSV Range for Yellow
+TAXI_YELLOW_MIN = np.array([20, 100, 100])
+TAXI_YELLOW_MAX = np.array([30, 255, 255])
+TAXI_PIXEL_RATIO = 0.10          # 10% of car must be yellow
 
 # Hardware Allocation
 DEVICE_A = 'cuda:0' # Vehicles
 DEVICE_B = 'cuda:1' # Pedestrians
 
-# Classes for Logic (Model A IDs)
-ALL_VEHICLE_CLASSES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+# Classes for Suppression Logic
+ALL_VEHICLE_CLASSES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14]
 
-# Mapping ID to Name for Visualization
+# Updated Class Names with Logic IDs
 CLASS_NAMES = {
     0: 'Car', 1: 'Jeep', 2: 'Van', 3: 'MiniBus', 4: 'MTW', 
-    5: 'Auto', 6: 'Bus', 7: 'Truck', 8: 'LCV', 9: 'Cycle', 
-    10: 'Other', 11: 'Pedestrian'
+    5: 'Auto', 6: 'Bus', 7: 'Heavy Truck', 8: 'LCV', 9: 'Cycle', 
+    10: 'Other', 11: 'Pedestrian',
+    # New Logic Classes
+    12: 'MCV', 13: 'Trailer', 14: 'Taxi'
 }
 
 def is_inside_vehicle(person_box, vehicle_boxes, threshold=0.3):
@@ -48,8 +62,69 @@ def is_inside_vehicle(person_box, vehicle_boxes, threshold=0.3):
                 return True
     return False
 
+def refine_truck(box):
+    """
+    Differentiates Truck vs MCV vs Trailer based on geometry.
+    Returns: Class ID (7, 12, or 13)
+    """
+    x1, y1, x2, y2 = box
+    w = x2 - x1
+    h = y2 - y1
+    area = w * h
+    
+    # Safety check to avoid division by zero
+    if h == 0: return 7 
+    
+    ratio = w / h
+
+    # Rule 1: Long and flat? -> Trailer
+    if ratio > TRAILER_ASPECT_RATIO:
+        return 13 # Trailer ID
+    
+    # Rule 2: Small area? -> MCV
+    # Note: This threshold depends heavily on camera distance/resolution (1088p)
+    if area < MCV_AREA_THRESHOLD:
+        return 12 # MCV ID
+
+    # Default -> Heavy Truck
+    return 7
+
+def is_taxi(frame, box):
+    """
+    Checks if a car is yellow enough to be a Taxi.
+    Returns: True/False
+    """
+    x1, y1, x2, y2 = box.astype(int)
+    
+    # Boundary Checks (Ensure crop is within image)
+    h_img, w_img = frame.shape[:2]
+    x1 = max(0, x1); y1 = max(0, y1)
+    x2 = min(w_img, x2); y2 = min(h_img, y2)
+    
+    if x1 >= x2 or y1 >= y2: return False
+
+    # Crop the car
+    car_roi = frame[y1:y2, x1:x2]
+    
+    # Convert to HSV
+    hsv_roi = cv2.cvtColor(car_roi, cv2.COLOR_BGR2HSV)
+    
+    # Mask Yellow
+    mask = cv2.inRange(hsv_roi, TAXI_YELLOW_MIN, TAXI_YELLOW_MAX)
+    
+    # Count non-zero pixels
+    yellow_pixels = cv2.countNonZero(mask)
+    total_pixels = car_roi.shape[0] * car_roi.shape[1]
+    
+    if total_pixels == 0: return False
+    
+    if (yellow_pixels / total_pixels) > TAXI_PIXEL_RATIO:
+        return True
+        
+    return False
+
 def run_tracking_pipeline(video_path, model_a_path, model_b_path, output_path):
-    print(f"🚀 Starting Engine: Dual-GPU + ByteTrack + Angled Horizon")
+    print(f"🚀 Starting Engine: Logic Layer (MCV/Trailer/Taxi) Active")
     
     # 1. Load Models
     print(f"🧠 Loading Model A (Vehicles) -> {DEVICE_A}")
@@ -62,32 +137,22 @@ def run_tracking_pipeline(video_path, model_a_path, model_b_path, output_path):
 
     # 2. Setup Video & Tracker
     tracker = sv.ByteTrack(frame_rate=30) 
-    
-    # Annotators (Updated for Supervision v0.16+)
     box_annotator = sv.BoxAnnotator(thickness=2)
     label_annotator = sv.LabelAnnotator(text_scale=0.5, text_thickness=1, text_padding=5)
 
     cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print(f"❌ Error: Could not open {video_path}")
-        return
-
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
     
-    # Calculate Absolute Pixel Coordinates for Horizon Line
+    # Horizon Calc
     x1_line = int(HORIZON_POINT_LEFT[0] * w)
     y1_line = int(HORIZON_POINT_LEFT[1] * h)
     x2_line = int(HORIZON_POINT_RIGHT[0] * w)
     y2_line = int(HORIZON_POINT_RIGHT[1] * h)
-    
-    # Calculate Slope (m) for y = mx + c
-    # Added 1e-6 to avoid division by zero
     slope = (y2_line - y1_line) / (x2_line - x1_line + 1e-6)
 
     out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
-
     frame_count = 0
     
     while cap.isOpened():
@@ -95,24 +160,37 @@ def run_tracking_pipeline(video_path, model_a_path, model_b_path, output_path):
         if not success: break
         frame_count += 1
         
-        # --- A. INFERENCE (Dual GPU) ---
+        # --- A. INFERENCE ---
         res_a = model_a.predict(frame, imgsz=1088, conf=0.25, device=DEVICE_A, verbose=False)[0]
         res_b = model_b.predict(frame, imgsz=1088, conf=0.25, classes=[0], device=DEVICE_B, verbose=False)[0]
 
-        # --- B. PRE-PROCESSING & MERGE ---
+        # --- B. LOGIC & MERGE ---
         final_boxes = []
         final_conf = []
         final_cls = []
         
-        vehicle_boxes = [] # For IoA check
+        vehicle_boxes = [] 
 
-        # 1. Process Vehicles (Model A)
+        # 1. Process Vehicles (Model A) + APPLY LOGIC
         if res_a.boxes:
             for box in res_a.boxes:
-                xyxy = box.xyxy[0].cpu().numpy()
+                xyxy = box.xyxy[0].cpu().numpy() # Keep float for precise IoU, but cast for logic
                 conf = float(box.conf[0].cpu().numpy())
                 cls = int(box.cls[0].cpu().numpy())
                 
+                # --- LOGIC LAYER START ---
+                
+                # Logic 1: Refine Truck -> MCV / Trailer
+                if cls == 7: # Truck
+                    cls = refine_truck(xyxy)
+                
+                # Logic 2: Refine Car -> Taxi
+                elif cls == 0: # Car
+                    if is_taxi(frame, xyxy):
+                        cls = 14 # Taxi ID
+                
+                # --- LOGIC LAYER END ---
+
                 final_boxes.append(xyxy)
                 final_conf.append(conf)
                 final_cls.append(cls)
@@ -120,19 +198,18 @@ def run_tracking_pipeline(video_path, model_a_path, model_b_path, output_path):
                 if cls in ALL_VEHICLE_CLASSES:
                     vehicle_boxes.append(xyxy)
 
-        # 2. Process Pedestrians (Model B) with Universal Suppression
+        # 2. Process Pedestrians (Model B)
         if res_b.boxes:
             for box in res_b.boxes:
                 xyxy = box.xyxy[0].cpu().numpy()
                 conf = float(box.conf[0].cpu().numpy())
                 
-                # Check Logic: Is this person inside a vehicle?
                 if not is_inside_vehicle(xyxy, vehicle_boxes, SUPPRESSION_IOA_THRESHOLD):
                     final_boxes.append(xyxy)
                     final_conf.append(conf)
-                    final_cls.append(PEDESTRIAN_CLASS_ID) # Remap ID
+                    final_cls.append(PEDESTRIAN_CLASS_ID)
 
-        # Draw Horizon Line even if no detections
+        # Draw Horizon
         cv2.line(frame, (x1_line, y1_line), (x2_line, y2_line), (0, 0, 255), 2)
 
         if len(final_boxes) == 0:
@@ -146,16 +223,10 @@ def run_tracking_pipeline(video_path, model_a_path, model_b_path, output_path):
             class_id=np.array(final_cls)
         )
 
-        # --- D. ANGLED HORIZON FILTER ---
-        # 1. Calculate centers of objects
+        # --- D. HORIZON FILTER ---
         centers_x = (detections.xyxy[:, 0] + detections.xyxy[:, 2]) / 2
         centers_y = (detections.xyxy[:, 1] + detections.xyxy[:, 3]) / 2
-        
-        # 2. Calculate the "Cutoff Y" for every object's specific X-position
-        # Equation: y = y1 + slope * (x - x1)
         y_cutoff_thresholds = y1_line + slope * (centers_x - x1_line)
-        
-        # 3. Filter: Keep objects strictly "Below" the line (Y value is higher than cutoff)
         mask = centers_y > y_cutoff_thresholds
         detections = detections[mask]
 
@@ -174,26 +245,24 @@ def run_tracking_pipeline(video_path, model_a_path, model_b_path, output_path):
             scene=annotated_frame, detections=detections, labels=labels
         )
 
-        # Redraw Line on top
+        # Redraw Horizon
         cv2.line(annotated_frame, (x1_line, y1_line), (x2_line, y2_line), (0, 0, 255), 2)
-        cv2.putText(annotated_frame, "HORIZON", (x1_line + 10, y1_line - 10), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
 
         out.write(annotated_frame)
 
         if frame_count % 50 == 0:
-            print(f"   ⏳ Tracked {frame_count} frames...")
+            print(f"   ⏳ Processed {frame_count} frames...")
 
     cap.release()
     out.release()
-    print(f"\n✅ Tracking Complete. Output: {output_path}")
+    print(f"\n✅ Logic Processing Complete. Output: {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", type=str, required=True, help="Input video")
     parser.add_argument("--model_a", type=str, default="/app/ViAna/models/v1/itva_medium_1088p.pt", help="Vehicle Model")
-    parser.add_argument("--model_b", type=str, default="yolo11l.pt", help="Person Model (Large)")
-    parser.add_argument("--out", type=str, default="output_tracking.mp4", help="Output path")
+    parser.add_argument("--model_b", type=str, default="yolo11l.pt", help="Person Model")
+    parser.add_argument("--out", type=str, default="output_logic.mp4", help="Output path")
     
     args = parser.parse_args()
     run_tracking_pipeline(args.video, args.model_a, args.model_b, args.out)

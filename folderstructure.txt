@@ -1,0 +1,166 @@
+.
+├── audit_dataset.py
+├── audit_uvh26.py
+├── blueprint.md
+├── configs
+│   └── vehicle_taxonomy.json
+├── convert_and_audit.py
+├── data
+│   ├── itva_phase1
+│   │   ├── images
+│   │   │   └── train
+│   │   │       ├── 100103.png -> /app/ViAna/data/processed/yolo_format/images/train/100103.png
+│   │   │       ├── <many files>
+│   │   │       ├── 
+│   │   │       └── 9.png -> /app/ViAna/data/processed/yolo_format/images/train/9.png
+│   │   ├── labels
+│   │   │   ├── train
+│   │   │   │   ├── 100103.txt
+│   │   │   │   ├── <many files>
+│   │   │   │   ├── 
+│   │   │   │   └── 9.txt
+│   │   │   └── train.cache
+│   │   └── train.txt
+│   ├── models
+│   ├── outputs
+│   │   ├── audit_samples
+│   │   │   ├── audit_128516.png
+│   │   │   ├── audit_199595.png
+│   │   │   ├── audit_217154.png
+│   │   │   ├── audit_256606.png
+│   │   │   ├── audit_308233.png
+│   │   │   ├── audit_376398.png
+│   │   │   ├── audit_393661.png
+│   │   │   ├── audit_506284.png
+│   │   │   ├── audit_933543.png
+│   │   │   └── audit_951243.png
+│   │   └── training
+│   │       └── itva_phase1_1280p
+│   │           ├── args.yaml
+│   │           ├── labels.jpg
+│   │           ├── results.csv
+│   │           ├── train_batch0.jpg
+│   │           ├── train_batch1.jpg
+│   │           ├── train_batch2.jpg
+│   │           └── weights
+│   │               ├── best.pt
+│   │               └── last.pt
+│   ├── processed
+│   │   └── yolo_format
+│   │       ├── data.yaml
+│   │       ├── images
+│   │       │   ├── train
+│   │       │   │   ├── 100103.png -> /root/Work/ViAna/data/raw/UVH-26/UVH-26-Train/data/000/100103.png
+│   │       │   │   ├── <many files>
+│   │       │   │   └── 9.png -> /root/Work/ViAna/data/raw/UVH-26/UVH-26-Train/data/003/9.png
+│   │       │   └── val
+│   │       │       ├── 100130.png -> /root/Work/ViAna/data/raw/UVH-26/UVH-26-Val/data/000/100130.png
+│   │       │       ├── <many files>
+│   │       │       └── 999595.png -> /root/Work/ViAna/data/raw/UVH-26/UVH-26-Val/data/001/999595.png
+│   │       └── labels
+│   │           ├── train
+│   │           │   ├── 100103.txt
+│   │           │   ├── <many files>
+│   │           │   ├── 
+│   │           │   └── 9.txt
+│   │           └── val
+│   │               ├── 100130.txt
+│   │               ├── <many files>
+│   │               └── 999595.txt
+│   └── raw
+│       └── UVH-26
+│           ├── dataset_infos.json
+│           ├── UVH-26-Train
+│           │   ├── data
+│           │   │   ├── 000
+│           │   │   │   ├── 100103.png
+│           │   │   │   ├── <many files>
+│           │   │   │   ├── 
+│           │   │   │   └── 9.png
+│           │   │   └── 004
+│           │   │       ├── 942657.png
+│           │   │       ├── <many files>
+│           │   │       └── 999988.png
+│           │   ├── UVH-26-MV-Train.json
+│           │   └── UVH-26-ST-Train.json
+│           └── UVH-26-Val
+│               ├── data
+│               │   ├── 000
+│               │   │   ├── 100130.png
+│               │   │   ├── <many files>
+│               │   │   └── 948114.png
+│               │   └── 001
+│               │       ├── 948345.png
+│               │       ├── <many files>
+│               │       ├── 
+│               │       └── 999595.png
+│               ├── UVH-26-MV-Val.json
+│               └── UVH-26-ST-Val.json
+├── debug_pretrain
+│   ├── debug_416126.png
+│   ├── debug_47052.png
+│   └── debug_657964.png
+├── docker-compose.yml
+├── Dockerfile
+├── docs
+│   ├── ITVA Environment Setup Guide.md
+│   ├── TMUX_README.md
+│   └── VEHICLE_CLASSIFICATION.md
+├── folderstructure.txt
+├── main.py
+├── models
+│   └── v1
+│       ├── itva_medium_1088p.pt
+│       └── training_metrics.csv
+├── process_video.py
+├── README.md
+├── runs
+│   └── detect
+│       └── val
+│           ├── BoxF1_curve.png
+│           ├── BoxP_curve.png
+│           ├── BoxPR_curve.png
+│           ├── BoxR_curve.png
+│           ├── confusion_matrix_normalized.png
+│           ├── confusion_matrix.png
+│           ├── output.txt
+│           ├── val_batch0_labels.jpg
+│           ├── val_batch0_pred.jpg
+│           ├── val_batch1_labels.jpg
+│           ├── val_batch1_pred.jpg
+│           ├── val_batch2_labels.jpg
+│           └── val_batch2_pred.jpg
+├── src
+│   ├── core
+│   │   └── __init__.py
+│   ├── __init__.py
+│   ├── phase2_ensemble.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-310.pyc
+│   │   └── __init__.cpython-312.pyc
+│   ├── train.py
+│   └── utils
+│       ├── build_itva_dataset.py
+│       ├── classifier.py
+│       ├── dataset_auditor.py
+│       ├── __init__.py
+│       ├── itva_phase1.yaml
+│       ├── __pycache__
+│       │   ├── classifier.cpython-310.pyc
+│       │   ├── classifier.cpython-312.pyc
+│       │   ├── dataset_auditor.cpython-310.pyc
+│       │   ├── __init__.cpython-310.pyc
+│       │   └── __init__.cpython-312.pyc
+│       ├── sync_taxonomy.py
+│       └── validate_now.py
+├── tests
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-310.pyc
+│   │   └── test_classifier.cpython-310-pytest-9.0.2.pyc
+│   └── test_classifier.py
+├── yolo11l.pt
+├── yolo11m.pt
+└── yolo26n.pt
+
+49 directories, 122720 files

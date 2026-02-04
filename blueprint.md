@@ -7,8 +7,8 @@
 
 ## 🚦 Project Master Status
 - **Current Phase:** Phase 2: High-Accuracy Offline Engine (Inference Logic)
-- **Overall Progress:** 60% (Model Released v1.0)
-- **Last Updated:** 2026-01-31
+- **Overall Progress:** 60% (Inference Engine Stabilized)
+- **Last Updated:** 2026-02-04
 
 ---
 
@@ -23,40 +23,35 @@
     - *Decision:* Abandoned `NVCUVID` compilation in favor of NVIDIA DALI / FFmpeg for decoding.
 - [x] **Verification:** Validated GPU load with PyTorch (Matrix Mul) and OpenCV (GpuMat Resize).
 - [x] **Refinement:** Established "Golden Master" v3.0 Environment Guide.
-    - *Implemented:* `docker-compose.yml` for standardized workflow.
-    - *Fixed:* Dataset Symbolic Link bridge (Host `/root/Work` <-> Container `/app`) baked into Dockerfile.
 
-#### ⚠️ History of Failed Attempts (Lessons Learned)
-*These approaches were attempted and discarded to ensure stability.*
+#### ⚠️ History of Failed Attempts (Phase 0)
 - [❌] **FAILED:** Build "Bleeding Edge" Image (Ubuntu 24.04 + CUDA 13.1). 
-    - *Reason:* Too many breaking API changes in CUDA 13.1; incompatible with current OpenCV source.
 - [❌] **FAILED:** Compile OpenCV 4.10 with `NVCUVID=ON` inside Docker.
-    - *Reason:* NVIDIA deprecated headers (nvcuvid.h) in CUDA 12.x. "Headless" build environments cannot reliably satisfy linker checks for runtime drivers without fragile hacks.
 
 ### Phase 1: Model & Dataset Strategy
 **Status:** ✅ COMPLETE
-- [x] **Action 1.1: Audit UVH-26 Dataset.**
-    - *Outcome:* Identified critical imbalance (Mini Bus < 1% vs MTW 47%).
-    - *Artifact:* `src/utils/dataset_auditor.py`.
-- [x] **Action 1.2: Design Taxonomy & Logic.**
-    - *Strategy:* **Config-Driven Architecture**. Decoupled logic from code using `vehicle_taxonomy.json`.
-    - *Outcome:* Normalized chaotic labels (Tempo, Tata Ace) into structured Target IDs.
-- [x] **Action 1.3: Engineer Balanced Dataset.**
-    - *Strategy:* **Manifest Oversampling**. Multiplied rare classes (Mini Bus 20x, LCV 5x) in the training manifest.
-    - *Outcome:* `itva_phase1` dataset created. Effective balance achieved without synthetic data.
+- [x] **Action 1.1: Audit UVH-26 Dataset.** (Identified Mini Bus imbalance).
+- [x] **Action 1.2: Design Taxonomy & Logic.** (Config-Driven `vehicle_taxonomy.json`).
+- [x] **Action 1.3: Engineer Balanced Dataset.** (Manifest Oversampling 20x).
 - [x] **Action 1.4: Train Model (The "Brain").**
-    - [x] **Pivot to Medium:** Switched from YOLO11-Large to **YOLO11-Medium** to resolve 5-day training bottleneck.
-    - [x] **High-Res Strategy:** Trained at **1088p** (1088px) to secure small-object recall.
-    - [x] **Outcome:** Achieved **mAP@50 > 0.93** and **Recall > 0.88** by Epoch 9.
-    - [x] **Validation:** Confirmed "Mini Bus" class is generalizing (Precision ~0.92, Recall ~0.98). Model released as `itva_medium_1088p.pt`.
-	- [x] Completion: Stopped training at Epoch 9 due to sufficient convergence (diminishing returns).
+    - [x] **Pivot:** Switched to **YOLO11-Medium** @ 1088p.
+    - [x] **Outcome:** Achieved **mAP@50 > 0.92** and **Recall > 0.88** by Epoch 7.
+    - [x] **Validation:** Confirmed "Mini Bus" generalization.
 
 ### Phase 2: High-Accuracy Offline Engine
 **Status:** 🚀 IN PROGRESS
-- [ ] **Action 2.1: The "Ensemble" Inference Engine.**
-    - *Strategy:* Run two models per frame to bridge the "missing class" gap.
-    - *Model A:* Custom `best.pt` (Medium) for Vehicles (Auto, Tempo, Truck).
-    - *Model B:* Standard `yolo11n.pt` (Nano) for **Pedestrians** (Class 0).
+- [x] **Action 2.1: The "Ensemble" Inference Engine.**
+    - *Goal:* Run two models simultaneously to cover Vehicles + Pedestrians.
+    - **Iteration Log (The Accuracy Climb):**
+        - [x] **Attempt 1 (Nano Sidecar):** Used `yolo11n.pt` for pedestrians. 
+            - *Result:* High speed, but false positives on Motorbike Riders and Car parts. Low confidence (0.35).
+        - [x] **Attempt 2 (Rider Suppression):** Implemented IoA Logic (`Intersection / Person_Area > 0.3`) to suppress people overlapping with 2-Wheelers.
+            - *Result:* Fixed "Rider" issue, but "Car Side" false positives remained.
+        - [x] **Attempt 3 (Small + Universal Suppression):** Upgraded to `yolo11s.pt` and checked overlap against *ALL* vehicles.
+            - *Result:* Better, but confidence still borderline (0.40 - 0.65).
+        - [x] **Attempt 4 (Dual-GPU Isolation):** **Final Strategy.**
+            - *Implementation:* Pushed Model A (Vehicles) to `cuda:0` and Model B (Pedestrians, **YOLO11-Medium**) to `cuda:1`.
+            - *Outcome:* High accuracy (>0.75 confidence) with zero latency penalty on the main vehicle stream.
 - [ ] **Action 2.2: Logic-Based Classification Layer.**
     - *Problem:* UVH-26 lacks explicit labels for MCV, Trailers, and Taxis.
     - *Solution:* Implement Post-Processing Heuristics:
@@ -65,7 +60,6 @@
         - **Taxi Split:** Filter `Car` by Color (Yellow Region Analysis).
 - [ ] **Action 2.3: High-Speed Tracking.**
     - *Decision:* Use **ByteTrack** instead of BoT-SORT.
-    - *Reason:* High detection confidence (mAP50-95 ~0.85) makes Re-ID redundant. ByteTrack saves VRAM and is faster.
 - [ ] **Action 2.4: Counting Logic.**
     - *Implementation:* Vector-based Line Crossing (In/Out counts).
 
@@ -83,22 +77,18 @@
 ## 🏗️ Architectural Decisions (Log)
 | Date | Decision | Rationale |
 | :--- | :--- | :--- |
-| 2026-01-26 | **Docker-First Environment** | Avoids "dependency hell" on host OS; ensures GPU passthrough stability. |
-| 2026-01-26 | **Dual-GPU Worker Strategy** | Maximizes 24GB total VRAM via parallel file processing. |
-| 2026-01-28 | **Container Downgrade** | Downgraded to Ubuntu 22.04 / CUDA 12.4 to ensure stable OpenCV compilation. |
-| 2026-01-28 | **Decoding Pivot (DALI)** | Switched to NVIDIA DALI for maintenance-free GPU decoding, abandoning `NVCUVID`. |
-| 2026-01-30 | **Config-Driven Taxonomy** | Decoupled Class Mapping from Python code. `vehicle_taxonomy.json` is now the Single Source of Truth. |
-| 2026-01-30 | **Manifest Oversampling** | Solved <1% class imbalance (Mini Bus) by repeating file paths in the training list 20x. |
-| 2026-01-31 | **The "Medium" Pivot** | Switched from Large to Medium Model. Drastically improved training speed while maintaining >0.92 mAP via 1088p resolution. |
-| 2026-01-31 | **Ensemble Inference** | Adopted "Sidecar" strategy: Running a parallel YOLO-Nano model specifically for Pedestrians, avoiding the need to retrain for common classes. |
-| 2026-01-31 | **Native Inference (No SAHI)** | Dropped SAHI for Phase 2. Native 1088p Recall (0.88+) is sufficient; SAHI latency is unjustified. |
-| 2026-01-31 | **ByteTrack Adoption** | Switched from BoT-SORT to ByteTrack due to high detection confidence (mAP50-95 > 0.85), saving compute resources. |
-| 2026-01-31 | **Early Stopping (Epoch 9)** | Model reached "Production Grade" metrics (mAP > 0.93) rapidly. Halted training to prevent overfitting and move to Inference logic. |
+| 2026-01-28 | **Decoding Pivot (DALI)** | Switched to NVIDIA DALI for maintenance-free GPU decoding. |
+| 2026-01-30 | **Config-Driven Taxonomy** | Decoupled Class Mapping from Python code. |
+| 2026-01-31 | **The "Medium" Pivot (Training)** | Switched Training to YOLO11-Medium to resolve 5-day bottleneck. |
+| 2026-01-31 | **Ensemble Inference** | Adopted "Sidecar" strategy (Vehicle Model + Pedestrian Model). |
+| 2026-01-31 | **ByteTrack Adoption** | Switched from BoT-SORT to ByteTrack due to high detection confidence. |
+| 2026-02-04 | **Universal Vehicle Suppression** | Logic Rule: If a "Person" overlaps >30% with *any* vehicle box, suppress them (Driver/Passenger/False Positive). |
+| 2026-02-04 | **Dual-GPU Isolation (Inference)** | Assigned Vehicle Model to `GPU 0` and Pedestrian Model to `GPU 1`. Allowed upgrading Pedestrian model to **Medium** for high accuracy without checking VRAM limits. |
 
 ---
 
 ## ⚠️ Known Blockers / Risks
-- **Overfitting Monitor:** Rapid convergence (Epoch 7) suggests potential memorization of oversampled classes. 
-    - *Status:* Monitor Class-wise Precision. Current metrics show healthy generalization (Val Loss decreasing).
 - **Logic Fragility:** "Heuristic" splitting (e.g., Truck vs MCV by size) is sensitive to camera distance/calibration.
     - *Mitigation:* Will require a "Calibration Factor" in the config for each video source.
+- **Distance Decay:** Pedestrians/Bikes far away (>50m) are missed or misclassified.
+    - *Mitigation:* Implemented **Horizon Line Filter** (Action 2.3) to ignore unreliable detections in the upper frame background.

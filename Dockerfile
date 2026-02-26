@@ -36,28 +36,27 @@ RUN mkdir -p opencv/build && cd opencv/build && \
     make install
 
 # ==============================================================================
-# STAGE 2: The Runtime (Production Ready) - FIXED
+# STAGE 2: The Runtime (Production Ready) - UPDATED
 # ==============================================================================
 FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
 
 WORKDIR /workspace/ViAna
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 1. Install Runtime Dependencies
+# 1. Install Runtime Dependencies (Added 'ffmpeg')
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-numpy \
     libgl1 libglib2.0-0 libgomp1 libprotobuf-dev \
     libjpeg-dev libpng-dev libtiff-dev \
     libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \
     libavcodec58 libavformat58 libswscale5 \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Install PyTorch (Pinned to CUDA 12.4)
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 
-# 3. Install Data Engineering Tools (FIXED)
-# - huggingface_hub[cli]: ADDS the 'huggingface-cli' command
-# - hf_transfer: ADDS the Rust accelerator for speed
+# 3. Install Data Engineering Tools
 RUN pip3 install --no-cache-dir --default-timeout=100 \
     "huggingface_hub[cli]" \
     hf_transfer \
@@ -79,6 +78,7 @@ COPY --from=builder /usr/local/lib/python3.10 /usr/local/lib/python3.10
 
 # 5. Setup Paths
 RUN ldconfig
+
 # [NEW] Fix for Absolute Symlinks in Dataset
 # Creates a bridge so links pointing to '/root/Work/ViAna' 
 # automatically redirect to the container mount '/app/ViAna'
@@ -88,7 +88,3 @@ RUN mkdir -p /root/Work && \
 ENV PYTHONPATH=/usr/local/lib/python3.10/site-packages:/usr/local/lib/python3.10/dist-packages
 
 CMD ["/bin/bash"]
-
-
-
-

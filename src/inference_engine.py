@@ -5,6 +5,7 @@ import cv2
 import torch
 import argparse
 import numpy as np
+import subprocess
 from ultralytics import YOLO
 import supervision as sv
 from collections import defaultdict, Counter
@@ -12,7 +13,7 @@ from collections import defaultdict, Counter
 # --- CONFIGURATION ---
 PEDESTRIAN_CLASS_ID = 11
 SUPPRESSION_IOA_THRESHOLD = 0.3
-AGNOSTIC_NMS_THRESHOLD = 0.5  # [NEW] Kills overlapping boxes of different classes
+AGNOSTIC_NMS_THRESHOLD = 0.5  
 
 # Horizon (Red Line) 0.30
 HORIZON_POINT_LEFT = (0.0, 0.6)
@@ -23,7 +24,7 @@ COUNTING_LINE_START = (0.0, 1.15)
 COUNTING_LINE_END = (1.0, -0.15)
 
 # Logic Constants
-TRAILER_ASPECT_RATIO = 2.5 # Only geometric rule kept for trucks
+TRAILER_ASPECT_RATIO = 2.5 
 
 # Hardware
 DEVICE_A = 'cuda:0' 
@@ -114,7 +115,7 @@ def draw_counts_on_line(frame, line_start, line_end, in_counts, out_counts):
         cv2.putText(frame, in_text, (center_x - tw//2, center_y + 30), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), thickness)
 
 def run_engine(video_path, model_a_path, model_b_path, output_path):
-    print(f"🚀 Starting Engine: Agnostic NMS & Native Truck Classes Active")
+    print(f"🚀 Starting Engine: Optimized Hardware FFmpeg (Low Size)")
     
     model_a = YOLO(model_a_path); model_a.to(DEVICE_A)
     model_b = YOLO(model_b_path); model_b.to(DEVICE_B)
@@ -138,7 +139,34 @@ def run_engine(video_path, model_a_path, model_b_path, output_path):
     x2_h = int(HORIZON_POINT_RIGHT[0] * w); y2_h = int(HORIZON_POINT_RIGHT[1] * h)
     horizon_slope = (y2_h - y1_h) / (x2_h - x1_h + 1e-6)
 
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+    # --- [NEW] Optimized FFmpeg NVENC Pipe ---
+    # --- [NEW] Ultra-Compressed FFmpeg NVENC Pipe ---
+    # --- [NEW] Extreme Compression HEVC (H.265) Pipe ---
+    command = [
+        'ffmpeg',
+        '-y',
+        '-loglevel', 'error',
+        '-f', 'rawvideo',
+        '-vcodec', 'rawvideo',
+        '-s', f'{w}x{h}',
+        '-pix_fmt', 'bgr24',
+        '-r', f'{fps}',
+        '-i', '-',
+        
+        # --- EXTREME ENCODING SETTINGS ---
+        '-c:v', 'hevc_nvenc',      # Switch to H.265 (Massive size reduction)
+        '-pix_fmt', 'yuv420p',
+        '-preset', 'p7',           # Slowest preset = Best possible compression
+        '-rc', 'vbr',
+        '-cq', '38',               # Aggressive compression (38-40 range)
+        '-b:v', '0',               # Target bitrate 0 (let CQ take over)
+        '-bf', '3',                # Maximize B-frames (critical for static backgrounds)
+        '-spatial-aq', '1',        # Keeps text/boxes sharp even at high compression
+        
+        output_path
+    ]
+    ffmpeg_pipe = subprocess.Popen(command, stdin=subprocess.PIPE)
+    
     frame_count = 0
 
     while cap.isOpened():
@@ -168,28 +196,22 @@ def run_engine(video_path, model_a_path, model_b_path, output_path):
             cv2.line(frame, (x1_h, y1_h), (x2_h, y2_h), (0, 0, 255), 2)
             cv2.line(frame, (line_start.x, line_start.y), (line_end.x, line_end.y), (0, 255, 0), 2)
             draw_counts_on_line(frame, line_start, line_end, counts_in, counts_out)
-            out.write(frame); continue
+            ffmpeg_pipe.stdin.write(frame.tobytes()) 
+            continue
 
-        # 1. Create Raw Detections
         detections = sv.Detections(xyxy=np.array(final_boxes), confidence=np.array(final_conf), class_id=np.array(final_cls))
-
-        # 2. [FIX] AGNOSTIC NMS: Kill double-boxes (e.g., Car and Jeep over the same object)
         detections = detections.with_nms(threshold=AGNOSTIC_NMS_THRESHOLD, class_agnostic=True)
 
-        # 3. Horizon Filter
         centers_x = (detections.xyxy[:, 0] + detections.xyxy[:, 2]) / 2
         centers_y = (detections.xyxy[:, 1] + detections.xyxy[:, 3]) / 2
         cutoff = y1_h + horizon_slope * (centers_x - x1_h)
         detections = detections[centers_y > cutoff]
 
-        # 4. Tracking
         detections = tracker.update_with_detections(detections)
         
-        # 5. Logic Overrides & Voting
         updated_class_ids = []
         for xyxy, tracker_id, class_id in zip(detections.xyxy, detections.tracker_id, detections.class_id):
             
-            # [FIX] Geometric Rule: Only check for Trailers. Trust AI for MCV vs Heavy Truck.
             if class_id in [7, 12]:
                 w_box, h_box = xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]
                 ratio = w_box / h_box if h_box > 0 else 0
@@ -249,20 +271,24 @@ def run_engine(video_path, model_a_path, model_b_path, output_path):
         cv2.rectangle(frame, (0, 0), (w, 50), (0, 0, 0), -1)
         cv2.putText(frame, dashboard_text, (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-        out.write(frame)
+        ffmpeg_pipe.stdin.write(frame.tobytes())
         
         if frame_count % 100 == 0: print(f"   ⏳ Processed {frame_count}/{total_frames} frames")
         if frame_count % 1000 == 0: print_traffic_report(frame_count, total_frames)
 
-    cap.release(); out.release()
+    cap.release()
+    ffmpeg_pipe.stdin.close()
+    ffmpeg_pipe.wait()
+    
     print_traffic_report(frame_count, total_frames)
+    print(f"✅ Video successfully encoded and saved to {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", required=True)
     parser.add_argument("--model_a", default="/app/ViAna/models/v1/itva_medium_1088p.pt")
     parser.add_argument("--model_b", default="yolo11l.pt")
-    parser.add_argument("--out", default="final_agnostic_nms.mp4")
+    parser.add_argument("--out", default="final_opt_output.mp4")
     args = parser.parse_args()
     
     run_engine(args.video, args.model_a, args.model_b, args.out)

@@ -7,7 +7,7 @@
 
 ## 🚦 Project Master Status
 - **Current Phase:** Phase 2: High-Accuracy Offline Engine (Logic Remediation & Stabilization)
-- **Overall Progress:** 65% (Inference & Tracking Stable; Logic Layer Needs Perspective Fix)
+- **Overall Progress:** 70% (Inference, Tracking, and Export Stable; Core Logic Fixes Next)
 - **Last Updated:** 2026-02-26
 
 ---
@@ -68,9 +68,9 @@
     - *Status:* **Active but Flawed.** Vector-based line crossing working, but counts are polluted by classification flickering (Truck $\leftrightarrow$ MCV) and double-counting (tracker ID switches).
 
 #### 🔄 Active Remediation Actions (The Logic Overhaul - Sequenced for Execution)
-- [ ] **Action 2.5: Hardware-Accelerated Video Export (Priority 0 - Infrastructure).**
+- [x] **Action 2.5: Hardware-Accelerated Video Export (Priority 0 - Infrastructure).**
     - *Problem:* `cv2.VideoWriter` generates massive, uncompressed files (GBs instead of MBs) that clog the drive during testing.
-    - *Strategy:* Replace OpenCV writer with a piped **FFmpeg Subprocess** using `h264_nvenc` to offload compression to the GPU media engine.
+    - *Strategy:* Replaced OpenCV writer with a piped **FFmpeg Subprocess** using `hevc_nvenc` to offload compression to the GPU media engine for extreme size reduction.
 - [ ] **Action 2.6: Perspective Correction Logic (Priority 1 - Data Integrity).**
     - *Problem:* Distant Heavy Trucks are mathematically misclassified as MCV because their pixel area drops below the static threshold.
     - *Strategy:* **Reference Box Calibration.** Define `NEAR_SCALE` and `FAR_SCALE`. Implement `normalize_area()` to convert raw pixels to depth-invariant "Virtual Meters" before applying logic thresholds.
@@ -111,7 +111,7 @@
 | 2026-02-04 | **Dual-GPU Isolation (Inference)** | Assigned Vehicle Model to `GPU 0` and Pedestrian Model to `GPU 1`. Allowed upgrading Pedestrian model to **Medium** for high accuracy without checking VRAM limits. |
 | 2026-02-05 | **Perspective Correction** | Decided to abandon static "Area Thresholds" for MCV/Truck logic. Moving to **Depth-Normalized Area** to handle perspective distortion. |
 | 2026-02-26 | **Double-Counting Stateful Locks** | Transitioning from basic coordinate tracking to a `counted_ids` Set memory structure to prevent tracker jitter from artificially inflating volume metrics. |
-| 2026-02-26 | **FFmpeg Export Pipe** | Moved away from OpenCV `VideoWriter` to hardware-accelerated FFmpeg (`h264_nvenc`) to solve file size bloat. |
+| 2026-02-26 | **FFmpeg Export Pipe** | Moved away from OpenCV `VideoWriter` to hardware-accelerated FFmpeg (`hevc_nvenc`) to solve file size bloat. |
 
 ---
 

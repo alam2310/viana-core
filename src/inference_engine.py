@@ -12,6 +12,7 @@ from collections import defaultdict, Counter
 # --- CONFIGURATION ---
 PEDESTRIAN_CLASS_ID = 11
 SUPPRESSION_IOA_THRESHOLD = 0.3
+AGNOSTIC_NMS_THRESHOLD = 0.5  # [NEW] Kills overlapping boxes of different classes
 
 # Horizon (Red Line) 0.30
 HORIZON_POINT_LEFT = (0.0, 0.6)
@@ -22,11 +23,7 @@ COUNTING_LINE_START = (0.0, 1.15)
 COUNTING_LINE_END = (1.0, -0.15)
 
 # Logic Constants
-MCV_AREA_THRESHOLD = 35000       
-TRAILER_ASPECT_RATIO = 2.5
-TAXI_YELLOW_MIN = np.array([20, 100, 100])
-TAXI_YELLOW_MAX = np.array([30, 255, 255])
-TAXI_PIXEL_RATIO = 0.10
+TRAILER_ASPECT_RATIO = 2.5 # Only geometric rule kept for trucks
 
 # Hardware
 DEVICE_A = 'cuda:0' 
@@ -43,7 +40,6 @@ CLASS_NAMES = {
 
 # --- STATE MANAGEMENT ---
 track_history = defaultdict(lambda: {
-    'max_area': 0, 
     'class_votes': Counter(), 
     'locked_class': None
 })
@@ -61,17 +57,6 @@ def is_inside_vehicle(person_box, vehicle_boxes, threshold=0.3):
         ix2 = min(px2, vx2); iy2 = min(py2, vy2)
         if ix2 > ix1 and iy2 > iy1:
             if ((ix2 - ix1) * (iy2 - iy1) / person_area) > threshold: return True
-    return False
-
-def is_taxi(frame, box):
-    x1, y1, x2, y2 = box.astype(int)
-    h_img, w_img = frame.shape[:2]
-    x1 = max(0, x1); y1 = max(0, y1); x2 = min(w_img, x2); y2 = min(h_img, y2)
-    if x1 >= x2 or y1 >= y2: return False
-    car_roi = frame[y1:y2, x1:x2]
-    hsv_roi = cv2.cvtColor(car_roi, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv_roi, TAXI_YELLOW_MIN, TAXI_YELLOW_MAX)
-    if cv2.countNonZero(mask) / (car_roi.size / 3) > TAXI_PIXEL_RATIO: return True
     return False
 
 def print_traffic_report(current_frame, total_frames):
@@ -129,7 +114,7 @@ def draw_counts_on_line(frame, line_start, line_end, in_counts, out_counts):
         cv2.putText(frame, in_text, (center_x - tw//2, center_y + 30), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), thickness)
 
 def run_engine(video_path, model_a_path, model_b_path, output_path):
-    print(f"🚀 Starting Engine: Large Video Mode")
+    print(f"🚀 Starting Engine: Agnostic NMS & Native Truck Classes Active")
     
     model_a = YOLO(model_a_path); model_a.to(DEVICE_A)
     model_b = YOLO(model_b_path); model_b.to(DEVICE_B)
@@ -138,7 +123,7 @@ def run_engine(video_path, model_a_path, model_b_path, output_path):
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) # [NEW] Get Total Frames
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     tracker = sv.ByteTrack(frame_rate=30)
     
@@ -170,7 +155,6 @@ def run_engine(video_path, model_a_path, model_b_path, output_path):
             for box in res_a.boxes:
                 xyxy = box.xyxy[0].cpu().numpy()
                 cls = int(box.cls[0].cpu().numpy())
-                if cls == 0 and is_taxi(frame, xyxy): cls = 14
                 final_boxes.append(xyxy); final_conf.append(float(box.conf[0])); final_cls.append(cls)
                 if cls in ALL_VEHICLE_CLASSES: vehicle_boxes.append(xyxy)
 
@@ -186,35 +170,35 @@ def run_engine(video_path, model_a_path, model_b_path, output_path):
             draw_counts_on_line(frame, line_start, line_end, counts_in, counts_out)
             out.write(frame); continue
 
+        # 1. Create Raw Detections
         detections = sv.Detections(xyxy=np.array(final_boxes), confidence=np.array(final_conf), class_id=np.array(final_cls))
 
+        # 2. [FIX] AGNOSTIC NMS: Kill double-boxes (e.g., Car and Jeep over the same object)
+        detections = detections.with_nms(threshold=AGNOSTIC_NMS_THRESHOLD, class_agnostic=True)
+
+        # 3. Horizon Filter
         centers_x = (detections.xyxy[:, 0] + detections.xyxy[:, 2]) / 2
         centers_y = (detections.xyxy[:, 1] + detections.xyxy[:, 3]) / 2
         cutoff = y1_h + horizon_slope * (centers_x - x1_h)
         detections = detections[centers_y > cutoff]
 
+        # 4. Tracking
         detections = tracker.update_with_detections(detections)
         
+        # 5. Logic Overrides & Voting
         updated_class_ids = []
         for xyxy, tracker_id, class_id in zip(detections.xyxy, detections.tracker_id, detections.class_id):
             
-            w_box, h_box = xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]
-            current_area = w_box * h_box
-            track_history[tracker_id]['max_area'] = max(track_history[tracker_id]['max_area'], current_area)
-            max_area = track_history[tracker_id]['max_area']
-
+            # [FIX] Geometric Rule: Only check for Trailers. Trust AI for MCV vs Heavy Truck.
             if class_id in [7, 12]:
+                w_box, h_box = xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]
                 ratio = w_box / h_box if h_box > 0 else 0
                 if ratio > TRAILER_ASPECT_RATIO: 
                     class_id = 13
                     track_history[tracker_id]['locked_class'] = 13
-                elif max_area < MCV_AREA_THRESHOLD: class_id = 12 
-                else: class_id = 7 
             
             if track_history[tracker_id]['locked_class'] is not None:
                 class_id = track_history[tracker_id]['locked_class']
-            elif class_id == 14:
-                track_history[tracker_id]['locked_class'] = 14
 
             track_history[tracker_id]['class_votes'][class_id] += 1
             if track_history[tracker_id]['locked_class'] is None:
@@ -225,7 +209,6 @@ def run_engine(video_path, model_a_path, model_b_path, output_path):
         
         detections.class_id = np.array(updated_class_ids)
 
-        # --- COUNTING (SAFETY CHECKED) ---
         if len(detections) > 0:
             bottom_centers = detections.get_anchors_coordinates(sv.Position.BOTTOM_CENTER)
             proxy_xyxy = []
@@ -244,7 +227,6 @@ def run_engine(video_path, model_a_path, model_b_path, output_path):
                 if is_in: counts_out[cls_id] += 1
                 if is_out: counts_in[cls_id] += 1
             
-            # Draw Debug Anchors only if detections exist
             for center in bottom_centers:
                 cv2.circle(frame, (int(center[0]), int(center[1])), 5, (0, 255, 255), -1)
 
@@ -269,13 +251,8 @@ def run_engine(video_path, model_a_path, model_b_path, output_path):
 
         out.write(frame)
         
-        # [NEW] Log every 100 frames with Total count
-        if frame_count % 100 == 0: 
-            print(f"   ⏳ Processed {frame_count}/{total_frames} frames")
-            
-        # [NEW] Periodic ASCII Table every 1000 frames
-        if frame_count % 1000 == 0:
-            print_traffic_report(frame_count, total_frames)
+        if frame_count % 100 == 0: print(f"   ⏳ Processed {frame_count}/{total_frames} frames")
+        if frame_count % 1000 == 0: print_traffic_report(frame_count, total_frames)
 
     cap.release(); out.release()
     print_traffic_report(frame_count, total_frames)
@@ -285,6 +262,7 @@ if __name__ == "__main__":
     parser.add_argument("--video", required=True)
     parser.add_argument("--model_a", default="/app/ViAna/models/v1/itva_medium_1088p.pt")
     parser.add_argument("--model_b", default="yolo11l.pt")
-    parser.add_argument("--out", default="final_large_run.mp4")
+    parser.add_argument("--out", default="final_agnostic_nms.mp4")
     args = parser.parse_args()
+    
     run_engine(args.video, args.model_a, args.model_b, args.out)

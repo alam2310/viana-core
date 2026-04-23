@@ -2,293 +2,351 @@ import warnings
 warnings.filterwarnings("ignore", message="The value of the smallest subnormal")
 
 import cv2
-import torch
+import time
+import datetime
 import argparse
-import numpy as np
 import subprocess
+import numpy as np
+from dataclasses import dataclass, field
+from collections import defaultdict, Counter
+from typing import Dict, List, Tuple
+
+import torch
 from ultralytics import YOLO
 import supervision as sv
-from collections import defaultdict, Counter
 
-# --- CONFIGURATION ---
-PEDESTRIAN_CLASS_ID = 11
-SUPPRESSION_IOA_THRESHOLD = 0.3
-AGNOSTIC_NMS_THRESHOLD = 0.5  
 
-# Horizon (Red Line) 0.30
-HORIZON_POINT_LEFT = (0.0, 0.6)
-HORIZON_POINT_RIGHT = (1.0, -0.4)
-
-# Counting (Green Line) 0.65
-COUNTING_LINE_START = (0.0, 1.15) 
-COUNTING_LINE_END = (1.0, -0.15)
-
-# Logic Constants
-TRAILER_ASPECT_RATIO = 2.5 
-
-# Hardware
-DEVICE_A = 'cuda:0' 
-DEVICE_B = 'cuda:1' 
-
-# Classes
-ALL_VEHICLE_CLASSES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14]
-CLASS_NAMES = {
-    0: 'Car', 1: 'Jeep', 2: 'Van', 3: 'MiniBus', 4: 'MTW', 
-    5: 'Auto', 6: 'Bus', 7: 'Heavy Truck', 8: 'LCV', 9: 'Cycle', 
-    10: 'Other', 11: 'Pedestrian',
-    12: 'MCV', 13: 'Trailer', 14: 'Taxi'
-}
-
-# --- STATE MANAGEMENT ---
-track_history = defaultdict(lambda: {
-    'class_votes': Counter(), 
-    'locked_class': None
-})
-
-counts_in = defaultdict(int)
-counts_out = defaultdict(int)
-
-def is_inside_vehicle(person_box, vehicle_boxes, threshold=0.3):
-    px1, py1, px2, py2 = person_box
-    person_area = (px2 - px1) * (py2 - py1)
-    if person_area == 0: return False
-    for vbox in vehicle_boxes:
-        vx1, vy1, vx2, vy2 = vbox
-        ix1 = max(px1, vx1); iy1 = max(py1, vy1)
-        ix2 = min(px2, vx2); iy2 = min(py2, vy2)
-        if ix2 > ix1 and iy2 > iy1:
-            if ((ix2 - ix1) * (iy2 - iy1) / person_area) > threshold: return True
-    return False
-
-def print_traffic_report(current_frame, total_frames):
-    print("\n" + "="*65)
-    print(f"📊 TRAFFIC REPORT @ Frame {current_frame}/{total_frames}")
-    print(f"{'CLASS NAME':<20} | {'IN COUNT':<10} | {'OUT COUNT':<10} | {'TOTAL':<10}")
-    print("-" * 65)
+# ==============================================================================
+# 1. CONFIGURATION
+# ==============================================================================
+@dataclass
+class TrafficConfig:
+    # Model Settings
+    device_a: str = 'cuda:0'
+    device_b: str = 'cuda:1'
+    pedestrian_id: int = 11
+    suppression_ioa: float = 0.3
+    nms_threshold: float = 0.5
     
-    all_classes = set(counts_in.keys()) | set(counts_out.keys())
-    sorted_stats = []
+    # Logic Constants
+    lock_frames: int = 15
+    perspective_scale: float = 6.0
+    trailer_ratio: float = 2.5
+    lcv_max_area: int = 25000
+    mcv_max_area: int = 65000
+    commercial_trucks: List[int] = field(default_factory=lambda: [7, 8, 12])
     
-    for cls_id in all_classes:
-        c_in = counts_in[cls_id]
-        c_out = counts_out[cls_id]
-        total = c_in + c_out
-        name = CLASS_NAMES.get(cls_id, f"ID {cls_id}")
-        sorted_stats.append((name, c_in, c_out, total))
+    # Geometry (Normalized)
+    horizon_left: Tuple[float, float] = (0.0, 0.2)
+    horizon_right: Tuple[float, float] = (1.0, 0.2)
+    counting_start: Tuple[float, float] = (0.0, 0.5)
+    counting_end: Tuple[float, float] = (1.0, 0.5)
     
-    sorted_stats.sort(key=lambda x: x[3], reverse=True)
-    
-    for name, c_in, c_out, total in sorted_stats:
-        print(f"{name:<20} | {c_in:<10} | {c_out:<10} | {total:<10}")
-    print("="*65 + "\n")
+    # Taxonomy
+    target_classes: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14])
+    class_names: Dict[int, str] = field(default_factory=lambda: {
+        0: 'Car', 1: 'Jeep', 2: 'Van', 3: 'MiniBus', 4: 'MTW', 
+        5: 'Auto', 6: 'Bus', 7: 'Heavy Truck', 8: 'LCV', 9: 'Cycle', 
+        10: 'Other', 11: 'Pedestrian', 12: 'MCV', 13: 'Trailer', 14: 'Taxi'
+    })
 
-def draw_counts_on_line(frame, line_start, line_end, in_counts, out_counts):
-    center_x = int((line_start.x + line_end.x) / 2)
-    center_y = int((line_start.y + line_end.y) / 2)
-    
-    DISPLAY_ORDER = sorted(CLASS_NAMES.keys())
-    
-    out_text = "OUT: "
-    has_out = False
-    for cls_id in DISPLAY_ORDER:
-        if out_counts[cls_id] > 0:
-            out_text += f"{CLASS_NAMES[cls_id]}:{out_counts[cls_id]} "
-            has_out = True
-    
-    in_text = "IN: "
-    has_in = False
-    for cls_id in DISPLAY_ORDER:
-        if in_counts[cls_id] > 0:
-            in_text += f"{CLASS_NAMES[cls_id]}:{in_counts[cls_id]} "
-            has_in = True
 
-    font_scale = 0.6; thickness = 2
-    
-    if has_out:
-        (tw, th), _ = cv2.getTextSize(out_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-        cv2.rectangle(frame, (center_x - tw//2 - 5, center_y - 30), (center_x + tw//2 + 5, center_y - 5), (0, 0, 0), -1)
-        cv2.putText(frame, out_text, (center_x - tw//2, center_y - 10), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (100, 255, 255), thickness)
-
-    if has_in:
-        (tw, th), _ = cv2.getTextSize(in_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-        cv2.rectangle(frame, (center_x - tw//2 - 5, center_y + 10), (center_x + tw//2 + 5, center_y + 35), (0, 0, 0), -1)
-        cv2.putText(frame, in_text, (center_x - tw//2, center_y + 30), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), thickness)
-
-def run_engine(video_path, model_a_path, model_b_path, output_path):
-    print(f"🚀 Starting Engine: Optimized Hardware FFmpeg (Low Size)")
-    
-    model_a = YOLO(model_a_path); model_a.to(DEVICE_A)
-    model_b = YOLO(model_b_path); model_b.to(DEVICE_B)
-
-    cap = cv2.VideoCapture(video_path)
-    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    tracker = sv.ByteTrack(frame_rate=30)
-    
-    line_start = sv.Point(int(COUNTING_LINE_START[0] * w), int(COUNTING_LINE_START[1] * h))
-    line_end = sv.Point(int(COUNTING_LINE_END[0] * w), int(COUNTING_LINE_END[1] * h))
-    line_zone = sv.LineZone(start=line_start, end=line_end)
-    
-    box_annotator = sv.BoxAnnotator(thickness=2)
-    label_annotator = sv.LabelAnnotator(text_scale=0.5, text_thickness=1)
-
-    x1_h = int(HORIZON_POINT_LEFT[0] * w); y1_h = int(HORIZON_POINT_LEFT[1] * h)
-    x2_h = int(HORIZON_POINT_RIGHT[0] * w); y2_h = int(HORIZON_POINT_RIGHT[1] * h)
-    horizon_slope = (y2_h - y1_h) / (x2_h - x1_h + 1e-6)
-
-    # --- [NEW] Optimized FFmpeg NVENC Pipe ---
-    # --- [NEW] Ultra-Compressed FFmpeg NVENC Pipe ---
-    # --- [NEW] Extreme Compression HEVC (H.265) Pipe ---
-    command = [
-        'ffmpeg',
-        '-y',
-        '-loglevel', 'error',
-        '-f', 'rawvideo',
-        '-vcodec', 'rawvideo',
-        '-s', f'{w}x{h}',
-        '-pix_fmt', 'bgr24',
-        '-r', f'{fps}',
-        '-i', '-',
+# ==============================================================================
+# 2. BUSINESS LOGIC & STATE MANAGEMENT
+# ==============================================================================
+class ClassificationEngine:
+    """Handles perspective math, trailer detection, and the N-frame voting lock."""
+    def __init__(self, config: TrafficConfig, frame_height: int):
+        self.config = config
+        self.h = frame_height
+        self.horizon_y = config.horizon_left[1] * frame_height
         
-        # --- EXTREME ENCODING SETTINGS ---
-        '-c:v', 'hevc_nvenc',      # Switch to H.265 (Massive size reduction)
-        '-pix_fmt', 'yuv420p',
-        '-preset', 'p7',           # Slowest preset = Best possible compression
-        '-rc', 'vbr',
-        '-cq', '38',               # Aggressive compression (38-40 range)
-        '-b:v', '0',               # Target bitrate 0 (let CQ take over)
-        '-bf', '3',                # Maximize B-frames (critical for static backgrounds)
-        '-spatial-aq', '1',        # Keeps text/boxes sharp even at high compression
+        # State: tracker_id -> {'votes': [], 'locked_class': int, 'max_ratio': float, 'max_norm_area': float}
+        self.track_history = defaultdict(lambda: {
+            'votes': [], 
+            'locked_class': None,
+            'max_ratio': 0.0,
+            'max_norm_area': 0.0
+        })
+
+    def normalize_area(self, raw_area: float, box_cy: float) -> float:
+        rel_y = (box_cy - self.horizon_y) / (self.h - self.horizon_y)
+        rel_y = np.clip(rel_y, 0.001, 1.0)
+        scale = 1 + (self.config.perspective_scale - 1) * (1 - rel_y)
+        return raw_area * scale
+
+    def process_vehicle(self, tracker_id: int, raw_class: int, xyxy: np.ndarray) -> Tuple[int, int]:
+        """Returns (final_class_id, normalized_area)"""
+        w_box, h_box = xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]
+        box_cy = (xyxy[1] + xyxy[3]) / 2
         
-        output_path
-    ]
-    ffmpeg_pipe = subprocess.Popen(command, stdin=subprocess.PIPE)
-    
-    frame_count = 0
+        raw_area = w_box * h_box
+        norm_area = self.normalize_area(raw_area, box_cy)
+        ratio = w_box / h_box if h_box > 0 else 0
+        state = self.track_history[tracker_id]
 
-    while cap.isOpened():
-        success, frame = cap.read()
-        if not success: break
-        frame_count += 1
+        # Reset voting if object gets significantly closer
+        if norm_area > state['max_norm_area'] * 1.5:
+            state['votes'].clear()
+            state['locked_class'] = None
+            state['max_norm_area'] = norm_area
 
-        res_a = model_a.predict(frame, imgsz=1088, conf=0.25, device=DEVICE_A, verbose=False)[0]
-        res_b = model_b.predict(frame, imgsz=1088, conf=0.25, classes=[0], device=DEVICE_B, verbose=False)[0]
+        # 1. Voting Lock
+        if state['locked_class'] is not None:
+            base_class = state['locked_class']
+        else:
+            state['votes'].append(raw_class)
+            base_class = Counter(state['votes']).most_common(1)[0][0]
+            if len(state['votes']) >= self.config.lock_frames:
+                state['locked_class'] = base_class
 
-        final_boxes, final_conf, final_cls, vehicle_boxes = [], [], [], []
+        final_class = base_class
 
-        if res_a.boxes:
-            for box in res_a.boxes:
-                xyxy = box.xyxy[0].cpu().numpy()
-                cls = int(box.cls[0].cpu().numpy())
-                final_boxes.append(xyxy); final_conf.append(float(box.conf[0])); final_cls.append(cls)
-                if cls in ALL_VEHICLE_CLASSES: vehicle_boxes.append(xyxy)
+        # 2. Commercial Tiering & Geometry
+        if base_class in self.config.commercial_trucks:
+            state['max_ratio'] = max(state['max_ratio'], ratio)
+            
+            if state['max_ratio'] > self.config.trailer_ratio:
+                final_class = 13
+            else:
+                if norm_area < self.config.lcv_max_area:
+                    final_class = 8
+                elif norm_area < self.config.mcv_max_area:
+                    final_class = 12
+                else:
+                    final_class = 7
 
-        if res_b.boxes:
-            for box in res_b.boxes:
-                xyxy = box.xyxy[0].cpu().numpy()
-                if not is_inside_vehicle(xyxy, vehicle_boxes, SUPPRESSION_IOA_THRESHOLD):
-                    final_boxes.append(xyxy); final_conf.append(float(box.conf[0])); final_cls.append(PEDESTRIAN_CLASS_ID)
+        return final_class, int(norm_area)
 
-        if not final_boxes:
-            cv2.line(frame, (x1_h, y1_h), (x2_h, y2_h), (0, 0, 255), 2)
-            cv2.line(frame, (line_start.x, line_start.y), (line_end.x, line_end.y), (0, 255, 0), 2)
-            draw_counts_on_line(frame, line_start, line_end, counts_in, counts_out)
-            ffmpeg_pipe.stdin.write(frame.tobytes()) 
-            continue
 
-        detections = sv.Detections(xyxy=np.array(final_boxes), confidence=np.array(final_conf), class_id=np.array(final_cls))
-        detections = detections.with_nms(threshold=AGNOSTIC_NMS_THRESHOLD, class_agnostic=True)
-
-        centers_x = (detections.xyxy[:, 0] + detections.xyxy[:, 2]) / 2
-        centers_y = (detections.xyxy[:, 1] + detections.xyxy[:, 3]) / 2
-        cutoff = y1_h + horizon_slope * (centers_x - x1_h)
-        detections = detections[centers_y > cutoff]
-
-        detections = tracker.update_with_detections(detections)
+# ==============================================================================
+# 3. I/O HANDLER
+# ==============================================================================
+class VideoStreamer:
+    """Manages OpenCV capture and FFmpeg NVENC HEVC piping."""
+    def __init__(self, input_path: str, output_path: str):
+        self.cap = cv2.VideoCapture(input_path)
+        self.w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         
-        updated_class_ids = []
-        for xyxy, tracker_id, class_id in zip(detections.xyxy, detections.tracker_id, detections.class_id):
-            
-            if class_id in [7, 12]:
-                w_box, h_box = xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]
-                ratio = w_box / h_box if h_box > 0 else 0
-                if ratio > TRAILER_ASPECT_RATIO: 
-                    class_id = 13
-                    track_history[tracker_id]['locked_class'] = 13
-            
-            if track_history[tracker_id]['locked_class'] is not None:
-                class_id = track_history[tracker_id]['locked_class']
+        cmd = [
+            'ffmpeg', '-y', '-loglevel', 'error', '-f', 'rawvideo', '-vcodec', 'rawvideo',
+            '-s', f'{self.w}x{self.h}', '-pix_fmt', 'bgr24', '-r', f'{self.fps}', '-i', '-',
+            '-c:v', 'hevc_nvenc', '-pix_fmt', 'yuv420p', '-preset', 'p7',
+            '-rc', 'vbr', '-cq', '38', '-b:v', '0', '-bf', '3', '-spatial-aq', '1', output_path
+        ]
+        self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE)
 
-            track_history[tracker_id]['class_votes'][class_id] += 1
-            if track_history[tracker_id]['locked_class'] is None:
-                most_common = track_history[tracker_id]['class_votes'].most_common(1)[0][0]
-                class_id = most_common
+    def read(self):
+        return self.cap.read()
 
-            updated_class_ids.append(class_id)
+    def write(self, frame):
+        self.pipe.stdin.write(frame.tobytes())
+
+    def close(self):
+        self.cap.release()
+        self.pipe.stdin.close()
+        self.pipe.wait()
+
+
+# ==============================================================================
+# 4. PRESENTATION / VISUALIZER
+# ==============================================================================
+class Visualizer:
+    """Handles all frame annotations and console reporting."""
+    def __init__(self, config: TrafficConfig, width: int, height: int):
+        self.config = config
+        self.w, self.h = width, height
+        self.box_annotator = sv.BoxAnnotator(thickness=2)
+        self.label_annotator = sv.LabelAnnotator(text_scale=0.5, text_thickness=1)
         
-        detections.class_id = np.array(updated_class_ids)
-
-        if len(detections) > 0:
-            bottom_centers = detections.get_anchors_coordinates(sv.Position.BOTTOM_CENTER)
-            proxy_xyxy = []
-            for (x, y) in bottom_centers: proxy_xyxy.append([x-1, y-1, x+1, y+1])
-            
-            proxy_detections = sv.Detections(
-                xyxy=np.array(proxy_xyxy), 
-                confidence=detections.confidence, 
-                class_id=detections.class_id, 
-                tracker_id=detections.tracker_id
-            )
-
-            cross_in, cross_out = line_zone.trigger(detections=proxy_detections)
-            
-            for is_in, is_out, cls_id in zip(cross_in, cross_out, detections.class_id):
-                if is_in: counts_out[cls_id] += 1
-                if is_out: counts_in[cls_id] += 1
-            
-            for center in bottom_centers:
-                cv2.circle(frame, (int(center[0]), int(center[1])), 5, (0, 255, 255), -1)
-
-        labels = [f"#{t_id} {CLASS_NAMES.get(c_id, 'Unk')}" for c_id, t_id in zip(detections.class_id, detections.tracker_id)]
-        frame = box_annotator.annotate(scene=frame, detections=detections)
-        frame = label_annotator.annotate(scene=frame, detections=detections, labels=labels)
+        # Calculate line coordinates in pixels
+        self.x1_h, self.y1_h = int(config.horizon_left[0] * width), int(config.horizon_left[1] * height)
+        self.x2_h, self.y2_h = int(config.horizon_right[0] * width), int(config.horizon_right[1] * height)
         
-        cv2.line(frame, (x1_h, y1_h), (x2_h, y2_h), (0, 0, 255), 2)
-        cv2.line(frame, (line_start.x, line_start.y), (line_end.x, line_end.y), (0, 255, 0), 2)
-        draw_counts_on_line(frame, line_start, line_end, counts_in, counts_out)
+        start_pt = sv.Point(int(config.counting_start[0] * width), int(config.counting_start[1] * height))
+        end_pt = sv.Point(int(config.counting_end[0] * width), int(config.counting_end[1] * height))
+        self.line_zone = sv.LineZone(start=start_pt, end=end_pt)
+        self.p_start, self.p_end = start_pt, end_pt
 
-        DISPLAY_ORDER = sorted(CLASS_NAMES.keys())
+    def draw_annotations(self, frame: np.ndarray, detections: sv.Detections, debug_info: dict) -> np.ndarray:
+        labels = []
+        for t_id, c_id in zip(detections.tracker_id, detections.class_id):
+            info = debug_info.get(t_id, {})
+            raw_id = info.get('raw', c_id)
+            area = info.get('area', 0)
+            
+            tracked_name = self.config.class_names.get(c_id, 'Unk')
+            raw_name = self.config.class_names.get(raw_id, 'Unk')
+            
+            text = f"#{t_id} {tracked_name} (Raw:{raw_name})"
+            if c_id in self.config.commercial_trucks or raw_id in self.config.commercial_trucks:
+                text += f" [{area//1000}k]"
+            labels.append(text)
+
+        frame = self.box_annotator.annotate(scene=frame, detections=detections)
+        frame = self.label_annotator.annotate(scene=frame, detections=detections, labels=labels)
+        
+        # Draw zones
+        cv2.line(frame, (self.x1_h, self.y1_h), (self.x2_h, self.y2_h), (0, 0, 255), 2)
+        cv2.line(frame, (self.p_start.x, self.p_start.y), (self.p_end.x, self.p_end.y), (0, 255, 0), 2)
+        return frame
+
+    def draw_dashboard(self, frame: np.ndarray, counts_in: dict, counts_out: dict):
         dashboard_text = "TOTALS: "
-        for cls_id in DISPLAY_ORDER:
-            total = counts_in[cls_id] + counts_out[cls_id]
+        for cls_id in sorted(self.config.class_names.keys()):
+            total = counts_in.get(cls_id, 0) + counts_out.get(cls_id, 0)
             if total > 0:
-                name = CLASS_NAMES.get(cls_id, 'Unk')
-                dashboard_text += f"{name}: {total} | "
+                dashboard_text += f"{self.config.class_names[cls_id]}: {total} | "
         
-        cv2.rectangle(frame, (0, 0), (w, 50), (0, 0, 0), -1)
+        cv2.rectangle(frame, (0, 0), (self.w, 50), (0, 0, 0), -1)
         cv2.putText(frame, dashboard_text, (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-        ffmpeg_pipe.stdin.write(frame.tobytes())
+    def print_report(self, current_frame: int, total_frames: int, counts_in: dict, counts_out: dict, start_time: float, fps: float):
+        elapsed_sec = time.time() - start_time
+        video_sec = current_frame / fps if fps > 0 else 0
         
-        if frame_count % 100 == 0: print(f"   ⏳ Processed {frame_count}/{total_frames} frames")
-        if frame_count % 1000 == 0: print_traffic_report(frame_count, total_frames)
+        print("\n" + "="*65)
+        print(f"📊 TRAFFIC REPORT @ Frame {current_frame}/{total_frames}")
+        print(f"⏱️  Processing Time: {datetime.timedelta(seconds=int(elapsed_sec))} | 🎞️ Video Processed: {datetime.timedelta(seconds=int(video_sec))}")
+        print(f"{'CLASS NAME':<20} | {'IN COUNT':<10} | {'OUT COUNT':<10} | {'TOTAL':<10}")
+        print("-" * 65)
+        
+        all_classes = set(counts_in.keys()) | set(counts_out.keys())
+        stats = []
+        for cls_id in all_classes:
+            c_in = counts_in.get(cls_id, 0)
+            c_out = counts_out.get(cls_id, 0)
+            if c_in + c_out > 0:
+                stats.append((self.config.class_names.get(cls_id, f"ID {cls_id}"), c_in, c_out, c_in + c_out))
+        
+        for name, c_in, c_out, total in sorted(stats, key=lambda x: x[3], reverse=True):
+            print(f"{name:<20} | {c_in:<10} | {c_out:<10} | {total:<10}")
+        print("="*65 + "\n")
 
-    cap.release()
-    ffmpeg_pipe.stdin.close()
-    ffmpeg_pipe.wait()
-    
-    print_traffic_report(frame_count, total_frames)
-    print(f"✅ Video successfully encoded and saved to {output_path}")
+
+# ==============================================================================
+# 5. ORCHESTRATOR PIPELINE
+# ==============================================================================
+class TrafficPipeline:
+    """The main application controller linking ML, I/O, Logic, and UI."""
+    def __init__(self, video_in: str, video_out: str, model_a_path: str, model_b_path: str):
+        self.cfg = TrafficConfig()
+        print("🚀 Initializing ViAna Pipeline Components...")
+        
+        self.stream = VideoStreamer(video_in, video_out)
+        self.engine = ClassificationEngine(self.cfg, self.stream.h)
+        self.viz = Visualizer(self.cfg, self.stream.w, self.stream.h)
+        self.tracker = sv.ByteTrack(frame_rate=30)
+        
+        self.model_a = YOLO(model_a_path); self.model_a.to(self.cfg.device_a)
+        self.model_b = YOLO(model_b_path); self.model_b.to(self.cfg.device_b)
+        
+        self.counts_in = defaultdict(int)
+        self.counts_out = defaultdict(int)
+        self.horizon_slope = (self.viz.y2_h - self.viz.y1_h) / (self.viz.x2_h - self.viz.x1_h + 1e-6)
+
+    def is_inside_vehicle(self, person_box, vehicle_boxes) -> bool:
+        px1, py1, px2, py2 = person_box
+        p_area = (px2 - px1) * (py2 - py1)
+        if p_area == 0: return False
+        for vx1, vy1, vx2, vy2 in vehicle_boxes:
+            ix1, iy1 = max(px1, vx1), max(py1, vy1)
+            ix2, iy2 = min(px2, vx2), min(py2, vy2)
+            if ix2 > ix1 and iy2 > iy1 and ((ix2 - ix1) * (iy2 - iy1) / p_area) > self.cfg.suppression_ioa:
+                return True
+        return False
+
+    def run(self):
+        start_time = time.time()
+        frame_count = 0
+
+        while self.stream.cap.isOpened():
+            success, frame = self.stream.read()
+            if not success: break
+            frame_count += 1
+            
+            # --- 1. Inference ---
+            res_a = self.model_a.predict(frame, imgsz=1088, conf=0.25, device=self.cfg.device_a, verbose=False)[0]
+            res_b = self.model_b.predict(frame, imgsz=1088, conf=0.25, classes=[0], device=self.cfg.device_b, verbose=False)[0]
+
+            boxes, confs, clss, vehicles = [], [], [], []
+            if res_a.boxes:
+                for b in res_a.boxes:
+                    xyxy, c = b.xyxy[0].cpu().numpy(), int(b.cls[0])
+                    boxes.append(xyxy); confs.append(float(b.conf[0])); clss.append(c)
+                    if c in self.cfg.target_classes: vehicles.append(xyxy)
+
+            if res_b.boxes:
+                for b in res_b.boxes:
+                    xyxy = b.xyxy[0].cpu().numpy()
+                    if not self.is_inside_vehicle(xyxy, vehicles):
+                        boxes.append(xyxy); confs.append(float(b.conf[0])); clss.append(self.cfg.pedestrian_id)
+
+            # Check Empty Frame & Handle Logs
+            if not boxes:
+                self.viz.draw_dashboard(frame, self.counts_in, self.counts_out)
+                self.stream.write(frame)
+                if frame_count % 100 == 0: print(f"   ⏳ Processed {frame_count}/{self.stream.total_frames}")
+                if frame_count % 1000 == 0: self.viz.print_report(frame_count, self.stream.total_frames, self.counts_in, self.counts_out, start_time, self.stream.fps)
+                continue
+
+            # --- 2. Tracking & Horizon Filter ---
+            dets = sv.Detections(xyxy=np.array(boxes), confidence=np.array(confs), class_id=np.array(clss))
+            dets = dets.with_nms(threshold=self.cfg.nms_threshold, class_agnostic=True)
+            
+            centers_x = (dets.xyxy[:, 0] + dets.xyxy[:, 2]) / 2
+            centers_y = (dets.xyxy[:, 1] + dets.xyxy[:, 3]) / 2
+            cutoff = self.viz.y1_h + self.horizon_slope * (centers_x - self.viz.x1_h)
+            dets = dets[centers_y > cutoff]
+            
+            dets = self.tracker.update_with_detections(dets)
+
+            # --- 3. Business Logic (Classification & Sizing) ---
+            updated_ids, debug_info = [], {}
+            for xyxy, t_id, raw_c_id in zip(dets.xyxy, dets.tracker_id, dets.class_id):
+                final_id, area = self.engine.process_vehicle(t_id, raw_c_id, xyxy)
+                updated_ids.append(final_id)
+                debug_info[t_id] = {'tracked': final_id, 'raw': raw_c_id, 'area': area}
+                
+            dets.class_id = np.array(updated_ids)
+
+            # --- 4. Counting Events ---
+            if len(dets) > 0:
+                anchors = dets.get_anchors_coordinates(sv.Position.BOTTOM_CENTER)
+                proxy = sv.Detections(
+                    xyxy=np.array([[x-1, y-1, x+1, y+1] for x, y in anchors]), 
+                    confidence=dets.confidence, class_id=dets.class_id, tracker_id=dets.tracker_id
+                )
+                cross_in, cross_out = self.viz.line_zone.trigger(detections=proxy)
+                for is_in, is_out, c_id in zip(cross_in, cross_out, dets.class_id):
+                    if is_in: self.counts_out[c_id] += 1
+                    if is_out: self.counts_in[c_id] += 1
+                for x, y in anchors: cv2.circle(frame, (int(x), int(y)), 5, (0, 255, 255), -1)
+
+            # --- 5. Rendering & I/O ---
+            frame = self.viz.draw_annotations(frame, dets, debug_info)
+            self.viz.draw_dashboard(frame, self.counts_in, self.counts_out)
+            self.stream.write(frame)
+
+            if frame_count % 100 == 0: print(f"   ⏳ Processed {frame_count}/{self.stream.total_frames}")
+            if frame_count % 1000 == 0: self.viz.print_report(frame_count, self.stream.total_frames, self.counts_in, self.counts_out, start_time, self.stream.fps)
+
+        # Cleanup
+        self.stream.close()
+        self.viz.print_report(frame_count, self.stream.total_frames, self.counts_in, self.counts_out, start_time, self.stream.fps)
+        print(f"✅ Pipeline complete. Output saved.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", required=True)
     parser.add_argument("--model_a", default="/app/ViAna/models/v1/itva_medium_1088p.pt")
     parser.add_argument("--model_b", default="yolo11l.pt")
-    parser.add_argument("--out", default="final_opt_output.mp4")
+    parser.add_argument("--out", default="final_pipeline_output.mp4")
     args = parser.parse_args()
     
-    run_engine(args.video, args.model_a, args.model_b, args.out)
+    pipeline = TrafficPipeline(args.video, args.out, args.model_a, args.model_b)
+    pipeline.run()

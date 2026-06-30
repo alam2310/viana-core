@@ -6,9 +6,9 @@
 ---
 
 ## 🚦 Project Master Status
-- **Current Phase:** Phase 2: High-Accuracy Offline Engine (Logic Remediation & Stabilization)
-- **Overall Progress:** 70% (Inference, Tracking, and Export Stable; Core Logic Fixes Next)
-- **Last Updated:** 2026-02-26
+- **Current Phase:** Phase 2: High-Accuracy Offline Engine (Feature Expansion & Logic Remediation)
+- **Overall Progress:** 70% (Inference, Tracking, and Export Stable; Expanding core requirements)
+- **Last Updated:** 2026-06-30
 
 ---
 
@@ -66,23 +66,31 @@
     - *Refinement:* Added **Horizon Filter** (y < 0.35) to remove distant/noisy detections.
 - [x] **Action 2.4: Basic Counting.**
     - *Status:* **Active but Flawed.** Vector-based line crossing working, but counts are polluted by classification flickering (Truck $\leftrightarrow$ MCV) and double-counting (tracker ID switches).
-
-#### 🔄 Active Remediation Actions (The Logic Overhaul - Sequenced for Execution)
-- [x] **Action 2.5: Hardware-Accelerated Video Export (Priority 0 - Infrastructure).**
+- [x] **Action 2.5: Hardware-Accelerated Video Export.**
     - *Problem:* `cv2.VideoWriter` generates massive, uncompressed files (GBs instead of MBs) that clog the drive during testing.
     - *Strategy:* Replaced OpenCV writer with a piped **FFmpeg Subprocess** using `hevc_nvenc` to offload compression to the GPU media engine for extreme size reduction.
-- [ ] **Action 2.6: Perspective Correction Logic (Priority 1 - Data Integrity).**
+
+#### 🔄 Active Feature Expansion & Remediation Actions (Sequenced for Execution)
+- [ ] **Action 2.6: OCR Metadata Extraction (New Requirement).**
+    - *Problem:* Date, time, and location context is burned into the video frames and must be captured for data correlation. Location can be anywhere in the frame.
+    - *Strategy:* Implement an OCR pipeline (e.g., EasyOCR or Tesseract). Sample frames at the start of the video, scan for text, and use Regex/NLP to parse Date, Time, and Location strings to attach as metadata for the reporting engine.
+- [ ] **Action 2.7: 15-Minute Interval CSV Export (New Requirement).**
+    - *Problem:* Single total counts are insufficient. Data must be binned temporally.
+    - *Strategy:* Utilize the OCR-extracted time (or frame-rate math) to bin vehicle counts into strict 15-minute windows (0-15, 15-30, 30-45, 45-60). Automatically generate a structured `.csv` report at the end of the video.
+- [ ] **Action 2.8: Perspective Correction Logic (Priority 1 - Data Integrity).**
     - *Problem:* Distant Heavy Trucks are mathematically misclassified as MCV because their pixel area drops below the static threshold.
     - *Strategy:* **Reference Box Calibration.** Define `NEAR_SCALE` and `FAR_SCALE`. Implement `normalize_area()` to convert raw pixels to depth-invariant "Virtual Meters" before applying logic thresholds.
-- [ ] **Action 2.7: Double-Counting Mitigation (Priority 2 - Data Integrity).**
+- [ ] **Action 2.9: Double-Counting Mitigation (Priority 2 - Data Integrity).**
     - *Problem:* Same vehicles (e.g., Jeeps) counted twice due to ID switching near the line or bounding box wobble.
     - *Strategy:* Increase ByteTrack `track_buffer` (e.g., to 60 frames) to survive occlusion. Implement a `counted_ids` Set to permanently lock an ID from triggering the counter more than once.
-- [ ] **Action 2.8: The "Attribute" Classifier (Priority 3 - Enhancement).**
-    - *Problem:* Heuristic rules (Yellow Color for Taxi) are inaccurate due to lighting.
-    - *Strategy:* **Secondary Classification Model.** Train a tiny, fast classifier (ResNet18) to distinguish `Taxi` vs `Private` vs `Jeep` based on crops.
-- [ ] **Action 2.9: Auto-Calibration / The "Smart" Line (Priority 4 - QoL).**
-    - *Problem:* Manual line coordinates are tedious.
-    - *Strategy:* **Flow-Based Auto-Setup**. Run a 10-second "Calibration Pass" to detect average vehicle trajectory and automatically generate the optimal Counting Line.
+- [ ] **Action 2.10: The "Attribute" Classifier & Multi-Axle Detection (Priority 3 - Enhancement).**
+    - *Problem:* Heuristic rules (Yellow Color for Taxi) fail. Standard YOLO cannot count truck axles.
+    - *Strategy:* **Secondary Classification Model.** Train a lightweight, secondary image classifier (ResNet18/YOLO-Cls) running on GPU 1. Pass it cropped images of detected vehicles to explicitly classify:
+        - *Cars:* `Taxi` vs `Private` vs `Jeep`.
+        - *Trucks:* `2-Axle`, `3-Axle`, `Multi-Axle (4+)`.
+- [ ] **Action 2.11: Auto-Calibration / The "Smart" Line (Priority 4 - QoL).**
+    - *Problem:* Manual line coordinates are tedious and camera angles can shift.
+    - *Strategy:* **Flow-Based Auto-Setup**. Run a 10-second "Calibration Pass" to detect average vehicle trajectory and automatically generate the optimal Counting Line. Include logic to handle diagonal roads (PCA) and dynamic recalibration if the camera bumps.
 
 ### Phase 3: Hardware Orchestration (Dual-GPU)
 **Status:** ⏳ PENDING
@@ -91,7 +99,8 @@
 
 ### Phase 4: Data Export & Validation
 **Status:** ⏳ PENDING
-- [ ] Generate per-class CSV/JSON summary reports.
+- [ ] *(Note: Basic CSV export pulled forward to Action 2.7. Remaining tasks include Dashboard integration or JSON API payloads).*
+- [ ] Generate per-class JSON summary reports.
 
 ---
 
@@ -112,6 +121,8 @@
 | 2026-02-05 | **Perspective Correction** | Decided to abandon static "Area Thresholds" for MCV/Truck logic. Moving to **Depth-Normalized Area** to handle perspective distortion. |
 | 2026-02-26 | **Double-Counting Stateful Locks** | Transitioning from basic coordinate tracking to a `counted_ids` Set memory structure to prevent tracker jitter from artificially inflating volume metrics. |
 | 2026-02-26 | **FFmpeg Export Pipe** | Moved away from OpenCV `VideoWriter` to hardware-accelerated FFmpeg (`hevc_nvenc`) to solve file size bloat. |
+| 2026-06-30 | **OCR Metadata & Temporal Binning** | Prioritized extracting burned-in video metadata via OCR to drive 15-minute interval CSV reporting over purely total counts. |
+| 2026-06-30 | **AI Attribute Engine Adoption** | Abandoned geometric proxies for Axle counting in favor of a dedicated Secondary Classifier (ResNet/YOLO-Cls) to accurately bin Multi-Axle trucks and Taxis. |
 
 ---
 
@@ -122,3 +133,5 @@
     - *Lesson:* We must increase the tracker's memory buffer to bridge gaps caused by occlusion, and use a strict state lock (`counted_ids`) so an object is mathematically immune to double-counting.
 - **OpenCV VideoWriter Bloat:** Default OpenCV video encoding writes massive, uncompressed files.
     - *Lesson:* Always use a subprocess pipe to an external hardware encoder (FFmpeg NVENC) for AI video output.
+- **Total Counts Are Insufficient:** Real traffic analytics requires temporal granularity (time-bins) correlated with actual geographic data.
+    - *Lesson:* We must extract burned-in video metadata (OCR) to provide contextual, interval-based reporting.

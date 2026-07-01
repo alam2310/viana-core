@@ -7,6 +7,8 @@ import datetime
 import argparse
 import subprocess
 import numpy as np
+import re
+import easyocr
 from dataclasses import dataclass, field
 from collections import defaultdict, Counter
 from typing import Dict, List, Tuple
@@ -52,7 +54,57 @@ class TrafficConfig:
 
 
 # ==============================================================================
-# 2. BUSINESS LOGIC & STATE MANAGEMENT
+# 2. METADATA EXTRACTION (OCR)
+# ==============================================================================
+def extract_metadata(frame: np.ndarray, reader: easyocr.Reader) -> dict:
+    """Extracts Date, Time, and Location from a video frame using EasyOCR."""
+    results = reader.readtext(frame)
+    
+    parsed_time_obj = None
+    date_str = "Unknown"
+    location_parts = []
+    
+    time_pattern = re.compile(r'\d{2}:\d{2}:\d{2}')
+    date_pattern = re.compile(r'\d{2}[-/]\d{2}[-/]\d{2,4}')
+    ignore_words = {'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 
+                    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'}
+    
+    for bbox, text, prob in results:
+        text_clean = text.strip()
+        
+        # 1. Check for Time
+        time_match = time_pattern.search(text_clean)
+        if time_match:
+            try:
+                parsed_time_obj = datetime.datetime.strptime(time_match.group(), "%H:%M:%S").time()
+            except ValueError:
+                pass
+            text_clean = time_pattern.sub('', text_clean).strip()
+        
+        # 2. Check for Date
+        date_match = date_pattern.search(text_clean)
+        if date_match:
+            date_str = date_match.group()
+            text_clean = date_pattern.sub('', text_clean).strip()
+        
+        # 3. Process remaining text for Location
+        if text_clean and text_clean.lower() not in ignore_words:
+            # Strip trailing/leading random punctuations
+            loc_cleaned = re.sub(r'^[^\w]+|[^\w]+$', '', text_clean)
+            if loc_cleaned:
+                location_parts.append(loc_cleaned)
+                
+    loc_str = " ".join(location_parts) if location_parts else "Unknown"
+    
+    return {
+        'time': parsed_time_obj,
+        'date': date_str,
+        'location': loc_str
+    }
+
+
+# ==============================================================================
+# 3. BUSINESS LOGIC & STATE MANAGEMENT
 # ==============================================================================
 class ClassificationEngine:
     """Handles perspective math, trailer detection, and the N-frame voting lock."""
@@ -61,7 +113,6 @@ class ClassificationEngine:
         self.h = frame_height
         self.horizon_y = config.horizon_left[1] * frame_height
         
-        # State: tracker_id -> {'votes': [], 'locked_class': int, 'max_ratio': float, 'max_norm_area': float}
         self.track_history = defaultdict(lambda: {
             'votes': [], 
             'locked_class': None,
@@ -76,7 +127,6 @@ class ClassificationEngine:
         return raw_area * scale
 
     def process_vehicle(self, tracker_id: int, raw_class: int, xyxy: np.ndarray) -> Tuple[int, int]:
-        """Returns (final_class_id, normalized_area)"""
         w_box, h_box = xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]
         box_cy = (xyxy[1] + xyxy[3]) / 2
         
@@ -85,13 +135,11 @@ class ClassificationEngine:
         ratio = w_box / h_box if h_box > 0 else 0
         state = self.track_history[tracker_id]
 
-        # Reset voting if object gets significantly closer
         if norm_area > state['max_norm_area'] * 1.5:
             state['votes'].clear()
             state['locked_class'] = None
             state['max_norm_area'] = norm_area
 
-        # 1. Voting Lock
         if state['locked_class'] is not None:
             base_class = state['locked_class']
         else:
@@ -102,7 +150,6 @@ class ClassificationEngine:
 
         final_class = base_class
 
-        # 2. Commercial Tiering & Geometry
         if base_class in self.config.commercial_trucks:
             state['max_ratio'] = max(state['max_ratio'], ratio)
             
@@ -120,7 +167,7 @@ class ClassificationEngine:
 
 
 # ==============================================================================
-# 3. I/O HANDLER
+# 4. I/O HANDLER
 # ==============================================================================
 class VideoStreamer:
     """Manages OpenCV capture and FFmpeg NVENC HEVC piping."""
@@ -152,7 +199,7 @@ class VideoStreamer:
 
 
 # ==============================================================================
-# 4. PRESENTATION / VISUALIZER
+# 5. PRESENTATION / VISUALIZER
 # ==============================================================================
 class Visualizer:
     """Handles all frame annotations and console reporting."""
@@ -162,7 +209,6 @@ class Visualizer:
         self.box_annotator = sv.BoxAnnotator(thickness=2)
         self.label_annotator = sv.LabelAnnotator(text_scale=0.5, text_thickness=1)
         
-        # Calculate line coordinates in pixels
         self.x1_h, self.y1_h = int(config.horizon_left[0] * width), int(config.horizon_left[1] * height)
         self.x2_h, self.y2_h = int(config.horizon_right[0] * width), int(config.horizon_right[1] * height)
         
@@ -189,7 +235,6 @@ class Visualizer:
         frame = self.box_annotator.annotate(scene=frame, detections=detections)
         frame = self.label_annotator.annotate(scene=frame, detections=detections, labels=labels)
         
-        # Draw zones
         cv2.line(frame, (self.x1_h, self.y1_h), (self.x2_h, self.y2_h), (0, 0, 255), 2)
         cv2.line(frame, (self.p_start.x, self.p_start.y), (self.p_end.x, self.p_end.y), (0, 255, 0), 2)
         return frame
@@ -228,7 +273,7 @@ class Visualizer:
 
 
 # ==============================================================================
-# 5. ORCHESTRATOR PIPELINE
+# 6. ORCHESTRATOR PIPELINE
 # ==============================================================================
 class TrafficPipeline:
     """The main application controller linking ML, I/O, Logic, and UI."""
@@ -244,9 +289,14 @@ class TrafficPipeline:
         self.model_a = YOLO(model_a_path); self.model_a.to(self.cfg.device_a)
         self.model_b = YOLO(model_b_path); self.model_b.to(self.cfg.device_b)
         
+        print("👁️  Initializing EasyOCR Engine (this may take a moment)...")
+        self.ocr_reader = easyocr.Reader(['en'], gpu=True)
+        
         self.counts_in = defaultdict(int)
         self.counts_out = defaultdict(int)
         self.horizon_slope = (self.viz.y2_h - self.viz.y1_h) / (self.viz.x2_h - self.viz.x1_h + 1e-6)
+        
+        self.target_msec = float('inf')
 
     def is_inside_vehicle(self, person_box, vehicle_boxes) -> bool:
         px1, py1, px2, py2 = person_box
@@ -260,6 +310,32 @@ class TrafficPipeline:
         return False
 
     def run(self):
+        # --- THE ANCHOR (Frame 0 Initialization) ---
+        print("\n⚓ Anchoring Video Time Context...")
+        success, frame = self.stream.read()
+        if success:
+            metadata = extract_metadata(frame, self.ocr_reader)
+            start_time_obj = metadata['time']
+            
+            print(f"📌 [ANCHOR] Date: {metadata['date']} | Time: {start_time_obj} | Location: {metadata['location']}")
+            
+            if start_time_obj:
+                # Calculate exact ms to the next 15-minute boundary
+                dt_now = datetime.datetime.combine(datetime.date.today(), start_time_obj)
+                minutes_to_add = 15 - (dt_now.minute % 15)
+                
+                next_boundary = (dt_now + datetime.timedelta(minutes=minutes_to_add)).replace(second=0, microsecond=0)
+                diff_ms = (next_boundary - dt_now).total_seconds() * 1000
+                
+                self.target_msec = diff_ms
+                print(f"🎯 First 15-Min Boundary set at +{diff_ms:.0f}ms (Video Time)")
+            else:
+                print("⚠️ [WARNING] Failed to parse start time. Interval reporting disabled.")
+            
+            # Rewind video pointer back to frame 0
+            self.stream.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        
+        
         start_time = time.time()
         frame_count = 0
 
@@ -267,6 +343,18 @@ class TrafficPipeline:
             success, frame = self.stream.read()
             if not success: break
             frame_count += 1
+            
+            # --- THE JUMP (15-Min Boundary Check) ---
+            current_msec = self.stream.cap.get(cv2.CAP_PROP_POS_MSEC)
+            if current_msec >= self.target_msec:
+                print(f"\n⏰ [INTERVAL] 15-Minute Boundary Reached at Video Time: {current_msec:.0f}ms")
+                
+                # The Sanity Check
+                sync_metadata = extract_metadata(frame, self.ocr_reader)
+                print(f"   🔍 Sanity Check - OCR reads Time: {sync_metadata.get('time')} | Date: {sync_metadata.get('date')}")
+                
+                # Queue the next jump
+                self.target_msec += 900000 
             
             # --- 1. Inference ---
             res_a = self.model_a.predict(frame, imgsz=1088, conf=0.25, device=self.cfg.device_a, verbose=False)[0]

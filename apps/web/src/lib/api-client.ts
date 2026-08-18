@@ -41,7 +41,7 @@ export class ApiClientError extends Error {
   }
 }
 
-/** Whitelist JobSubmitRequest fields so job_id / gpu_device cannot leak. */
+/** Whitelist JobSubmitRequest fields so JobConfig.job_id / gpu_device cannot leak. */
 export function toJobSubmitPayload(body: JobSubmitRequest): JobSubmitRequest {
   return {
     task_type: body.task_type,
@@ -56,6 +56,13 @@ export function toJobSubmitPayload(body: JobSubmitRequest): JobSubmitRequest {
     ...(body.start_fresh !== undefined ? { start_fresh: body.start_fresh } : {}),
   };
 }
+
+/** Client-owned POST /jobs body. Rejects engine JobConfig fields at the type level. */
+export type JobSubmitClientBody = JobSubmitRequest & {
+  job_id?: never;
+  gpu_device?: never;
+  output_dir?: never;
+};
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -110,7 +117,7 @@ export async function prescan(
 }
 
 export async function submitJob(
-  body: JobSubmitRequest,
+  body: JobSubmitClientBody,
 ): Promise<JobSubmitResponse> {
   const payload = toJobSubmitPayload(body);
   if (USE_MOCKS) {

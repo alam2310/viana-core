@@ -58,7 +58,7 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 ### Phase 6 — Orchestrator
 - FastAPI routes, worker pool, WebSocket
 
-### Phase 7 — UI foundation
+### Phase 7 — UI foundation ✅ (2026-08-18)
 - Next.js scaffold, container manager, API client, mock mode
 
 ### Phase 8 — UI workflows

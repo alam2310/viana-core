@@ -11,7 +11,7 @@ PROJECT_ROOT = Path("/app/ViAna")
 INPUT_DATA_DIR = PROJECT_ROOT / "data/processed/yolo_format"
 OUTPUT_DATA_DIR = PROJECT_ROOT / "data/itva_phase1"
 TAXONOMY_PATH = PROJECT_ROOT / "configs/vehicle_taxonomy.json"
-OUTPUT_YAML_PATH = PROJECT_ROOT / "src/utils/itva_phase1.yaml"
+OUTPUT_YAML_PATH = PROJECT_ROOT / "legacy/training/utils/itva_phase1.yaml"
 
 TARGET_IDS = {
     'Car': 0, 'Jeep': 1, 'Van': 2, 'Mini Bus': 3,

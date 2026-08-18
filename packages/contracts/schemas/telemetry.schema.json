@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/telemetry.schema.json",
+  "title": "TelemetryMessage",
+  "type": "object",
+  "required": ["job_id", "telemetry_type", "data"],
+  "properties": {
+    "job_id": { "type": "string" },
+    "status": {
+      "enum": ["PENDING", "PROCESSING", "PAUSED", "COMPLETED", "FAILED", "CANCELLED"]
+    },
+    "telemetry_type": {
+      "enum": ["PROGRESS", "MOVING_EVENT", "LOG"]
+    },
+    "data": { "type": "object" }
+  }
+}

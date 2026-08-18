@@ -1,0 +1,23 @@
+{
+  "prescan_id": "prescan_mock_001",
+  "video_meta": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 25.0,
+    "duration_sec": 3600.0,
+    "frame_count": 90000
+  },
+  "ocr": {
+    "time": "09:00:00",
+    "date": "15-03-2026",
+    "location": "NH48 Km42",
+    "confidence": 0.82
+  },
+  "proposed_lines": {
+    "horizon_line": { "start": [120, 400], "end": [1800, 520] },
+    "counting_line": { "start": [80, 900], "end": [1840, 780] },
+    "confidence": 0.71
+  },
+  "preview_url": "/utils/prescan/prescan_mock_001/preview.jpg",
+  "profiles": []
+}

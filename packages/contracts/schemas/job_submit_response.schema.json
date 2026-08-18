@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/job_submit_response.schema.json",
+  "title": "JobSubmitResponse",
+  "type": "object",
+  "required": ["job_id", "status", "gpu_device", "queue_position", "output_dir"],
+  "properties": {
+    "job_id": { "type": "string" },
+    "status": {
+      "enum": ["PENDING", "PROCESSING", "PAUSED", "COMPLETED", "FAILED", "CANCELLED"]
+    },
+    "gpu_device": { "type": "string", "pattern": "^cuda:[01]$" },
+    "queue_position": { "type": "integer", "minimum": 0 },
+    "output_dir": { "type": "string" }
+  }
+}

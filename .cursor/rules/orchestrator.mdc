@@ -1,0 +1,14 @@
+---
+description: FastAPI orchestrator rules
+globs: src/orchestrator/**/*
+alwaysApply: false
+---
+
+# Orchestrator Rules
+
+- Read `src/orchestrator/AGENTS.md` and `api_contracts.md`.
+- Spawn engine via subprocess; do not embed CV logic in routes.
+- Backend assigns `job_id` and `gpu_device`; return in `JobSubmitResponse`.
+- Max 2 concurrent GPU workers.
+- Update `docs/PROJECT_STATUS.md` API matrix when routes are implemented.
+- WebSocket payloads must match `packages/contracts/schemas/telemetry.schema.json`.

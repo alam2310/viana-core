@@ -1,0 +1,16 @@
+# Host-side config for Next.js container manager (copy to orchestrator_config.yaml)
+container:
+  image_name: itva-base:stable
+  container_name: viana_core
+  runtime: nvidia
+  ports:
+    - "8000:8000"
+  volumes:
+    - /path/to/ViAna:/app/ViAna
+    - /path/to/data:/data
+
+output:
+  parent_dir: /data/viana-outputs
+
+api:
+  base_url: http://localhost:8000

@@ -53,36 +53,42 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Install PyTorch (Pinned to CUDA 12.4)
+# 2. Upgrade pip to prevent source compilation issues
+RUN pip3 install --upgrade pip
+
+# 3. Install PyTorch (Pinned to CUDA 12.4)
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 
-# 3. Install Data Engineering Tools
+# 4. Install Data Engineering Tools
+# 4. Install Data Engineering Tools
 RUN pip3 install --no-cache-dir --default-timeout=100 \
+    --extra-index-url https://download.pytorch.org/whl/cu124 \
     "huggingface_hub[cli]" \
     hf_transfer \
     tqdm \
     pytest \
-    "numpy<2"\
+    "numpy>=1.26.0,<2"\
     pandas \ 
     pyyaml \
-    opencv-python \
     matplotlib \
     seaborn \
     ultralytics \
     supervision \
     easyocr
 
-# 4. Copy Compiled OpenCV Artifacts
+# [TRACKER FIX] Install pre-built lapx wheel to prevent C++ numpy build failures
+RUN pip3 install --no-cache-dir lapx>=0.5.5
+RUN pip3 install --no-cache-dir trackers
+
+# 5. Copy Compiled OpenCV Artifacts
 COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=builder /usr/local/include/opencv4 /usr/local/include/opencv4
 COPY --from=builder /usr/local/lib/python3.10 /usr/local/lib/python3.10
 
-# 5. Setup Paths
+# 6. Setup Paths
 RUN ldconfig
 
-# [NEW] Fix for Absolute Symlinks in Dataset
-# Creates a bridge so links pointing to '/root/Work/ViAna' 
-# automatically redirect to the container mount '/app/ViAna'
+# 7. Fix for Absolute Symlinks in Dataset
 RUN mkdir -p /root/Work && \
     ln -s /app/ViAna /root/Work/ViAna
 

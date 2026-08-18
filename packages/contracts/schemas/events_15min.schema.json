@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/events_15min.schema.json",
+  "title": "Aggregate15MinRow",
+  "description": "One row in {stem}_15min.csv (vehicle classes only, zero-filled grid)",
+  "type": "object",
+  "required": [
+    "window_start", "window_end", "class_name", "direction", "count", "partial"
+  ],
+  "properties": {
+    "window_start": { "type": "string", "format": "date-time" },
+    "window_end": { "type": "string", "format": "date-time" },
+    "date": { "type": "string" },
+    "location": { "type": "string" },
+    "class_name": { "type": "string" },
+    "category": { "type": "string" },
+    "class_type": { "type": "string" },
+    "sub_class": { "type": "string" },
+    "direction": { "enum": ["in", "out"] },
+    "count": { "type": "integer", "minimum": 0 },
+    "partial": { "type": "boolean" }
+  }
+}

@@ -6,11 +6,11 @@ import torch
 # --- CONFIGURATION ---
 # Absolute paths ensure stability across different execution contexts (CLI vs Docker)
 PROJECT_ROOT = "/app/ViAna"
-DATA_YAML_PATH = os.path.join(PROJECT_ROOT, "src/utils/itva_phase1.yaml")
+DATA_YAML_PATH = os.path.join(PROJECT_ROOT, "legacy/training/utils/itva_phase1.yaml")
 EXPERIMENT_PROJECT = os.path.join(PROJECT_ROOT, "data/outputs/training")
 EXPERIMENT_NAME = "itva_phase1_1280p"
-#MODEL_WEIGHTS = "yolo11l.pt"  # YOLO11-Large
-MODEL_WEIGHTS = "yolo11m.pt"  # YOLO11-Medium
+#MODEL_WEIGHTS = "models/pretrained/yolo11l.pt"  # YOLO11-Large
+MODEL_WEIGHTS = "models/pretrained/yolo11m.pt"  # YOLO11-Medium
 
 def run_training():
     """

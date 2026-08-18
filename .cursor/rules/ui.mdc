@@ -1,0 +1,16 @@
+---
+description: Rules for ViAna Next.js UI (apps/web)
+globs: apps/web/**/*
+alwaysApply: false
+---
+
+# ViAna UI Rules
+
+- **Start with** `apps/web/AGENTS.md` and `docs/ui/README.md`.
+- Import types from `@viana/contracts` → `packages/contracts/typescript`.
+- Never send `job_id` or `gpu_device` in job submit payloads.
+- Container docker commands only in `apps/web/src/app/api/container/` (host-side).
+- Canvas coordinates must match `video_meta` pixel dimensions; clamp to frame.
+- Use mocks when API is ❌ in `docs/PROJECT_STATUS.md` — `packages/contracts/fixtures/`.
+- Sync job queue from backend `GET /jobs`; localStorage is for UI prefs only.
+- See `docs/ui/` for flows, canvas spec, API integration.

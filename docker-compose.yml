@@ -7,11 +7,20 @@ services:
     # build: .
     
     container_name: viana_core
+
+    ports:
+      - "8000:8000"
+    
+    environment:
+      - PYTHONPATH=/app/ViAna/src
+      - VIANA_OUTPUT_PARENT=/data/viana-outputs
     
     # 1. Volume Mounts (The "Live Link")
     # Maps current directory (.) to /app/ViAna inside container
     volumes:
       - .:/app/ViAna
+      # Mount host data root (adjust path on your machine):
+      - ${VIANA_DATA_ROOT:-./data}:/data
     
     # 2. Working Directory
     working_dir: /app/ViAna

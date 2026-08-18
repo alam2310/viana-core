@@ -1,0 +1,32 @@
+# ViAna engine defaults (override per job via task_parameters)
+
+models:
+  vehicle: models/v1/itva_medium_1088p.pt
+  pedestrian: models/pretrained/yolo11l.pt
+
+detection:
+  confidence_threshold: 0.75
+  imgsz: 1088
+  nms_threshold: 0.5
+  suppression_ioa: 0.3
+
+classification:
+  use_heuristic_truck_split: true
+  lock_frames: 15
+  perspective_scale: 6.0
+  trailer_ratio: 2.5
+  lcv_max_area: 25000
+  mcv_max_area: 65000
+
+ocr:
+  min_confidence: 0.6
+  recalibration_interval_sec: 300
+  drift_threshold_sec: 90
+
+pipeline:
+  checkpoint_interval_frames: 500
+  telemetry_progress_frames: 300
+  telemetry_detail_progress_frames: 30
+
+output:
+  parent_dir: /data/viana-outputs

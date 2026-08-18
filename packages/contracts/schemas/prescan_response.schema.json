@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/prescan_response.schema.json",
+  "title": "PrescanResponse",
+  "type": "object",
+  "required": ["prescan_id", "video_meta", "ocr"],
+  "properties": {
+    "prescan_id": { "type": "string" },
+    "video_meta": {
+      "type": "object",
+      "required": ["width", "height", "fps", "duration_sec", "frame_count"],
+      "properties": {
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "fps": { "type": "number" },
+        "duration_sec": { "type": "number" },
+        "frame_count": { "type": "integer" }
+      }
+    },
+    "ocr": {
+      "type": "object",
+      "properties": {
+        "time": { "type": ["string", "null"] },
+        "date": { "type": ["string", "null"] },
+        "location": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"] }
+      }
+    },
+    "proposed_lines": {
+      "type": ["object", "null"],
+      "properties": {
+        "horizon_line": {
+          "type": "object",
+          "properties": {
+            "start": { "type": "array", "items": { "type": "integer" } },
+            "end": { "type": "array", "items": { "type": "integer" } }
+          }
+        },
+        "counting_line": {
+          "type": "object",
+          "properties": {
+            "start": { "type": "array", "items": { "type": "integer" } },
+            "end": { "type": "array", "items": { "type": "integer" } }
+          }
+        },
+        "confidence": { "type": "number" }
+      }
+    },
+    "preview_url": { "type": "string" },
+    "profiles": { "type": "array", "items": { "type": "object" } }
+  }
+}

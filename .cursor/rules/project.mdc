@@ -1,0 +1,19 @@
+---
+description: Global ViAna monorepo rules — read AGENTS.md first
+alwaysApply: true
+---
+
+# ViAna Project Rules (all agents)
+
+1. **Start every session** by reading `/AGENTS.md` and `docs/PROJECT_STATUS.md`.
+2. **Source of truth conflicts:** follow `docs/governance/SOURCE_OF_TRUTH.md`.
+3. **Never invent APIs or CSV columns** — use `packages/contracts/schemas/`.
+4. **Update `docs/PROJECT_STATUS.md`** when completing a phase or endpoint.
+5. **Schema before code** — see `docs/governance/AI_SDLC.md`.
+6. **Do not modify `legacy/`** except path fixes; parity reference only.
+7. **Task routing:**
+   - Engine → `src/viana/AGENTS.md`
+   - API → `src/orchestrator/AGENTS.md`
+   - UI → `apps/web/AGENTS.md`
+
+Current plan: `docs/PROJECT_PLAN.md`. Architecture: `docs/ARCHITECTURE.md`.

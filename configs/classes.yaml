@@ -1,0 +1,108 @@
+# YOLO class id → analytics hierarchy (single source of truth at inference time).
+# aggregate: include class in {stem}_15min.csv reports
+
+classes:
+  - id: 0
+    name: Car
+    category: Passenger
+    class_type: Light Fast
+    sub_class: Car
+    aggregate: true
+
+  - id: 1
+    name: Jeep
+    category: Passenger
+    class_type: Light Fast
+    sub_class: Jeep
+    aggregate: true
+
+  - id: 2
+    name: Van
+    category: Passenger
+    class_type: Light Fast
+    sub_class: Van
+    aggregate: true
+
+  - id: 3
+    name: MiniBus
+    category: Passenger
+    class_type: Light Fast
+    sub_class: Mini Bus
+    aggregate: true
+
+  - id: 4
+    name: MTW
+    category: Passenger
+    class_type: Light Fast
+    sub_class: MTW
+    aggregate: true
+
+  - id: 5
+    name: Auto
+    category: Passenger
+    class_type: Light Fast
+    sub_class: Auto
+    aggregate: true
+
+  - id: 6
+    name: Bus
+    category: Passenger
+    class_type: Heavy Fast
+    sub_class: City Bus
+    aggregate: true
+
+  - id: 7
+    name: Heavy Truck
+    category: Goods
+    class_type: Heavy Fast
+    sub_class: Truck
+    aggregate: true
+
+  - id: 8
+    name: LCV
+    category: Goods
+    class_type: Light Fast
+    sub_class: LCV
+    aggregate: true
+
+  - id: 9
+    name: Cycle
+    category: Passenger
+    class_type: Slow
+    sub_class: Cycle
+    aggregate: true
+
+  - id: 10
+    name: Other
+    category: Goods
+    class_type: Light Fast
+    sub_class: Others
+    aggregate: true
+
+  - id: 11
+    name: Pedestrian
+    category: Passenger
+    class_type: Slow
+    sub_class: Pedestrian
+    aggregate: false
+
+  - id: 12
+    name: MCV
+    category: Goods
+    class_type: Heavy Fast
+    sub_class: MCV
+    aggregate: true
+
+  - id: 13
+    name: Trailer
+    category: Goods
+    class_type: Heavy Fast
+    sub_class: Trailers
+    aggregate: true
+
+  - id: 14
+    name: Taxi
+    category: Passenger
+    class_type: Light Fast
+    sub_class: Taxi
+    aggregate: true

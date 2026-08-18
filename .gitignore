@@ -3,6 +3,33 @@ __pycache__/
 *.pyc
 .DS_Store
 venv/
+.venv/
 .env
 yolo*
-.gitignore
+
+# ViAna v2 outputs
+**/viana-outputs/
+*.checkpoint.json
+
+# Node / Next.js
+apps/web/node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/.env.local
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/
+
+# Prescan temp previews (under output dirs)
+**/prescan/*.jpg
+
+# Legacy artifact outputs (large / reproducible)
+legacy/artifacts/runs/
+legacy/artifacts/debug_pretrain/

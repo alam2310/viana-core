@@ -1,0 +1,18 @@
+---
+description: Rules for ViAna CV engine development (src/viana)
+globs: src/viana/**/*
+alwaysApply: false
+---
+
+# ViAna Engine Rules
+
+- Do not modify `legacy/inference/inference_engine.py` except for path fixes; it is the parity reference.
+- New code lives under `src/viana/`.
+- CLI-first: every stage must be invocable via `python -m viana`.
+- Use `JobSubmitRequest` / Pydantic models from `src/viana/config/job.py`.
+- Output artifacts under `{output.parent_dir}/{project_id}/` via `src/viana/io/paths.py`.
+- No analytics (15-min bins) inside the GPU frame loop — write events CSV only.
+- `horizon_line` and `counting_line` are mandatory; validate frame bounds.
+- Heuristic truck split behind `use_heuristic_truck_split` flag.
+- Class hierarchy from `configs/classes.yaml` only.
+- Parity procedure: see `legacy/PARITY.md`.

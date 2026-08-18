@@ -1,0 +1,15 @@
+{
+  "job_id": "job_mock_paused",
+  "status": "PAUSED",
+  "task_type": "ViAna_Moving",
+  "source_video_path": "/data/projects/nh48/videos/2026-03-15_09-00.mp4",
+  "project_id": "nh48",
+  "output_dir": "/data/viana-outputs/nh48",
+  "checkpoint_exists": true,
+  "gpu_device": "cuda:0",
+  "progress": {
+    "current_frame": 18420,
+    "total_frames": 90000,
+    "processing_fps": 21.5
+  }
+}

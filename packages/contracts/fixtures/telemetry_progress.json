@@ -1,0 +1,10 @@
+{
+  "job_id": "job_mock_001",
+  "status": "PROCESSING",
+  "telemetry_type": "PROGRESS",
+  "data": {
+    "current_frame": 5000,
+    "total_frames": 90000,
+    "processing_fps": 22.1
+  }
+}

@@ -1,3 +1,30 @@
+🛠️ ITVA / ViAna Platform
+
+> **AI agents:** read [`AGENTS.md`](AGENTS.md) first. **Status:** [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md). **Plan:** [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md).
+
+> **Monorepo:** Engine → `src/viana/` · API → `src/orchestrator/` · UI → `apps/web/` · Contracts → `packages/contracts/` · **Legacy (discardable)** → `legacy/` · Governance → `docs/governance/`
+
+```
+ViAna/
+├── src/viana/              # NEW engine (active development)
+├── src/orchestrator/       # FastAPI job manager
+├── apps/web/               # Next.js UI (Phase 7)
+├── packages/contracts/     # Shared schemas & types
+├── configs/                # classes.yaml, engine_defaults.yaml
+├── models/
+│   ├── v1/                 # Production weights
+│   └── pretrained/         # yolo11l.pt, yolo11m.pt
+├── legacy/                 # ★ Old code — delete after v2 parity sign-off
+│   ├── inference/inference_engine.py   # parity reference
+│   ├── training/           # Phase 1 train + dataset utils
+│   ├── scripts/            # audit & taxonomy tools
+│   └── PARITY.md
+├── tests/viana/            # New engine tests
+└── docs/ui/                # UI development guides
+```
+
+---
+
 🛠️ ITVA Environment Setup Guide: "Golden Master" v3.0
 Version: 3.0 (Finalized)
 

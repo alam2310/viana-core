@@ -1,4 +1,7 @@
 # 🗺️ Project Blueprint: Indian Traffic Video Analytics (ITVA)
+
+> **⚠️ v2 platform status:** For current phase, API readiness, and implementation plan, see **`docs/PROJECT_STATUS.md`** and **`docs/PROJECT_PLAN.md`**. This file is a historical research log (Phase 0–2 legacy pipeline era).
+
 **Objective:** End-to-end offline pipeline for high-accuracy vehicle classification and counting.
 **Hardware:** i7-12700F | 32GB DDR5 | 2x RTX 3060 (12GB) | Host: Ubuntu 24.04 | Container: Ubuntu 22.04
 **Target Classes:** 2-Wheelers, Cars, Auto Rickshaws, Trucks, Medium Vehicles, Light Vehicles, Heavy Vehicles.
@@ -7,8 +10,8 @@
 
 ## 🚦 Project Master Status
 - **Current Phase:** Phase 2: High-Accuracy Offline Engine (Feature Expansion & Logic Remediation)
-- **Overall Progress:** 70% (Inference, Tracking, and Export Stable; Expanding core requirements)
-- **Last Updated:** 2026-06-30
+- **Overall Progress:** 75% (Inference, Tracking, Export, and OCR Time-Sync Stable; Next: Interval CSV Export)
+- **Last Updated:** 2026-07-01
 
 ---
 
@@ -37,7 +40,7 @@
 **Status:** ✅ COMPLETE
 - [x] **Action 1.1: Audit UVH-26 Dataset.**
     - *Outcome:* Identified critical imbalance (Mini Bus < 1% vs MTW 47%).
-    - *Artifact:* `src/utils/dataset_auditor.py`.
+    - *Artifact:* `legacy/training/utils/dataset_auditor.py` (was `src/utils/dataset_auditor.py`).
 - [x] **Action 1.2: Design Taxonomy & Logic.**
     - *Strategy:* **Config-Driven Architecture**. Decoupled logic from code using `vehicle_taxonomy.json`.
     - *Outcome:* Normalized chaotic labels (Tempo, Tata Ace) into structured Target IDs.
@@ -69,11 +72,11 @@
 - [x] **Action 2.5: Hardware-Accelerated Video Export.**
     - *Problem:* `cv2.VideoWriter` generates massive, uncompressed files (GBs instead of MBs) that clog the drive during testing.
     - *Strategy:* Replaced OpenCV writer with a piped **FFmpeg Subprocess** using `hevc_nvenc` to offload compression to the GPU media engine for extreme size reduction.
+- [x] **Action 2.6: OCR Metadata Extraction (New Requirement).**
+    - *Problem:* Date, time, and location context is burned into the video frames and must be captured for data correlation. Location can be anywhere in the frame.
+    - *Strategy:* Implemented an EasyOCR pipeline with the "Anchor & Jump" PTS strategy. Samples Frame 0, anchors the start time, and uses video Presentation Time Stamp (PTS) to dynamically jump to exact 15-minute boundaries without framerate drift.
 
 #### 🔄 Active Feature Expansion & Remediation Actions (Sequenced for Execution)
-- [ ] **Action 2.6: OCR Metadata Extraction (New Requirement).**
-    - *Problem:* Date, time, and location context is burned into the video frames and must be captured for data correlation. Location can be anywhere in the frame.
-    - *Strategy:* Implement an OCR pipeline (e.g., EasyOCR or Tesseract). Sample frames at the start of the video, scan for text, and use Regex/NLP to parse Date, Time, and Location strings to attach as metadata for the reporting engine.
 - [ ] **Action 2.7: 15-Minute Interval CSV Export (New Requirement).**
     - *Problem:* Single total counts are insufficient. Data must be binned temporally.
     - *Strategy:* Utilize the OCR-extracted time (or frame-rate math) to bin vehicle counts into strict 15-minute windows (0-15, 15-30, 30-45, 45-60). Automatically generate a structured `.csv` report at the end of the video.
@@ -123,6 +126,7 @@
 | 2026-02-26 | **FFmpeg Export Pipe** | Moved away from OpenCV `VideoWriter` to hardware-accelerated FFmpeg (`hevc_nvenc`) to solve file size bloat. |
 | 2026-06-30 | **OCR Metadata & Temporal Binning** | Prioritized extracting burned-in video metadata via OCR to drive 15-minute interval CSV reporting over purely total counts. |
 | 2026-06-30 | **AI Attribute Engine Adoption** | Abandoned geometric proxies for Axle counting in favor of a dedicated Secondary Classifier (ResNet/YOLO-Cls) to accurately bin Multi-Axle trucks and Taxis. |
+| 2026-07-01 | **Anchor & Jump Time-Sync** | Utilized PTS (Presentation Time Stamp) instead of standard FPS math to calculate 15-minute interval boundaries. Eliminates desync caused by variable framerates (VFR) and missing frames. |
 
 ---
 

@@ -1,0 +1,13 @@
+{
+    "job_id": "job_12345",
+    "status": "PROCESSING",
+    "progress": {
+      "current_frame": 450,
+      "total_frames": 18000,
+      "processing_fps": 115.2
+    },
+    "telemetry_type": "MOVING_EVENT | PARKED_EVENT | JUNCTION_EVENT",
+    "data": {
+      // Event-specific data block
+    }
+  }

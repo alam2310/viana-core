@@ -1,0 +1,100 @@
+# Project Status (Living Document)
+
+**Last updated:** 2026-08-18  
+**Current focus:** Phase 1 — Contracts & config  
+**Canonical plan:** `docs/PROJECT_PLAN.md`
+
+> AI agents: update this file when you complete a phase, endpoint, or milestone. Do not rely on chat memory.
+
+---
+
+## Overall progress (v2 platform)
+
+| Track | Phase | Status | Owner surface |
+|-------|-------|--------|---------------|
+| Platform | 0 — Monorepo scaffold | ✅ **Complete** | repo root |
+| Engine | 1 — Contracts & config | ⬜ Not started | `src/viana/` |
+| Engine | 2 — I/O & CSV | ⬜ Not started | `src/viana/` |
+| Engine | 3 — CV core | ⬜ Not started | `src/viana/` |
+| Engine | 4 — Prescan & lines | ⬜ Not started | `src/viana/` |
+| Engine | 5 — Process & render | ⬜ Not started | `src/viana/` |
+| API | 6 — Orchestrator | ⬜ Not started | `src/orchestrator/` |
+| UI | 7 — Foundation | ⬜ Not started | `apps/web/` |
+| UI | 8 — Workflows | ⬜ Not started | `apps/web/` |
+| QA | 9 — Parity & hardening | ⬜ Not started | `tests/`, `legacy/PARITY.md` |
+
+---
+
+## Phase 0 completion checklist ✅
+
+- [x] `src/viana/` package + CLI stubs
+- [x] `src/orchestrator/` FastAPI stub (`GET /health`)
+- [x] `packages/contracts/` schemas + TS types + fixtures
+- [x] `configs/classes.yaml`, `configs/engine_defaults.yaml`
+- [x] `legacy/` consolidated (discardable)
+- [x] `docs/ui/*` skeleton guides
+- [x] `docs/adr/` 001, 002
+- [x] Governance docs (`AGENTS.md`, this file, `docs/governance/*`)
+- [x] Models: `models/v1/`, `models/pretrained/`
+
+---
+
+## API implementation matrix (for UI parallel work)
+
+UI **must** use `packages/contracts/fixtures/` until an endpoint is marked ✅.
+
+| Endpoint | Implemented | Schema | Fixture |
+|----------|-------------|--------|---------|
+| `GET /health` | ✅ stub | — | — |
+| `POST /utils/prescan` | ❌ | `prescan_response.schema.json` | `prescan_response.json` |
+| `POST /jobs` | ❌ | `job_submit.schema.json` | — |
+| `GET /jobs` | ❌ | — | — |
+| `GET /jobs/{id}` | ❌ | — | `job_status_paused.json` |
+| `POST /jobs/{id}/resume` | ❌ | — | — |
+| `POST /jobs/{id}/start-fresh` | ❌ | — | — |
+| `WS /ws/jobs` | ❌ | `telemetry.schema.json` | `telemetry_progress.json` |
+| `GET/POST /projects/{id}/profiles` | ❌ | `calibration_profile.schema.json` | — |
+
+---
+
+## CLI implementation matrix
+
+| Command | Implemented | Notes |
+|---------|-------------|-------|
+| `viana prescan` | ❌ stub | Phase 4 |
+| `viana run` | ❌ stub | Phase 3–5 |
+| `viana resume` | ❌ stub | Phase 5 |
+| `viana aggregate` | ❌ stub | Phase 2 |
+
+---
+
+## Locked decisions
+
+See `docs/PROJECT_PLAN.md` and `docs/adr/`.
+
+| Topic | Decision |
+|-------|----------|
+| Job ownership | Backend assigns `job_id`, `gpu_device` |
+| GPU | 1 GPU / job; 2 concurrent videos |
+| Output path | `{output.parent_dir}/{project_id}/` |
+| Artifacts | `{stem}_events`, `{stem}_15min`, `{stem}_processed` |
+| Resume | Explicit only |
+| Detection conf default | 0.75 |
+| Scope | ViAna Moving Count only (v0.1) |
+
+---
+
+## Parity gate (before deleting `legacy/`)
+
+- [ ] Golden clip — `tests/viana/fixtures/PARITY_NOTES.md`
+- [ ] Legacy vs v2 counts — `legacy/PARITY.md`
+- [ ] Real project videos via UI
+
+---
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-08-18 | Phase 0 complete; governance docs; UI agent context in `apps/web/AGENTS.md` |
+| 2026-08-18 | v2 plan approved (event-sourced, backend jobs, monorepo) |

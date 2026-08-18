@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/events_raw.schema.json",
+  "title": "RawCrossingEventRow",
+  "description": "One row in {stem}_events.csv",
+  "type": "object",
+  "required": [
+    "event_id", "job_id", "video_file", "track_id", "frame_index",
+    "video_pts_ms", "class_name", "direction", "confidence"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "job_id": { "type": "string" },
+    "video_file": { "type": "string" },
+    "track_id": { "type": "integer" },
+    "frame_index": { "type": "integer" },
+    "video_pts_ms": { "type": "number" },
+    "wall_time": { "type": ["string", "null"] },
+    "wall_time_source": {
+      "enum": ["ocr_recalibrated", "ocr_anchor", "user_fallback", "unavailable", null]
+    },
+    "ocr_confidence": { "type": ["number", "null"] },
+    "date": { "type": "string" },
+    "location": { "type": "string" },
+    "class_id": { "type": "integer" },
+    "class_name": { "type": "string" },
+    "raw_class_id": { "type": "integer" },
+    "raw_class_name": { "type": "string" },
+    "category": { "type": "string" },
+    "class_type": { "type": "string" },
+    "sub_class": { "type": "string" },
+    "direction": { "enum": ["in", "out"] },
+    "confidence": { "type": "number" },
+    "norm_area": { "type": "integer" },
+    "anchor_x": { "type": "number" },
+    "anchor_y": { "type": "number" }
+  }
+}

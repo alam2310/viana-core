@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/calibration_profile.schema.json",
+  "title": "CalibrationProfile",
+  "type": "object",
+  "required": ["profile_id", "profile_name", "reference_resolution", "horizon_line", "counting_line"],
+  "properties": {
+    "profile_id": { "type": "string" },
+    "profile_name": { "type": "string" },
+    "reference_resolution": {
+      "type": "array",
+      "items": { "type": "integer" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "horizon_line": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "array", "items": { "type": "integer" } },
+        "end": { "type": "array", "items": { "type": "integer" } }
+      }
+    },
+    "counting_line": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "array", "items": { "type": "integer" } },
+        "end": { "type": "array", "items": { "type": "integer" } }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "source": { "enum": ["user_drawn", "auto_proposed", "user_edited"] }
+  }
+}

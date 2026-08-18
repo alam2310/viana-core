@@ -146,3 +146,64 @@ export interface TelemetryMessage {
   telemetry_type: TelemetryType;
   data: Record<string, unknown>;
 }
+
+/** YOLO class id → analytics hierarchy (`configs/classes.yaml`). */
+export interface VehicleClass {
+  id: number;
+  name: string;
+  category: string;
+  class_type: string;
+  sub_class: string;
+  aggregate: boolean;
+}
+
+export interface ClassTaxonomy {
+  classes: VehicleClass[];
+}
+
+export interface ModelPaths {
+  vehicle: string;
+  pedestrian: string;
+}
+
+export interface DetectionDefaults {
+  confidence_threshold: number;
+  imgsz: number;
+  nms_threshold: number;
+  suppression_ioa: number;
+}
+
+export interface ClassificationDefaults {
+  use_heuristic_truck_split: boolean;
+  lock_frames: number;
+  perspective_scale: number;
+  trailer_ratio: number;
+  lcv_max_area: number;
+  mcv_max_area: number;
+}
+
+export interface OcrDefaults {
+  min_confidence: number;
+  recalibration_interval_sec: number;
+  drift_threshold_sec: number;
+}
+
+export interface PipelineDefaults {
+  checkpoint_interval_frames: number;
+  telemetry_progress_frames: number;
+  telemetry_detail_progress_frames: number;
+}
+
+export interface OutputDefaults {
+  parent_dir: string;
+}
+
+/** Engine defaults (`configs/engine_defaults.yaml`). Overridable per job. */
+export interface EngineDefaults {
+  models: ModelPaths;
+  detection: DetectionDefaults;
+  classification: ClassificationDefaults;
+  ocr: OcrDefaults;
+  pipeline: PipelineDefaults;
+  output: OutputDefaults;
+}

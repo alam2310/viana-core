@@ -14,7 +14,7 @@
 | Track | Phase | Status | Owner surface |
 |-------|-------|--------|---------------|
 | Platform | 0 — Monorepo scaffold | ✅ **Closed** | repo root |
-| Engine | 1 — Contracts & config | ⬜ Not started | `src/viana/` |
+| Engine | 1 — Contracts & config | 🔄 In progress | `src/viana/` |
 | Engine | 2 — I/O & CSV | ⬜ Not started | `src/viana/` |
 | Engine | 3 — CV core | ⬜ Not started | `src/viana/` |
 | Engine | 4 — Prescan & lines | ⬜ Not started | `src/viana/` |
@@ -47,9 +47,11 @@
 ## Phase 1 — first tasks
 
 1. Full `JobConfig` Pydantic validation ↔ JSON schema sync
-2. `classes.yaml` / `engine_defaults.yaml` loaders + tests
+2. [x] `classes.yaml` / `engine_defaults.yaml` loaders + tests
 3. Wire CSV column validation to `events_*.schema.json`
 4. Optional: `.github/workflows/test.yml` for `pytest tests/viana/`
+
+**Engine config loaders (2026-08-18):** `viana.config.classes.load_class_taxonomy` and `viana.config.defaults.load_engine_defaults`. Schemas: `packages/contracts/schemas/classes.schema.json`, `engine_defaults.schema.json`.
 
 ---
 
@@ -112,6 +114,7 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | Phase 1: classes.yaml / engine_defaults.yaml Pydantic loaders + tests |
 | 2026-08-18 | AgentReady round 2: requirements.txt, pattern refs, legacy docstrings |
 | 2026-08-18 | AgentReady remediation: CI, lint, OpenAPI, threat model, design docs |
 | 2026-08-18 | Phase 0 formally closed; hygiene pass (schemas, fixtures, Dockerfile, sign-off doc) |

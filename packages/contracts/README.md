@@ -34,6 +34,8 @@ See `docs/governance/AI_SDLC.md`.
 | `telemetry.schema.json` | WebSocket messages |
 | `checkpoint.schema.json` | `{stem}.checkpoint.json` (engine resume) |
 | `run_result.schema.json` | `{stem}.run_result.json` (final outcome) |
+| `classes.schema.json` | `configs/classes.yaml` (YOLO id → reporting hierarchy) |
+| `engine_defaults.schema.json` | `configs/engine_defaults.yaml` (thresholds, model paths) |
 
 ## Fixtures (UI mocks)
 

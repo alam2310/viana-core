@@ -34,11 +34,13 @@ services:
               count: all
               capabilities: [gpu]
     
-    # 4. Interactive Mode Settings
-    # Keeps the container running so you can log in
-    stdin_open: true # equivalent to -i
-    tty: true        # equivalent to -t
-    command: /bin/bash
+    # 4. Orchestrator API. Editable install may be missing if the image predates pyproject deps.
+    stdin_open: true
+    tty: true
+    command:
+      - bash
+      - -lc
+      - python3 -c "import uvicorn,fastapi,orchestrator" 2>/dev/null || pip3 install -e ".[dev]"; pip3 install -q "numpy>=1.26.0,<2"; pip3 install -q "trackers==2.6.0" --no-deps; exec python3 -m uvicorn orchestrator.app:app --host 0.0.0.0 --port 8000 --app-dir src
     
     # 5. Shared Memory (Crucial for PyTorch/Dataloaders)
     shm_size: '8gb'

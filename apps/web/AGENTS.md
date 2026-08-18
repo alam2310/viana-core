@@ -45,7 +45,7 @@ Copy `apps/web/.env.example` → `.env.local`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_USE_MOCKS=true
+NEXT_PUBLIC_USE_MOCKS=false
 ```
 
 When `USE_MOCKS=true`, `lib/api-client.ts` should return fixture data from `packages/contracts/fixtures/`.
@@ -95,7 +95,7 @@ When scaffolding `apps/web/` (stub `package.json` + `tsconfig.json` already pres
 - [x] Paused job resume / start-fresh UX
 - [x] Telemetry_detail toggle (prefs) + mock WS panel
 
-Keep `NEXT_PUBLIC_USE_MOCKS=true` until API endpoints are ✅.
+Keep `NEXT_PUBLIC_USE_MOCKS=false` for live Phase 6 E2E (`http://localhost:8000`). Use `true` only for fixture-only UI work.
 
 ---
 

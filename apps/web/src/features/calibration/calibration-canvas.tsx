@@ -61,6 +61,7 @@ export function CalibrationCanvas({
   horizon,
   counting,
   onChange,
+  previewUrl,
   className,
 }: {
   width: number;
@@ -68,13 +69,27 @@ export function CalibrationCanvas({
   horizon: LineSegment;
   counting: LineSegment;
   onChange: (next: { horizon: LineSegment; counting: LineSegment }) => void;
+  previewUrl?: string | null;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drag, setDrag] = useState<Handle | null>(null);
+  const [preview, setPreview] = useState<HTMLImageElement | null>(null);
   const displayWidth = 720;
   const scale = displayWidth / width;
   const displayHeight = Math.round(height * scale);
+
+  useEffect(() => {
+    if (!previewUrl) {
+      setPreview(null);
+      return;
+    }
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => setPreview(image);
+    image.onerror = () => setPreview(null);
+    image.src = previewUrl;
+  }, [previewUrl]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -87,19 +102,23 @@ export function CalibrationCanvas({
     }
     ctx.fillStyle = "#111827";
     ctx.fillRect(0, 0, displayWidth, displayHeight);
-    ctx.strokeStyle = "#374151";
-    ctx.lineWidth = 1;
-    for (let x = 0; x < displayWidth; x += 80) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, displayHeight);
-      ctx.stroke();
-    }
-    for (let y = 0; y < displayHeight; y += 80) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(displayWidth, y);
-      ctx.stroke();
+    if (preview) {
+      ctx.drawImage(preview, 0, 0, displayWidth, displayHeight);
+    } else {
+      ctx.strokeStyle = "#374151";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < displayWidth; x += 80) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, displayHeight);
+        ctx.stroke();
+      }
+      for (let y = 0; y < displayHeight; y += 80) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(displayWidth, y);
+        ctx.stroke();
+      }
     }
 
     const drawLine = (line: LineSegment, color: string, label: string) => {
@@ -121,7 +140,7 @@ export function CalibrationCanvas({
 
     drawLine(horizon, "#dc2626", "Horizon");
     drawLine(counting, "#16a34a", "Counting");
-  }, [counting, displayHeight, horizon, scale]);
+  }, [counting, displayHeight, horizon, preview, scale]);
 
   function eventPoint(event: React.MouseEvent<HTMLCanvasElement>): Point {
     const canvas = canvasRef.current;

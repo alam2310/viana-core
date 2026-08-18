@@ -48,7 +48,7 @@ classes:
     name: Bus
     category: Passenger
     class_type: Heavy Fast
-    sub_class: City Bus
+    sub_class: Bus
     aggregate: true
 
   - id: 7

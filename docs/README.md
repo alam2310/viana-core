@@ -14,7 +14,7 @@
 | [`specs/ui_specifications.md`](specs/ui_specifications.md) | UI product requirements |
 | [`governance/`](governance/) | AI SDLC rules, contract sync, kickoff prompts |
 | [`design/`](design/) | Design intent (invariants, preconditions) |
-| [`ui/`](ui/) | UI development guides |
+| [`ui/`](ui/) | UI development guides (incl. [`ui/OVERLAY_COLORS.md`](ui/OVERLAY_COLORS.md)) |
 | [`adr/`](adr/) | Architecture decisions |
 
 **Historical (legacy era):** [`../legacy/blueprint.md`](../legacy/blueprint.md), [`../legacy/docs/`](../legacy/docs/)

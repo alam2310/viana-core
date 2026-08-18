@@ -8,6 +8,7 @@ from typing import Any
 from viana.config.defaults import DetectionDefaults
 from viana.config.files import repo_root
 from viana.domain.boxes import Detection
+from viana.stages.detect import VEHICLE_CLASS_IDS
 from viana.stages.video import VideoFrame
 
 
@@ -46,18 +47,24 @@ class UltralyticsDualDetector:
         """Run both models on ``frame.image`` (must be a BGR array)."""
         if frame.image is None:
             return [], []
-        vehicles = self._predict(self._vehicle, frame.image)
-        people = self._predict(self._pedestrian, frame.image)
+        vehicles = self._predict(
+            self._vehicle, frame.image, class_ids=sorted(VEHICLE_CLASS_IDS)
+        )
+        people = self._predict(self._pedestrian, frame.image, class_ids=[0])
         return vehicles, people
 
-    def _predict(self, model: Any, image: object) -> list[Detection]:
-        results = model.predict(
-            image,
-            device=self._device,
-            imgsz=self._imgsz,
-            conf=self._conf,
-            verbose=False,
-        )
+    def _predict(
+        self, model: Any, image: object, *, class_ids: list[int] | None = None
+    ) -> list[Detection]:
+        predict_kw: dict[str, Any] = {
+            "device": self._device,
+            "imgsz": self._imgsz,
+            "conf": self._conf,
+            "verbose": False,
+        }
+        if class_ids is not None:
+            predict_kw["classes"] = class_ids
+        results = model.predict(image, **predict_kw)
         detections: list[Detection] = []
         if not results:
             return detections

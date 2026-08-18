@@ -3,11 +3,11 @@
 import type { TelemetryMessage } from "@viana/contracts";
 
 export function TelemetryPanel({
-  message,
+  messages,
   telemetryDetail,
   onTelemetryDetail,
 }: {
-  message: TelemetryMessage | null;
+  messages: TelemetryMessage[];
   telemetryDetail: boolean;
   onTelemetryDetail: (value: boolean) => void;
 }) {
@@ -27,7 +27,9 @@ export function TelemetryPanel({
         </label>
       </div>
       <pre className="mt-3 max-h-64 overflow-auto rounded bg-neutral-50 p-3 text-xs">
-        {message ? JSON.stringify(message, null, 2) : "waiting…"}
+        {messages.length > 0
+          ? JSON.stringify(messages.slice(-8), null, 2)
+          : "waiting…"}
       </pre>
     </section>
   );

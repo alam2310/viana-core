@@ -21,6 +21,15 @@ def test_geometric_lines_stay_in_frame() -> None:
     assert proposed.horizon_line.start[1] < proposed.counting_line.start[1]
 
 
+def test_geometric_lines_span_frame_width() -> None:
+    """Proposed lines pin X to the left and right pixel edges."""
+    proposed = propose_lines(1920, 1080)
+    assert proposed.horizon_line.start == (0, 648)
+    assert proposed.horizon_line.end == (1919, 0)
+    assert proposed.counting_line.start == (0, 1079)
+    assert proposed.counting_line.end == (1919, 0)
+
+
 def test_scale_line_maps_profile_resolution() -> None:
     """Profile lines scale then clamp like the UI canvas rule."""
     line = LineSegment(start=(100, 200), end=(1900, 400))

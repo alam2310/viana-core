@@ -53,15 +53,16 @@ class CrossingState:
             self._previous[item.track_id] = current
             if previous is None:
                 continue
-            if item.track_id in self.counted_track_ids:
+            if int(item.track_id) in self.counted_track_ids:
                 continue
             direction = crossing_direction(self.counting_line, previous, current)
             if direction is None:
                 continue
-            self.counted_track_ids.add(item.track_id)
+            track_id = int(item.track_id)
+            self.counted_track_ids.add(track_id)
             events.append(
                 Crossing(
-                    track_id=item.track_id,
+                    track_id=track_id,
                     class_id=class_ids.get(item.track_id, item.detection.class_id),
                     raw_class_id=item.raw_class_id,
                     direction=direction,

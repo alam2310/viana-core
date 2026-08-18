@@ -97,3 +97,17 @@ export function videoStem(path: string): string {
   const base = path.split("/").pop() ?? path;
   return base.replace(/\.[^.]+$/, "");
 }
+
+/** In-frame fallback when prescan does not propose lines (v2 never uses off-screen geometry). */
+export function defaultCalibrationLines(
+  width: number,
+  height: number,
+): { horizon: LineSegment; counting: LineSegment } {
+  const x0 = 0;
+  const x1 = Math.max(1, width - 1);
+  const horizonLeftY = clampCoord(height * 0.6, height);
+  return {
+    horizon: { start: [x0, horizonLeftY], end: [x1, 0] },
+    counting: { start: [x0, Math.max(0, height - 1)], end: [x1, 0] },
+  };
+}

@@ -11,7 +11,7 @@ from viana.domain.geometry import filter_below_horizon
 from viana.stages.classify import ClassificationEngine
 from viana.stages.crossing import Crossing, CrossingState
 from viana.stages.detect import merge_detections
-from viana.stages.track import IoUTracker, TrackedDetection
+from viana.stages.track import BoxTracker, TrackedDetection, build_tracker
 
 
 @dataclass
@@ -33,12 +33,17 @@ class FrameCVEngine:
     frame_height: int
     detection: DetectionDefaults
     classification: ClassificationDefaults
-    tracker: IoUTracker = field(default_factory=IoUTracker)
+    tracker: BoxTracker = field(default_factory=build_tracker)
     classifier: ClassificationEngine = field(init=False)
     crossings: CrossingState = field(init=False)
 
     def __post_init__(self) -> None:
-        self.classifier = ClassificationEngine(self.classification, self.horizon, self.frame_height)
+        self.classifier = ClassificationEngine(
+            self.classification,
+            self.horizon,
+            self.frame_height,
+            self.counting_line,
+        )
         self.crossings = CrossingState(counting_line=self.counting_line)
 
     def process_models(
@@ -71,12 +76,17 @@ class FrameCVEngine:
         tracked = self.tracker.update(filtered, frame_index)
         class_ids: dict[int, int] = {}
         norm_areas: dict[int, int] = {}
+        counted = {int(tid) for tid in self.crossings.counted_track_ids}
         for item in tracked:
+            track_id = int(item.track_id)
             final_id, area = self.classifier.process_vehicle(
-                item.track_id, item.raw_class_id, item.detection
+                track_id,
+                item.raw_class_id,
+                item.detection,
+                counted=track_id in counted,
             )
-            class_ids[item.track_id] = final_id
-            norm_areas[item.track_id] = area
+            class_ids[track_id] = final_id
+            norm_areas[track_id] = area
         crossings = self.crossings.update(
             tracked,
             class_ids=class_ids,
@@ -84,6 +94,10 @@ class FrameCVEngine:
             frame_index=frame_index,
             video_pts_ms=video_pts_ms,
         )
+        for crossing in crossings:
+            track_id = int(crossing.track_id)
+            self.classifier.freeze(track_id, crossing.class_id)
+            class_ids[track_id] = crossing.class_id
         return FrameCVResult(
             tracked=tracked,
             crossings=crossings,

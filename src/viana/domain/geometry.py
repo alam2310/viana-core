@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 from viana.config.job import LineSegment
 from viana.domain.boxes import Detection
 from viana.io.csv_schema import CrossingDirection
@@ -54,6 +56,18 @@ def line_y_at_x(line: LineSegment, x: float) -> float:
         return y1
     t = (x - x1) / (x2 - x1)
     return y1 + t * (y2 - y1)
+
+
+def point_to_line_distance(line: LineSegment, point: tuple[float, float]) -> float:
+    """Perpendicular distance from ``point`` to the infinite line through the segment."""
+    x1, y1 = float(line.start[0]), float(line.start[1])
+    x2, y2 = float(line.end[0]), float(line.end[1])
+    px, py = point
+    dx, dy = x2 - x1, y2 - y1
+    length = math.hypot(dx, dy)
+    if length < 1e-9:
+        return math.hypot(px - x1, py - y1)
+    return abs(dx * (y1 - py) - (x1 - px) * dy) / length
 
 
 def point_side(line: LineSegment, point: tuple[float, float]) -> float:

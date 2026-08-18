@@ -26,6 +26,8 @@ export function QueuePanel({
   onSubmitPending,
   onResume,
   onStartFresh,
+  onCancel,
+  onAggregate,
   busyId,
 }: {
   jobs: JobStatusResponse[];
@@ -38,6 +40,8 @@ export function QueuePanel({
   onSubmitPending: (path: string) => void;
   onResume: (jobId: string) => void;
   onStartFresh: (jobId: string) => void;
+  onCancel: (jobId: string) => void;
+  onAggregate: (jobId: string) => void;
   busyId: string | null;
 }) {
   return (
@@ -138,34 +142,68 @@ export function QueuePanel({
                     : ""}
                 </p>
               ) : null}
+              {job.error_message ? (
+                <p className="mt-1 text-xs text-red-700">{job.error_message}</p>
+              ) : null}
+              {job.queue_position ? (
+                <p className="mt-1 text-xs text-neutral-600">
+                  Queue position {job.queue_position}
+                </p>
+              ) : null}
               {job.status === "COMPLETED" ? (
                 <p className="mt-1 text-xs text-neutral-600">
                   {job.output_dir}/{videoStem(job.source_video_path)}_events.csv
+                  {" · "}
+                  {job.output_dir}/{videoStem(job.source_video_path)}_15min.csv
                 </p>
               ) : null}
-              {(paused || (failed && job.checkpoint_exists)) && (
-                <div className="mt-2 flex gap-2">
-                  {paused ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={busyId === job.job_id}
-                      onClick={() => onResume(job.job_id)}
-                    >
-                      Resume
-                    </Button>
-                  ) : null}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(job.status === "PENDING" || job.status === "PROCESSING") && (
                   <Button
                     type="button"
                     size="sm"
-                    variant="danger"
+                    variant="ghost"
                     disabled={busyId === job.job_id}
-                    onClick={() => onStartFresh(job.job_id)}
+                    onClick={() => onCancel(job.job_id)}
                   >
-                    Start fresh
+                    Cancel
                   </Button>
-                </div>
-              )}
+                )}
+                {job.status === "COMPLETED" ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busyId === job.job_id}
+                    onClick={() => onAggregate(job.job_id)}
+                  >
+                    Aggregate 15min
+                  </Button>
+                ) : null}
+                {(paused || (failed && job.checkpoint_exists)) && (
+                  <>
+                    {paused ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={busyId === job.job_id}
+                        onClick={() => onResume(job.job_id)}
+                      >
+                        Resume
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="danger"
+                      disabled={busyId === job.job_id}
+                      onClick={() => onStartFresh(job.job_id)}
+                    >
+                      Start fresh
+                    </Button>
+                  </>
+                )}
+              </div>
             </li>
           );
         })}

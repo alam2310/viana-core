@@ -23,6 +23,7 @@ from viana.stages.ocr import OcrReader, optional_easyocr_reader, parse_osd_hits
 from viana.stages.prescan import VideoMeta
 from viana.stages.render import FfmpegRenderer, FrameRenderer, NullRenderer
 from viana.stages.time_map import TimeMap, save_time_map, time_map_from_metadata
+from viana.stages.track import build_tracker
 from viana.stages.ultralytics_detect import UltralyticsDualDetector
 from viana.stages.video import VideoFrame, iter_cv2_frames
 
@@ -117,11 +118,13 @@ def _open_renderer(
     *,
     resume: bool,
     start_index: int,
+    class_names: dict[int, str] | None = None,
 ) -> FrameRenderer:
     if not job.task_parameters.render_video or resume or start_index > 0:
         return NullRenderer()
     renderer = FfmpegRenderer(paths["processed_video"], meta.width, meta.height, meta.fps)
     renderer.set_lines(job.task_parameters.horizon_line, job.task_parameters.counting_line)
+    renderer.set_class_names(class_names or {})
     return renderer
 
 
@@ -221,7 +224,14 @@ def run_moving_count(
     writer_renderer: FrameRenderer = (
         renderer
         if renderer is not None
-        else _open_renderer(job, paths, meta, resume=resume, start_index=start_index)
+        else _open_renderer(
+            job,
+            paths,
+            meta,
+            resume=resume,
+            start_index=start_index,
+            class_names=taxonomy.id_to_name(),
+        )
     )
 
     engine = FrameCVEngine(
@@ -230,6 +240,7 @@ def run_moving_count(
         frame_height=meta.height,
         detection=defaults.detection,
         classification=defaults.classification,
+        tracker=build_tracker(frame_rate=meta.fps),
     )
     if checkpoint is not None and resume:
         engine.crossings.counted_track_ids = set(checkpoint.counted_track_ids)

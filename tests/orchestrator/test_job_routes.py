@@ -179,6 +179,13 @@ def test_health_still_ok(client: TestClient) -> None:
     assert response.json() == {"status": "ok", "phase": 6}
 
 
+def test_cors_allows_ui_origin(client: TestClient) -> None:
+    """Browser dashboard on :3000 must call the orchestrator on :8000."""
+    response = client.get("/health", headers={"Origin": "http://localhost:3000"})
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+
 def test_post_jobs_rejects_client_job_id(client: TestClient) -> None:
     """UI must not send job_id; extra fields are forbidden."""
     body = {**VALID_SUBMIT, "job_id": "job_from_ui"}

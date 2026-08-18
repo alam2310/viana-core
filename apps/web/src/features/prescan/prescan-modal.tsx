@@ -10,8 +10,15 @@ import type {
 
 import { CalibrationCanvas } from "@/features/calibration/calibration-canvas";
 import { Button } from "@/components/ui/button";
-import { prescan } from "@/lib/api-client";
-import { validateCalibration } from "@/lib/geometry";
+import {
+  prescan,
+  resolveApiAssetUrl,
+  saveProfile,
+} from "@/lib/api-client";
+import {
+  defaultCalibrationLines,
+  validateCalibration,
+} from "@/lib/geometry";
 
 export interface CalibrationDraft {
   source_video_path: string;
@@ -41,6 +48,8 @@ export function PrescanModal({
   const [horizon, setHorizon] = useState<LineSegment | null>(null);
   const [counting, setCounting] = useState<LineSegment | null>(null);
   const [applyToPending, setApplyToPending] = useState(false);
+  const [saveAsProfile, setSaveAsProfile] = useState(false);
+  const [profileId, setProfileId] = useState("session");
 
   async function runPrescan(frameOffset = offset) {
     setBusy(true);
@@ -57,9 +66,16 @@ export function PrescanModal({
         user_start_date: response.ocr.date ?? undefined,
         location: response.ocr.location ?? undefined,
       });
+      const fallback = defaultCalibrationLines(
+        response.video_meta.width,
+        response.video_meta.height,
+      );
       if (response.proposed_lines) {
         setHorizon(response.proposed_lines.horizon_line);
         setCounting(response.proposed_lines.counting_line);
+      } else {
+        setHorizon(fallback.horizon);
+        setCounting(fallback.counting);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -113,6 +129,7 @@ export function PrescanModal({
               height={meta.height}
               horizon={horizon}
               counting={counting}
+              previewUrl={resolveApiAssetUrl(result.preview_url)}
               onChange={(next) => {
                 setHorizon(next.horizon);
                 setCounting(next.counting);
@@ -196,22 +213,59 @@ export function PrescanModal({
               />
               Apply lines to all pending videos
             </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={saveAsProfile}
+                onChange={(event) => setSaveAsProfile(event.target.checked)}
+              />
+              Save as project profile
+            </label>
+            {saveAsProfile ? (
+              <label className="text-sm">
+                profile_id
+                <input
+                  className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 font-mono text-sm"
+                  value={profileId}
+                  onChange={(event) => setProfileId(event.target.value)}
+                />
+              </label>
+            ) : null}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
               <Button
                 type="button"
-                disabled={issues.length > 0}
+                disabled={issues.length > 0 || busy}
                 onClick={() =>
-                  onConfirm({
-                    source_video_path: sourceVideoPath,
-                    video_meta: meta,
-                    metadata,
-                    horizon_line: horizon,
-                    counting_line: counting,
-                    applyToPending,
-                  })
+                  void (async () => {
+                    if (saveAsProfile && /^[a-z0-9][a-z0-9_-]*$/.test(profileId)) {
+                      try {
+                        await saveProfile(projectId, {
+                          profile_id: profileId,
+                          profile_name: profileId,
+                          reference_resolution: [meta.width, meta.height],
+                          horizon_line: horizon,
+                          counting_line: counting,
+                          source: result.proposed_lines
+                            ? "user_edited"
+                            : "user_drawn",
+                        });
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : String(err));
+                        return;
+                      }
+                    }
+                    onConfirm({
+                      source_video_path: sourceVideoPath,
+                      video_meta: meta,
+                      metadata,
+                      horizon_line: horizon,
+                      counting_line: counting,
+                      applyToPending,
+                    });
+                  })()
                 }
               >
                 Save calibration

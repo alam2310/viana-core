@@ -59,6 +59,32 @@ def test_standalone_pedestrian_kept() -> None:
     assert ids == [0, 11]
 
 
+def test_coco_non_person_not_mapped_to_pedestrian() -> None:
+    """YOLO11 bicycle/car ids must not become Pedestrian taxonomy rows."""
+    bike = _box(80, 80, 100, 140, class_id=1, conf=0.9)
+    merged = merge_detections(
+        [],
+        [bike],
+        suppression_ioa=0.3,
+        nms_threshold=0.5,
+        confidence_threshold=0.75,
+    )
+    assert merged == []
+
+
+def test_unknown_vehicle_class_dropped() -> None:
+    """Ids outside the ITVA vehicle set are not mapped through classes.yaml."""
+    ghost = _box(0, 0, 20, 20, class_id=11, conf=0.9)
+    merged = merge_detections(
+        [ghost],
+        [],
+        suppression_ioa=0.3,
+        nms_threshold=0.5,
+        confidence_threshold=0.75,
+    )
+    assert merged == []
+
+
 def test_horizon_filter_drops_far_boxes() -> None:
     """Centers above the horizon line are ignored (legacy TrafficPipeline)."""
     horizon = LineSegment(start=(0, 50), end=(200, 50))

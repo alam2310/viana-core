@@ -13,9 +13,10 @@
 2. `docs/specs/ui_specifications.md` (product requirements)
 3. `docs/ui/USER_FLOWS.md`
 4. `docs/ui/CALIBRATION_CANVAS.md`
-5. `docs/ui/API_INTEGRATION.md`
-6. `docs/ui/STATE_MACHINE.md`
-7. `docs/api_contracts.md`
+5. `docs/ui/OVERLAY_COLORS.md`
+6. `docs/ui/API_INTEGRATION.md`
+7. `docs/ui/STATE_MACHINE.md`
+8. `docs/api_contracts.md`
 
 ---
 
@@ -26,6 +27,7 @@
 | `DEVELOPMENT_GUIDE.md` | Local setup, env vars, monorepo map |
 | `USER_FLOWS.md` | Step-by-step screens |
 | `CALIBRATION_CANVAS.md` | Line drawing, coords, clamping |
+| `OVERLAY_COLORS.md` | Processed-video line + per-class box colors |
 | `API_INTEGRATION.md` | HTTP + WebSocket, errors |
 | `STATE_MACHINE.md` | Job states, resume/fresh |
 | `COMPONENT_MAP.md` | Planned component layout |
@@ -33,9 +35,9 @@
 
 ---
 
-## Mock-first development
+## Mock vs live
 
-Until `docs/PROJECT_STATUS.md` marks endpoints ✅:
+Phase 6 endpoints are ✅. Default E2E env is `NEXT_PUBLIC_USE_MOCKS=false`. Fixtures remain for local UI-only work.
 
 ```typescript
 import prescanFixture from '../../../packages/contracts/fixtures/prescan_response.json';
@@ -59,4 +61,4 @@ apps/web/
 └── .env.example
 ```
 
-Phase 8 workflows are in `apps/web` against fixtures. Turn off mocks only when `PROJECT_STATUS.md` marks endpoints ✅.
+Phase 8 workflows talk to the live API when `NEXT_PUBLIC_USE_MOCKS=false`.

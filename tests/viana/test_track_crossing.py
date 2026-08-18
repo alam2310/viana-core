@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import pytest
+
 from viana.config.defaults import load_engine_defaults
 from viana.config.job import LineSegment
 from viana.domain.boxes import Detection
 from viana.stages.crossing import CrossingState
 from viana.stages.cv_core import FrameCVEngine
-from viana.stages.track import IoUTracker, TrackedDetection
+from viana.stages.track import ByteTrackTracker, IoUTracker, TrackedDetection
 
 
 def test_iou_tracker_stable_id() -> None:
@@ -18,6 +20,42 @@ def test_iou_tracker_stable_id() -> None:
     first = tracker.update([a], 0)
     second = tracker.update([b], 1)
     assert first[0].track_id == second[0].track_id == 1
+
+
+def test_byte_track_keeps_id_and_splits_classes() -> None:
+    """ByteTrack (if installed) holds overlapping boxes and isolates pedestrians."""
+    pytest.importorskip("trackers")
+    tracker = ByteTrackTracker(frame_rate=15)
+    ids: list[int] = []
+    for index in range(8):
+        box = Detection(
+            x1=10 + index,
+            y1=10 + index,
+            x2=40 + index,
+            y2=40 + index,
+            confidence=0.9,
+            class_id=0,
+        )
+        tracked = tracker.update([box], index)
+        if tracked:
+            ids.append(tracked[0].track_id)
+    assert ids
+    assert len(set(ids)) == 1
+    person = Detection(x1=12, y1=12, x2=38, y2=38, confidence=0.9, class_id=11)
+    people = tracker.update([person], 20)
+    assert people
+    assert people[0].track_id != ids[0]
+    assert people[0].track_id >= 1_000_000
+
+
+def test_iou_tracker_does_not_match_different_classes() -> None:
+    """A pedestrian box must not inherit a vehicle track id by overlap."""
+    tracker = IoUTracker()
+    car = Detection(x1=10, y1=10, x2=40, y2=40, confidence=0.9, class_id=0)
+    person = Detection(x1=12, y1=12, x2=38, y2=38, confidence=0.9, class_id=11)
+    first = tracker.update([car], 0)
+    second = tracker.update([person], 1)
+    assert first[0].track_id != second[0].track_id
 
 
 def test_crossing_emits_once_per_track() -> None:
@@ -62,3 +100,7 @@ def test_frame_engine_counts_crossing_without_15min() -> None:
     result = engine.process_detections([above], frame_index=1, video_pts_ms=40)
     assert len(result.crossings) == 1
     assert not hasattr(result, "bins")
+    locked = result.class_ids[result.crossings[0].track_id]
+    flipped = Detection(x1=42, y1=0, x2=82, y2=90, confidence=0.9, class_id=1)
+    later = engine.process_detections([flipped], frame_index=2, video_pts_ms=80)
+    assert later.class_ids[result.crossings[0].track_id] == locked

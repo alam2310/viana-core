@@ -5,6 +5,9 @@ from __future__ import annotations
 from viana.domain.boxes import Detection, ioa_child_in_parent, nms_class_agnostic
 
 PEDESTRIAN_ID = 11
+# ITVA vehicle-head ids (legacy target_classes). Pedestrian is model-B only.
+VEHICLE_CLASS_IDS = frozenset({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14})
+COCO_PERSON_ID = 0
 
 
 def pedestrian_inside_vehicle(
@@ -27,11 +30,17 @@ def merge_detections(
 ) -> list[Detection]:
     """Combine model-A vehicles and model-B persons, then class-agnostic NMS.
 
-    Pedestrian YOLO class 0 is remapped to ``pedestrian_id``. Persons overlapping a
-    vehicle above ``suppression_ioa`` are dropped. Confidence is applied after merge.
+    Pedestrian YOLO **person** (COCO 0) is remapped to ``pedestrian_id``. Other
+    model-B classes (car, bicycle, …) are dropped so they cannot inherit the
+    passenger/slow/pedestrian taxonomy row. Vehicle boxes outside the ITVA id
+    set are dropped. Persons overlapping a vehicle above ``suppression_ioa``
+    are dropped. Confidence is applied after merge.
     """
+    kept_vehicles = [item for item in vehicles if item.class_id in VEHICLE_CLASS_IDS]
     mapped_people: list[Detection] = []
     for person in pedestrians:
+        if person.class_id != COCO_PERSON_ID:
+            continue
         remapped = Detection(
             x1=person.x1,
             y1=person.y1,
@@ -40,11 +49,13 @@ def merge_detections(
             confidence=person.confidence,
             class_id=pedestrian_id,
         )
-        if pedestrian_inside_vehicle(remapped, vehicles, suppression_ioa):
+        if pedestrian_inside_vehicle(remapped, kept_vehicles, suppression_ioa):
             continue
         mapped_people.append(remapped)
 
-    merged = [item for item in vehicles + mapped_people if item.confidence >= confidence_threshold]
+    merged = [
+        item for item in kept_vehicles + mapped_people if item.confidence >= confidence_threshold
+    ]
     if not merged:
         return []
     return nms_class_agnostic(merged, nms_threshold)

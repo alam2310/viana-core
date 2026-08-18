@@ -1,8 +1,8 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-19  
-**Current focus:** Phase 6 — Orchestrator workers; UI remains on mocks until E2E  
-**API blocker:** none for subprocess wiring (`viana run` / `prescan` / `resume` / `aggregate` are implemented).  
+**Current focus:** E2E (mocks off) complete; Phase 9 parity recorded — **do not delete `legacy/`**  
+**API blocker:** none. Live `:8000/health` is Phase 6.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
 
@@ -22,8 +22,8 @@
 | Engine | 5 — Process & render | ✅ **Complete** (YOLO/FFmpeg optional at runtime) | `src/viana/` |
 | API | 6 — Orchestrator | ✅ Workers spawn `python -m viana` | `src/orchestrator/` |
 | UI | 7 — Foundation | ✅ Scaffold complete | `apps/web/` |
-| UI | 8 — Workflows | ✅ Mocked complete | `apps/web/` |
-| QA | 9 — Parity & hardening | ⬜ Not started | `tests/`, `legacy/PARITY.md` |
+| UI | 8 — Workflows | ✅ Live client (`NEXT_PUBLIC_USE_MOCKS=false`) | `apps/web/` |
+| QA | 9 — Parity & hardening | 🟡 Recorded, **not signed off** | `tests/viana/fixtures/PARITY_NOTES.md` |
 
 ---
 
@@ -111,11 +111,22 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 ---
 
+## E2E (UI mocks off) — 2026-08-19
+
+- `apps/web/.env.local`: `NEXT_PUBLIC_USE_MOCKS=false`, `NEXT_PUBLIC_API_URL=http://localhost:8000`
+- Container `viana_core` publishes **8000**; compose command runs uvicorn (installs editable package if missing, then pins `numpy<2`).
+- `GET http://localhost:8000/health` → `{"status":"ok","phase":6}`. CORS allows the Next.js origin.
+- Scripted live flow: health → prescan (`/data/raw/test_video.mp4`) → submit (no `job_id`/`gpu_device`) → WS/GET progress → COMPLETED → `POST …/aggregate` → 409 on silent re-submit → `start_fresh` → DELETE cancel → CANCELLED.
+- Pause/resume: short clips finish before `checkpoint_interval_frames=500`, so **PAUSED** is rare; cancel is eventually `CANCELLED` (poll; not always instant).
+- 15-min CSV needs wall-clock metadata (OCR or `user_start_time`/`user_start_date`). `test_video` OCR was empty → header-only `_15min.csv`. `parity_golden` with user metadata → 28 aggregate rows (`--partial` because 300/331 frames).
+- **YOLO + FFmpeg:** confirmed in container after NumPy pin. Processed MP4 written. Do not treat a NumPy 2 + OpenCV 4.10 combo as success.
+
 ## Parity gate (before deleting `legacy/`)
 
-- [ ] Golden clip — `tests/viana/fixtures/PARITY_NOTES.md`
-- [ ] Legacy vs v2 counts — `legacy/PARITY.md`
-- [ ] Real project videos via UI
+- [x] Golden clip — `tests/viana/fixtures/PARITY_NOTES.md` (`hiv000001` 180s in-frame match + `parity_golden.mp4`)
+- [x] Legacy vs v2 counts — `legacy/PARITY.md` (matched lines + conf 0.25: 125 vs 160; vehicles 115 vs 113; **not** ±2% overall)
+- [x] Real project extract via UI HTTP client (not CLI-only); browser click-through not automated
+- [ ] Human sign-off on deltas — **required before deleting `legacy/`**
 
 ---
 
@@ -123,6 +134,10 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Overlay class: rolling majority off-line (no distant lock); HEVC NVENC cq 42 |
+| 2026-08-19 | Overlay: class name on boxes; geometric lines pin x=0 / x=width-1. Parity v2@0.25: 160 vs legacy 125 (vehicles 113 vs 115; Pedestrian 47 vs 10). Still not ±2%; do not delete `legacy/` |
+| 2026-08-19 | Parity re-run: `hiv000001` 180s window with **matching in-frame lines**; legacy 125 vs v2@0.75 72 (Van/MiniBus equal). Still not ±2%; do not delete `legacy/` |
+| 2026-08-19 | E2E: UI mocks off; CORS; preview canvas; 409/aggregate/cancel; live Phase 6 health. Phase 9: golden clip + legacy vs v2 counts recorded; **do not delete legacy/** |
 | 2026-08-19 | Phase 6: orchestrator workers spawn `python -m viana`; job queue (2 GPUs); 409 silent-resume; WS telemetry |
 | 2026-08-19 | Phase 5: viana run/resume process loop, telemetry, FFmpeg render, explicit resume |
 | 2026-08-19 | Phase 4: viana prescan OCR + line proposal + profiles + preview JPEG |

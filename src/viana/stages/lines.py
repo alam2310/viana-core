@@ -8,9 +8,9 @@ from viana.config.job import LineSegment
 from viana.domain.geometry import clamp_point
 from viana.io.profiles import CalibrationProfile, parse_created_at
 
-# Normalized endpoints matching the prescan fixture on 1920×1080 CCTV framing.
-_HORIZON = ((0.0625, 0.37037), (0.9375, 0.48148))
-_COUNTING = ((0.04167, 0.83333), (0.95833, 0.72222))
+# Normalized y (left, right). X is always pinned to frame left/right edges.
+_HORIZON_Y = (0.6, 0.0)
+_COUNTING_Y = (1.0, 0.0)
 GEOMETRIC_CONFIDENCE = 0.4
 PROFILE_CONFIDENCE = 0.85
 
@@ -25,21 +25,17 @@ class ProposedLines(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
 
 
-def _endpoint(frac: tuple[float, float], width: int, height: int) -> tuple[int, int]:
-    x = round(frac[0] * (width - 1))
-    y = round(frac[1] * (height - 1))
-    return clamp_point(x, y, width, height)
-
-
 def geometric_lines(width: int, height: int) -> ProposedLines:
-    """Default far/near lines for a typical roadside CCTV frame."""
+    """Far/near lines spanning left and right frame edges (legacy in-frame clamp)."""
+    x0, x1 = 0, width - 1
+    counting_left_y = height - 1 if _COUNTING_Y[0] >= 1.0 else int(_COUNTING_Y[0] * height)
     horizon = LineSegment(
-        start=_endpoint(_HORIZON[0], width, height),
-        end=_endpoint(_HORIZON[1], width, height),
+        start=clamp_point(x0, int(_HORIZON_Y[0] * height), width, height),
+        end=clamp_point(x1, int(_HORIZON_Y[1] * height), width, height),
     )
     counting = LineSegment(
-        start=_endpoint(_COUNTING[0], width, height),
-        end=_endpoint(_COUNTING[1], width, height),
+        start=clamp_point(x0, counting_left_y, width, height),
+        end=clamp_point(x1, int(_COUNTING_Y[1] * height), width, height),
     )
     horizon.assert_within_frame(width, height, "horizon_line")
     counting.assert_within_frame(width, height, "counting_line")

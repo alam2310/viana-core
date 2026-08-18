@@ -22,6 +22,8 @@
 | Paused job detail | GET | `/jobs/{id}` |
 | Resume | POST | `/jobs/{id}/resume` |
 | Start fresh | POST | `/jobs/{id}/start-fresh` |
+| Re-aggregate | POST | `/jobs/{id}/aggregate` |
+| Cancel | DELETE | `/jobs/{id}` |
 | Live updates | WS | `/ws/jobs` |
 
 ## Error handling
@@ -29,7 +31,7 @@
 | HTTP | Meaning | UI action |
 |------|---------|-----------|
 | 400 | Invalid geometry / config | Toast + highlight field |
-| 409 | Checkpoint exists without resume/fresh | Show resume modal |
+| 409 | Checkpoint exists without resume/fresh | Show start-fresh prompt; resume from PAUSED job card |
 | 503 | GPU workers busy | Show queue position |
 | 500 | Engine crash | Show PAUSED if checkpoint exists |
 

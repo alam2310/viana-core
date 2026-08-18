@@ -1,14 +1,17 @@
 /**
- * Job API client. Mock path uses packages/contracts/fixtures until
- * docs/PROJECT_STATUS.md marks each endpoint ✅.
+ * Job API client. Mock path uses packages/contracts/fixtures when
+ * NEXT_PUBLIC_USE_MOCKS is not false.
  *
  * Never send job_id or gpu_device on POST /jobs.
  */
 
 import type {
+  CalibrationProfile,
   JobStatusResponse,
   JobSubmitRequest,
   JobSubmitResponse,
+  LineSegment,
+  Point,
   PrescanResponse,
   TelemetryMessage,
 } from "@viana/contracts";
@@ -31,8 +34,22 @@ export interface PrescanRequestBody {
   frame_offset_sec?: number;
 }
 
+export interface AggregateResponse {
+  command?: string;
+  aggregate_15min?: string;
+  [key: string]: unknown;
+}
+
 function asContract<T>(value: unknown): T {
   return value as T;
+}
+
+function intPoint(point: Point): Point {
+  return [Math.round(point[0]), Math.round(point[1])];
+}
+
+function intLine(line: LineSegment): LineSegment {
+  return { start: intPoint(line.start), end: intPoint(line.end) };
 }
 
 export class ApiClientError extends Error {
@@ -46,14 +63,34 @@ export class ApiClientError extends Error {
   }
 }
 
+export function isCheckpointConflict(error: unknown): boolean {
+  return error instanceof ApiClientError && error.status === 409;
+}
+
+function formatApiError(status: number, statusText: string, data: unknown): string {
+  if (data && typeof data === "object" && "detail" in data) {
+    const detail = (data as { detail: unknown }).detail;
+    if (typeof detail === "string") {
+      return `API ${status}: ${detail}`;
+    }
+    return `API ${status}: ${JSON.stringify(detail)}`;
+  }
+  return `API ${status} ${statusText}`;
+}
+
 /** Whitelist JobSubmitRequest fields so JobConfig.job_id / gpu_device cannot leak. */
 export function toJobSubmitPayload(body: JobSubmitRequest): JobSubmitRequest {
+  const params = body.task_parameters;
   return {
     task_type: body.task_type,
     source_video_path: body.source_video_path,
     project_id: body.project_id,
     ...(body.metadata ? { metadata: body.metadata } : {}),
-    task_parameters: body.task_parameters,
+    task_parameters: {
+      ...params,
+      horizon_line: intLine(params.horizon_line),
+      counting_line: intLine(params.counting_line),
+    },
     ...(body.calibration_profile_id
       ? { calibration_profile_id: body.calibration_profile_id }
       : {}),
@@ -69,15 +106,30 @@ export type JobSubmitClientBody = JobSubmitRequest & {
   output_dir?: never;
 };
 
+/** Prefix orchestrator-relative paths (preview_url) with NEXT_PUBLIC_API_URL. */
+export function resolveApiAssetUrl(path: string): string {
+  if (!path) {
+    return path;
+  }
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  const base = API_BASE_URL.replace(/\/$/, "");
+  return path.startsWith("/") ? `${base}${path}` : `${base}/${path}`;
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
   const data = text ? (JSON.parse(text) as unknown) : null;
   if (!response.ok) {
     throw new ApiClientError(
-      `API ${response.status} ${response.statusText}`,
+      formatApiError(response.status, response.statusText, data),
       response.status,
       data,
     );
+  }
+  if (response.status === 204) {
+    return undefined as T;
   }
   return data as T;
 }
@@ -104,7 +156,7 @@ export interface HealthResponse {
 
 export async function getHealth(): Promise<HealthResponse> {
   if (USE_MOCKS) {
-    return { status: "ok", phase: 0 };
+    return { status: "ok", phase: 6 };
   }
   return requestJson<HealthResponse>("/health");
 }
@@ -157,31 +209,86 @@ export async function getJob(jobId: string): Promise<JobStatusResponse> {
   return requestJson<JobStatusResponse>(`/jobs/${encodeURIComponent(jobId)}`);
 }
 
-export async function resumeJob(jobId: string): Promise<JobStatusResponse> {
+export async function resumeJob(jobId: string): Promise<JobSubmitResponse> {
   if (USE_MOCKS) {
     const job = mockResumeJob(jobId);
     if (!job) {
       throw new ApiClientError("Job not found", 404);
     }
-    return job;
+    return {
+      job_id: job.job_id,
+      status: job.status,
+      gpu_device: job.gpu_device ?? "cuda:0",
+      queue_position: job.queue_position ?? 0,
+      output_dir: job.output_dir,
+    };
   }
-  return requestJson<JobStatusResponse>(
+  return requestJson<JobSubmitResponse>(
     `/jobs/${encodeURIComponent(jobId)}/resume`,
     { method: "POST" },
   );
 }
 
-export async function startFreshJob(jobId: string): Promise<JobStatusResponse> {
+export async function startFreshJob(jobId: string): Promise<JobSubmitResponse> {
   if (USE_MOCKS) {
     const job = mockStartFreshJob(jobId);
     if (!job) {
       throw new ApiClientError("Job not found", 404);
     }
-    return job;
+    return {
+      job_id: job.job_id,
+      status: job.status,
+      gpu_device: job.gpu_device ?? "cuda:0",
+      queue_position: job.queue_position ?? 0,
+      output_dir: job.output_dir,
+    };
   }
-  return requestJson<JobStatusResponse>(
+  return requestJson<JobSubmitResponse>(
     `/jobs/${encodeURIComponent(jobId)}/start-fresh`,
     { method: "POST" },
+  );
+}
+
+export async function cancelJob(jobId: string): Promise<void> {
+  if (USE_MOCKS) {
+    return;
+  }
+  await requestJson<void>(`/jobs/${encodeURIComponent(jobId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function aggregateJob(jobId: string): Promise<AggregateResponse> {
+  if (USE_MOCKS) {
+    return { command: "aggregate", aggregate_15min: "mock_15min.csv" };
+  }
+  return requestJson<AggregateResponse>(
+    `/jobs/${encodeURIComponent(jobId)}/aggregate`,
+    { method: "POST" },
+  );
+}
+
+export async function listProfiles(
+  projectId: string,
+): Promise<CalibrationProfile[]> {
+  if (USE_MOCKS) {
+    return asContract<PrescanResponse>(prescanFixture).profiles ?? [];
+  }
+  return requestJson<CalibrationProfile[]>(
+    `/projects/${encodeURIComponent(projectId)}/profiles`,
+  );
+}
+
+export async function saveProfile(
+  projectId: string,
+  profile: CalibrationProfile,
+): Promise<CalibrationProfile> {
+  if (USE_MOCKS) {
+    return profile;
+  }
+  return requestJson<CalibrationProfile>(
+    `/projects/${encodeURIComponent(projectId)}/profiles`,
+    { method: "POST", body: JSON.stringify(profile) },
   );
 }
 
@@ -198,12 +305,34 @@ export function subscribeJobTelemetry(
   }
 
   const wsUrl = `${API_BASE_URL.replace(/^http/, "ws")}/ws/jobs`;
-  const socket = new WebSocket(wsUrl);
-  socket.addEventListener("message", (event) => {
-    const parsed = JSON.parse(String(event.data)) as TelemetryMessage;
-    onMessage(parsed);
-  });
-  return () => socket.close();
+  let closed = false;
+  let socket: WebSocket | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function connect() {
+    if (closed) {
+      return;
+    }
+    socket = new WebSocket(wsUrl);
+    socket.addEventListener("message", (event) => {
+      const parsed = JSON.parse(String(event.data)) as TelemetryMessage;
+      onMessage(parsed);
+    });
+    socket.addEventListener("close", () => {
+      if (!closed) {
+        reconnectTimer = setTimeout(connect, 2000);
+      }
+    });
+  }
+
+  connect();
+  return () => {
+    closed = true;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+    }
+    socket?.close();
+  };
 }
 
 export const apiClient = {
@@ -214,7 +343,12 @@ export const apiClient = {
   getJob,
   resumeJob,
   startFreshJob,
+  cancelJob,
+  aggregateJob,
+  listProfiles,
+  saveProfile,
   subscribeJobTelemetry,
+  resolveApiAssetUrl,
   useMocks: USE_MOCKS,
   apiBaseUrl: API_BASE_URL,
 };

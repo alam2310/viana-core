@@ -2,7 +2,7 @@
 
 Next.js 15 host application: container lifecycle on the host, job UI against FastAPI in Docker (`http://localhost:8000`).
 
-Until endpoints are marked ✅ in `docs/PROJECT_STATUS.md`, keep `NEXT_PUBLIC_USE_MOCKS=true` (fixtures in `packages/contracts/fixtures/`).
+Until endpoints are marked ✅ in `docs/PROJECT_STATUS.md`, keep `NEXT_PUBLIC_USE_MOCKS=true` (fixtures in `packages/contracts/fixtures/`). Phase 6 is ✅ — E2E uses `NEXT_PUBLIC_USE_MOCKS=false`.
 
 ## Setup
 

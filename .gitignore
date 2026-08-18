@@ -1,3 +1,6 @@
+# AgentReady / local tool output
+.agentready/
+
 data/
 __pycache__/
 *.pyc

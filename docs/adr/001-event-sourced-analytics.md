@@ -1,3 +1,8 @@
+---
+status: Accepted
+applies_to: viana-core
+---
+
 # ADR 001: Event-Sourced Analytics
 
 ## Status
@@ -6,8 +11,7 @@ Accepted
 
 ## Context
 
-# Legacy scripts and experiments — see `legacy/README.md` and `legacy/PARITY.md`.
-# Parity reference: legacy/inference/inference_engine.py
+Legacy inline 15-minute aggregation coupled OCR fixes to full video re-runs. See `legacy/inference/inference_engine.py` for parity reference.
 
 ## Decision
 

@@ -26,18 +26,18 @@ RAW_CLASS_NAMES = [
 ]
 
 class ITVADatasetBuilder:
-    def __init__(self):
+    def __init__(self) -> None:
         self._load_taxonomy()
         self.stats = {k: 0 for k in TARGET_IDS.keys()}
         
-    def _load_taxonomy(self):
+    def _load_taxonomy(self) -> None:
         if not TAXONOMY_PATH.exists():
             raise FileNotFoundError(f"❌ Taxonomy config missing: {TAXONOMY_PATH}")
         with open(TAXONOMY_PATH, 'r') as f:
             self.taxonomy = json.load(f)
         print(f"✅ Loaded Taxonomy: {len(self.taxonomy)} keys.")
 
-    def get_target_id(self, raw_class_name):
+    def get_target_id(self, raw_class_name) -> None:
         key = raw_class_name.lower().strip()
         if key not in self.taxonomy:
             raise ValueError(f"❌ CRITICAL: Raw class '{raw_class_name}' not found in JSON config!")
@@ -46,7 +46,7 @@ class ITVADatasetBuilder:
              raise ValueError(f"❌ Config Error: Sub-class '{sub_class}' is not in TARGET_IDS map.")
         return TARGET_IDS[sub_class], sub_class
 
-    def build(self):
+    def build(self) -> None:
         print(f"🚀 Starting Dataset Build: {INPUT_DATA_DIR} -> {OUTPUT_DATA_DIR}")
         
         if OUTPUT_DATA_DIR.exists():
@@ -128,7 +128,7 @@ class ITVADatasetBuilder:
         print("\n✅ Build Complete.")
         self._generate_yaml()
 
-    def _generate_yaml(self):
+    def _generate_yaml(self) -> None:
         yaml_data = {
             'path': str(OUTPUT_DATA_DIR.resolve()), 
             'train': 'train.txt',

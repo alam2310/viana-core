@@ -1,0 +1,174 @@
+openapi: 3.1.0
+info:
+  title: ViAna Orchestrator API
+  version: 0.1.0
+  description: |
+    Job management API for ViAna moving-count engine.
+    Machine-readable contracts: `packages/contracts/schemas/`.
+    Human reference: `docs/api_contracts.md`.
+servers:
+  - url: http://localhost:8000
+    description: Local Docker publish (default)
+
+paths:
+  /:
+    get:
+      summary: Service metadata
+      operationId: getRoot
+      responses:
+        "200":
+          description: Orchestrator identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceInfo"
+
+  /health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      tags: [health]
+      responses:
+        "200":
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /utils/prescan:
+    post:
+      summary: Prescan video (OCR + line proposal)
+      operationId: postPrescan
+      tags: [utils]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescanRequest"
+      responses:
+        "200":
+          description: Prescan result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrescanResponse"
+        "501":
+          description: Not implemented (Phase 4)
+
+  /jobs:
+    post:
+      summary: Submit moving-count job
+      operationId: postJob
+      tags: [jobs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobSubmitRequest"
+      responses:
+        "201":
+          description: Job accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSubmitResponse"
+        "409":
+          description: Checkpoint exists; explicit resume required
+        "501":
+          description: Not implemented (Phase 6)
+
+  /jobs/{job_id}:
+    get:
+      summary: Get job status
+      operationId: getJob
+      tags: [jobs]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatus"
+        "404":
+          description: Job not found
+
+components:
+  schemas:
+    ServiceInfo:
+      type: object
+      required: [service, version, phase]
+      properties:
+        service:
+          type: string
+          example: viana-orchestrator
+        version:
+          type: string
+          example: "0.1.0"
+        phase:
+          type: integer
+          example: 0
+
+    HealthResponse:
+      type: object
+      required: [status, phase]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        phase:
+          type: integer
+
+    PrescanRequest:
+      type: object
+      required: [source_video_path, project_id]
+      properties:
+        source_video_path:
+          type: string
+        project_id:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_-]*$"
+        frame_offset_sec:
+          type: number
+          default: 0
+
+    PrescanResponse:
+      type: object
+      description: See packages/contracts/schemas/prescan_response.schema.json
+
+    JobSubmitRequest:
+      type: object
+      description: See packages/contracts/schemas/job_submit.schema.json
+
+    JobSubmitResponse:
+      type: object
+      required: [job_id, status, gpu_device, queue_position, output_dir]
+      properties:
+        job_id:
+          type: string
+        status:
+          $ref: "#/components/schemas/JobStatusEnum"
+        gpu_device:
+          type: string
+          pattern: "^cuda:[01]$"
+        queue_position:
+          type: integer
+          minimum: 0
+        output_dir:
+          type: string
+
+    JobStatus:
+      type: object
+      description: See packages/contracts/schemas/job_status.schema.json
+
+    JobStatusEnum:
+      type: string
+      enum: [PENDING, PROCESSING, PAUSED, COMPLETED, FAILED, CANCELLED]

@@ -6,11 +6,28 @@ from pathlib import Path
 
 
 def project_output_dir(parent_dir: Path, project_id: str) -> Path:
+    """Resolve the per-project output directory.
+
+    Args:
+        parent_dir: Configured artifact root (e.g. `/data/viana-outputs`).
+        project_id: Project slug validated by `JobSubmitRequest`.
+
+    Returns:
+        Absolute path `{parent_dir}/{project_id}/`.
+    """
     return parent_dir / project_id
 
 
 def artifact_paths(output_dir: Path, video_stem: str) -> dict[str, Path]:
-    """Standard artifact filenames for a processed video."""
+    """Build standard artifact paths for a processed video stem.
+
+    Args:
+        output_dir: Project output directory.
+        video_stem: Filename without extension.
+
+    Returns:
+        Mapping of logical artifact names to absolute paths.
+    """
     return {
         "events": output_dir / f"{video_stem}_events.csv",
         "aggregate_15min": output_dir / f"{video_stem}_15min.csv",
@@ -23,8 +40,10 @@ def artifact_paths(output_dir: Path, video_stem: str) -> dict[str, Path]:
 
 
 def profiles_dir(output_dir: Path) -> Path:
+    """Return the calibration profiles directory for a project."""
     return output_dir / "profiles"
 
 
 def prescan_dir(output_dir: Path) -> Path:
+    """Return the prescan preview directory for a project."""
     return output_dir / "prescan"

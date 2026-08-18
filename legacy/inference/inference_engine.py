@@ -1,3 +1,5 @@
+"""Legacy parity reference for ViAna moving-count pipeline."""
+
 import warnings
 warnings.filterwarnings("ignore", message="The value of the smallest subnormal")
 
@@ -24,18 +26,20 @@ try:
     from trackers import ByteTrackTracker as StandaloneTracker
     class ByteTrackTracker:
         """Wrapper for the standalone 'trackers' package."""
-        def __init__(self, frame_rate=30):
+        def __init__(self, frame_rate=30) -> None:
             self.tracker = StandaloneTracker(frame_rate=frame_rate)
             
         def update(self, detections: sv.Detections) -> sv.Detections:
+            """Update tracker state with new detections."""
             return self.tracker.update(detections)
 except ImportError:
     class ByteTrackTracker:
         """Fallback wrapper if the standalone package is missing."""
-        def __init__(self, frame_rate=30):
+        def __init__(self, frame_rate=30) -> None:
             self.tracker = sv.ByteTrack(frame_rate=frame_rate)
             
         def update(self, detections: sv.Detections) -> sv.Detections:
+            """Update tracker state with new detections."""
             if hasattr(self.tracker, 'update_with_detections'):
                 return self.tracker.update_with_detections(detections)
             return self.tracker.update(detections)
@@ -46,6 +50,8 @@ except ImportError:
 # ==============================================================================
 @dataclass
 class TrafficConfig:
+    """Runtime configuration for the legacy traffic pipeline."""
+
     device_a: str = 'cuda:0'
     device_b: str = 'cuda:1'
     pedestrian_id: int = 11
@@ -78,7 +84,7 @@ class TrafficConfig:
 # ==============================================================================
 class TimeSyncEngine:
     """Handles OCR extraction and dynamic interval boundary calculations."""
-    def __init__(self):
+    def __init__(self) -> None:
         print("👁️  Initializing EasyOCR Engine (this may take a moment)...")
         self.reader = easyocr.Reader(['en'], gpu=True)
         self.target_video_msec = float('inf')
@@ -89,6 +95,7 @@ class TimeSyncEngine:
                              'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'}
 
     def extract_metadata(self, frame: np.ndarray) -> dict:
+        """Extract OCR time, date, and location metadata from a frame."""
         results = self.reader.readtext(frame)
         parsed_time, date_str, location_parts = None, "Unknown", []
         
@@ -122,7 +129,8 @@ class TimeSyncEngine:
         next_boundary = (dt_now + datetime.timedelta(minutes=minutes_to_add)).replace(second=0, microsecond=0)
         return (next_boundary - dt_now).total_seconds() * 1000
 
-    def initialize_anchor(self, frame: np.ndarray):
+    def initialize_anchor(self, frame: np.ndarray) -> None:
+        """Anchor interval reporting from OCR metadata on the first frame."""
         print("\n⚓ Anchoring Video Time Context...")
         meta = self.extract_metadata(frame)
         print(f"📌 [ANCHOR] Date: {meta['date']} | Time: {meta['time']} | Location: {meta['location']}")
@@ -174,6 +182,8 @@ class DetectionEngine:
         return False
 
     def predict(self, frame: np.ndarray) -> Optional[sv.Detections]:
+        """Run dual-model detection and return merged detections."""
+        """Run dual-model detection and return merged detections."""
         res_a = self.model_a.predict(frame, imgsz=1088, conf=0.25, device=self.cfg.device_a, verbose=False)[0]
         res_b = self.model_b.predict(frame, imgsz=1088, conf=0.25, classes=[0], device=self.cfg.device_b, verbose=False)[0]
 
@@ -209,6 +219,8 @@ class ClassificationEngine:
         self.track_history = defaultdict(lambda: {'votes': [], 'locked_class': None, 'max_ratio': 0.0, 'max_norm_area': 0.0})
 
     def process_vehicle(self, tracker_id: int, raw_class: int, xyxy: np.ndarray) -> Tuple[int, int]:
+        """Apply heuristic classification and return final class id and area."""
+        """Apply heuristic classification and return final class id and area."""
         w_box, h_box = xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]
         box_cy = (xyxy[1] + xyxy[3]) / 2
         
@@ -260,13 +272,16 @@ class VideoStreamer:
         ]
         self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE)
 
-    def read(self):
+    def read(self) -> None:
+        """Read the next frame from the input video."""
         return self.cap.read()
 
-    def write(self, frame):
+    def write(self, frame) -> None:
+        """Write an annotated frame to the FFmpeg output pipe."""
         self.pipe.stdin.write(frame.tobytes())
 
-    def close(self):
+    def close(self) -> None:
+        """Release capture and finalize encoded output."""
         self.cap.release()
         self.pipe.stdin.close()
         self.pipe.wait()
@@ -297,6 +312,8 @@ class Visualizer:
         self.line_zone = sv.LineZone(start=line_start_point, end=line_end_point)
 
     def draw(self, frame: np.ndarray, dets: sv.Detections, debug_info: dict, counts_in: dict, counts_out: dict) -> np.ndarray:
+        """Draw boxes, lines, and aggregate counts on the frame."""
+        """Draw boxes, lines, and aggregate counts on the frame."""
         labels = [
             f"#{t} {self.cfg.class_names.get(c, 'Unk')} (Raw:{self.cfg.class_names.get(debug_info.get(t, {}).get('raw', c), 'Unk')})"
             + (f" [{debug_info.get(t, {}).get('area', 0)//1000}k]" if c in self.cfg.commercial_trucks else "")
@@ -320,6 +337,8 @@ class Visualizer:
 # 7. ORCHESTRATOR PIPELINE (The Facade)
 # ==============================================================================
 class TrafficPipeline:
+    """End-to-end legacy moving-count processing pipeline."""
+
     def __init__(self, video_in: str, video_out: str, model_a: str, model_b: str):
         print("🚀 Initializing ViAna Pipeline Components...")
         self.cfg = TrafficConfig()
@@ -332,7 +351,8 @@ class TrafficPipeline:
         self.tracker = ByteTrackTracker(frame_rate=30)
         self.counts_in, self.counts_out = defaultdict(int), defaultdict(int)
 
-    def run(self):
+    def run(self) -> None:
+        """Execute the full legacy inference and rendering loop."""
         success, frame = self.stream.read()
         if success: self.time_sync.initialize_anchor(frame)
         self.stream.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)

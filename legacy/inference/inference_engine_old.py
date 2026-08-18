@@ -57,7 +57,7 @@ class TrafficConfig:
 # ==============================================================================
 class TimeSyncEngine:
     """Handles OCR extraction and dynamic interval boundary calculations."""
-    def __init__(self):
+    def __init__(self) -> None:
         print("👁️  Initializing EasyOCR Engine (this may take a moment)...")
         self.reader = easyocr.Reader(['en'], gpu=True)
         self.target_video_msec = float('inf')
@@ -240,13 +240,13 @@ class VideoStreamer:
         self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE)
 
     # [FIX] Re-added the missing I/O methods!
-    def read(self):
+    def read(self) -> None:
         return self.cap.read()
 
-    def write(self, frame):
+    def write(self, frame) -> None:
         self.pipe.stdin.write(frame.tobytes())
 
-    def close(self):
+    def close(self) -> None:
         self.cap.release()
         self.pipe.stdin.close()
         self.pipe.wait()
@@ -308,7 +308,7 @@ class TrafficPipeline:
         self.tracker = ByteTrackTracker(frame_rate=30)
         self.counts_in, self.counts_out = defaultdict(int), defaultdict(int)
 
-    def run(self):
+    def run(self) -> None:
         success, frame = self.stream.read()
         if success: self.time_sync.initialize_anchor(frame)
         self.stream.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)

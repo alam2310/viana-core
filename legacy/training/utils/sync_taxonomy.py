@@ -1,3 +1,5 @@
+"""Legacy taxonomy sync helper."""
+
 import json
 import os
 import sys
@@ -5,7 +7,7 @@ import sys
 # Define the Path to your Single Source of Truth
 CONFIG_PATH = os.path.join("legacy", "configs", "vehicle_taxonomy.json")
 
-def sync_taxonomy():
+def sync_taxonomy() -> None:
     """
     Updates the vehicle_taxonomy.json file with new raw keys found during the UVH-26 audit.
     This ensures that the JSON config remains the Single Source of Truth.

@@ -3,11 +3,12 @@
 import pytest
 from pydantic import ValidationError
 
-from viana.config.job import JobSubmitRequest, ViAnaTaskParameters, LineSegment
+from viana.config.job import JobSubmitRequest, LineSegment, ViAnaTaskParameters
 from viana.io.paths import artifact_paths, project_output_dir
 
 
-def test_project_id_validation():
+def test_project_id_validation() -> None:
+    """Reject invalid project_id slugs."""
     with pytest.raises(ValidationError):
         JobSubmitRequest(
             source_video_path="/data/v.mp4",
@@ -19,7 +20,8 @@ def test_project_id_validation():
         )
 
 
-def test_resume_and_start_fresh_mutually_exclusive():
+def test_resume_and_start_fresh_mutually_exclusive() -> None:
+    """Reject conflicting resume flags."""
     with pytest.raises(ValidationError):
         JobSubmitRequest(
             source_video_path="/data/v.mp4",
@@ -33,7 +35,8 @@ def test_resume_and_start_fresh_mutually_exclusive():
         )
 
 
-def test_artifact_paths():
+def test_artifact_paths() -> None:
+    """Verify standard artifact filename helpers."""
     from pathlib import Path
 
     out = project_output_dir(Path("/data/viana-outputs"), "nh48")

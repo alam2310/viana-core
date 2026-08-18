@@ -25,7 +25,7 @@ How AI agents should work on this repo to minimize context drift, hallucination,
 4. Read relevant schema in `packages/contracts/schemas/`
 5. Implement
 6. Update `PROJECT_STATUS.md` if you completed a milestone
-7. Run tests listed in `AGENTS.md` §7
+7. Run tests listed in `AGENTS.md` §7 (`make test`, `make lint`, `make typecheck`)
 
 ---
 

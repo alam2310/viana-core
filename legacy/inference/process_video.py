@@ -1,3 +1,5 @@
+"""Legacy video audit harness for taxonomy mapping checks."""
+
 import sys
 import os
 import pandas as pd
@@ -11,7 +13,7 @@ from src.utils.classifier import VehicleClassifier
 # --- Placeholder for your actual Model Inference ---
 # In reality, you will replace this with your actual YOLO/DeepStream call
 # For now, we simulate detections to test the PIPELINE
-def get_mock_model_detections(frame_number):
+def get_mock_model_detections(frame_number) -> None:
     """
     Simulates what your UVH-26 model returns.
     Replace this function with your actual model inference code later.
@@ -27,8 +29,10 @@ def get_mock_model_detections(frame_number):
         return [("MUV", 0.75, [300, 300, 400, 400])]
     return []
 
-def process_video_audit(video_path, output_csv="audit_report.csv"):
+def process_video_audit(video_path, output_csv="audit_report.csv") -> None:
+    """Audit video detections against taxonomy mappings and write CSV."""
     print(f"🚀 Starting Video Audit: {video_path}")
+    """Audit video detections against taxonomy mappings."""
     
     # 2. Initialize the Classifier
     try:

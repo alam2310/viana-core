@@ -10,6 +10,8 @@ When two documents disagree, **this table wins**.
 | **TypeScript types** | `packages/contracts/typescript/index.ts` | Must match schemas |
 | **Python job models** | `src/viana/config/job.py` | Must match schemas |
 | **Human API summary** | `docs/api_contracts.md` | Must match schemas |
+| **OpenAPI spec** | `openapi.yaml` | Must match `api_contracts.md` |
+| **Threat model** | `THREAT_MODEL.md` | Security scope |
 | **Class names & aggregation flags** | `configs/classes.yaml` | Inference time |
 | **UVH training label map** | `legacy/configs/vehicle_taxonomy.json` | Training / legacy only |
 | **Engine default thresholds** | `configs/engine_defaults.yaml` | Overridable per job |

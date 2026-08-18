@@ -1,3 +1,5 @@
+"""Legacy YOLO training entry script."""
+
 import os
 import sys
 from ultralytics import YOLO
@@ -12,7 +14,7 @@ EXPERIMENT_NAME = "itva_phase1_1280p"
 #MODEL_WEIGHTS = "models/pretrained/yolo11l.pt"  # YOLO11-Large
 MODEL_WEIGHTS = "models/pretrained/yolo11m.pt"  # YOLO11-Medium
 
-def run_training():
+def run_training() -> None:
     """
     Executes the High-Fidelity Training Protocol (Phase 1.3).
     - Resolution: 1280p (Critical for small object recall)

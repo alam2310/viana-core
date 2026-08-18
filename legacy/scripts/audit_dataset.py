@@ -1,3 +1,5 @@
+"""Legacy dataset audit CLI."""
+
 import sys
 import os
 
@@ -11,7 +13,8 @@ DATA_YAML_PATH = "/app/ViAna/data/processed/yolo_format/data.yaml"
 OUTPUT_DIR = "/app/ViAna/data/outputs/audit_samples/"
 # =================================================
 
-def main():
+def main() -> None:
+    """Run dataset label audit and write sample images."""
     if not os.path.exists(DATA_YAML_PATH):
         print(f"❌ Error: data.yaml not found at {DATA_YAML_PATH}")
         print("   Please edit 'audit_dataset.py' and set the correct DATA_YAML_PATH.")

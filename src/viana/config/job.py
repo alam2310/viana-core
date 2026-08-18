@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -19,12 +19,16 @@ class LineSegment(BaseModel):
 
 
 class JobMetadata(BaseModel):
-    user_start_time: Optional[str] = None
-    user_start_date: Optional[str] = None
-    location: Optional[str] = None
+    """Optional user-supplied metadata (OCR fallback / report headers)."""
+
+    user_start_time: str | None = None
+    user_start_date: str | None = None
+    location: str | None = None
 
 
 class ViAnaTaskParameters(BaseModel):
+    """Per-job CV parameters for ViAna Moving Count."""
+
     horizon_line: LineSegment
     counting_line: LineSegment
     confidence_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
@@ -41,25 +45,29 @@ class JobSubmitRequest(BaseModel):
     project_id: str
     metadata: JobMetadata = Field(default_factory=JobMetadata)
     task_parameters: ViAnaTaskParameters
-    calibration_profile_id: Optional[str] = None
+    calibration_profile_id: str | None = None
     resume: bool = False
     start_fresh: bool = False
 
     @field_validator("project_id")
     @classmethod
-    def validate_project_id(cls, v: str) -> str:
-        if not PROJECT_ID_PATTERN.match(v):
+    def validate_project_id(cls, value: str) -> str:
+        """Ensure project_id is a lowercase slug safe for directory names."""
+        if not PROJECT_ID_PATTERN.match(value):
             raise ValueError("project_id must match [a-z0-9][a-z0-9_-]*")
-        return v
+        return value
 
     @model_validator(mode="after")
     def resume_xor_fresh(self) -> JobSubmitRequest:
+        """Disallow ambiguous resume intent when both flags are set."""
         if self.resume and self.start_fresh:
             raise ValueError("resume and start_fresh are mutually exclusive")
         return self
 
 
 class JobSubmitResponse(BaseModel):
+    """Orchestrator response after accepting a job submit request."""
+
     job_id: str
     status: Literal["PENDING", "PROCESSING", "PAUSED", "COMPLETED", "FAILED", "CANCELLED"]
     gpu_device: str

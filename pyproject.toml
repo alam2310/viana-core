@@ -15,12 +15,18 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "python-multipart>=0.0.9",
+    "structlog>=24.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "httpx>=0.27",
+    "ruff>=0.9",
+    "mypy>=1.13",
+    "bandit>=1.8",
+    "import-linter>=2.1",
+    "pre-commit>=4.0",
 ]
 
 [project.scripts]
@@ -33,3 +39,49 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 # Legacy tests: pytest legacy/tests/
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "S", "B", "UP"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+"src/viana/cli.py" = ["B008"]
+"legacy/**" = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+packages = ["viana", "orchestrator"]
+exclude = ["legacy"]
+
+[[tool.mypy.overrides]]
+module = ["typer", "typer.*"]
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["legacy", "tests", ".venv", "venv"]
+skips = ["B101"]
+
+[tool.importlinter]
+root_packages = ["viana", "orchestrator"]
+
+[[tool.importlinter.contracts]]
+name = "Engine must not import orchestrator"
+type = "forbidden"
+source_modules = ["viana"]
+forbidden_modules = ["orchestrator"]
+
+[[tool.importlinter.contracts]]
+name = "Orchestrator must not import engine implementation"
+type = "forbidden"
+source_modules = ["orchestrator"]
+forbidden_modules = [
+    "viana.stages",
+    "viana.domain",
+]

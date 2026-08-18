@@ -1,3 +1,5 @@
+"""Legacy Phase 2 ensemble script (11l variant)."""
+
 import cv2
 import torch
 import argparse
@@ -35,7 +37,7 @@ CLASS_COLORS = {
 COLOR_SUPPRESSED = (128, 128, 128)  # Gray (Suppressed)
 DEFAULT_COLOR = (255, 255, 255)     # Fallback: White
 
-def is_inside_vehicle(person_box, vehicle_boxes, threshold=0.3):
+def is_inside_vehicle(person_box, vehicle_boxes, threshold=0.3) -> None:
     """
     Calculates Intersection over Area (IoA).
     Returns True if the person is significantly overlapping with ANY vehicle.
@@ -65,7 +67,7 @@ def is_inside_vehicle(person_box, vehicle_boxes, threshold=0.3):
                 
     return False
 
-def draw_dashed_rect(img, pt1, pt2, color, thickness=1, dash_len=10):
+def draw_dashed_rect(img, pt1, pt2, color, thickness=1, dash_len=10) -> None:
     """Utility to draw a dashed rectangle for suppressed items."""
     x1, y1 = pt1
     x2, y2 = pt2
@@ -80,8 +82,10 @@ def draw_dashed_rect(img, pt1, pt2, color, thickness=1, dash_len=10):
         cv2.line(img, (x1, y), (x1, min(y + dash_len, y2)), color, thickness)
         cv2.line(img, (x2, y), (x2, min(y + dash_len, y2)), color, thickness)
 
-def run_ensemble(video_path, model_a_path, model_b_path, output_path):
+def run_ensemble(video_path, model_a_path, model_b_path, output_path) -> None:
+    """Run legacy dual-GPU ensemble detection on a video."""
     print(f"🚀 Starting Dual-GPU Ensemble Inference (Medium + Large)...")
+    """Run legacy ensemble detection pass."""
     print(f"   • Model A (Vehicles)    -> {DEVICE_A}")
     print(f"   • Model B (Pedestrians) -> {DEVICE_B}")
     

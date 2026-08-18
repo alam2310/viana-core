@@ -112,6 +112,8 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | AgentReady round 2: requirements.txt, pattern refs, legacy docstrings |
+| 2026-08-18 | AgentReady remediation: CI, lint, OpenAPI, threat model, design docs |
 | 2026-08-18 | Phase 0 formally closed; hygiene pass (schemas, fixtures, Dockerfile, sign-off doc) |
 | 2026-08-18 | Repo cleanup: historical docs → `legacy/`; active specs → `docs/` |
 | 2026-08-18 | Phase 0 complete; governance docs; UI agent context in `apps/web/AGENTS.md` |

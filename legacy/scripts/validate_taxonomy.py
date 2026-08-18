@@ -1,3 +1,5 @@
+"""Legacy vehicle taxonomy validation script."""
+
 import sys
 import os
 from pathlib import Path
@@ -9,7 +11,8 @@ sys.path.insert(0, str(REPO_ROOT / "legacy" / "training"))
 from utils.classifier import VehicleClassifier
 
 
-def validate_mappings():
+def validate_mappings() -> None:
+    """Print taxonomy mapping validation table."""
     config_path = REPO_ROOT / "legacy" / "configs" / "vehicle_taxonomy.json"
 
     try:

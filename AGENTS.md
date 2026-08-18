@@ -64,11 +64,41 @@ Sync via **contracts only**. If the UI needs a new field, add it to the schema f
 ## 7. Verification commands
 
 ```bash
+pip install -r requirements.txt
 pip install -e ".[dev]"
 pytest tests/viana/
 python -m viana --help
 make api-dev    # :8000/health
+make lint && make typecheck
 ```
+
+### Single-file verification (agents)
+
+Fast feedback without a full build — target one file or test module:
+
+```bash
+ruff check src/viana/cli.py
+ruff format --check src/viana/cli.py
+mypy src/viana/cli.py
+bandit -r src/viana/cli.py -c pyproject.toml
+pytest tests/viana/test_phase0.py -q
+```
+
+TypeScript (after Phase 7 scaffold):
+
+```bash
+npx eslint apps/web/src/path/to/file.ts
+npx tsc --noEmit -p apps/web
+```
+
+## Pattern References
+
+- New API contract field: follow the pattern in `packages/contracts/schemas/job_submit.schema.json`, then sync `packages/contracts/typescript/index.ts` and `src/viana/config/job.py`
+- New FastAPI route: follow the pattern in `src/orchestrator/routes/health.py`
+- Structured logging: see `src/orchestrator/logging_config.py` for reference implementation
+- Job validation: follow the pattern in `src/viana/config/job.py`
+- Artifact paths: follow the pattern in `src/viana/io/paths.py`
+- CLI command: follow the pattern in `src/viana/cli.py`
 
 ## 8. Historical docs
 

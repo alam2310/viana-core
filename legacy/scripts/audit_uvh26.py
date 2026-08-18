@@ -1,3 +1,5 @@
+"""Legacy UVH-26 label audit utility."""
+
 import os
 import yaml
 import cv2
@@ -13,7 +15,8 @@ DATASET_ROOT = "/root/Work/ViAna/data/raw/UVH-26"
 DEBUG_DIR = "/root/Work/ViAna/debug_pretrain"
 INTEREST_CLASSES = ["Auto Rickshaw", "LCV", "Bus", "Three-wheeler"] 
 
-def load_yaml_classes(yaml_path):
+def load_yaml_classes(yaml_path) -> None:
+    """Load YOLO class id-to-name mapping from a data.yaml file."""
     with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)
     names = data.get('names', {})
@@ -21,7 +24,8 @@ def load_yaml_classes(yaml_path):
         return names 
     return {i: name for i, name in enumerate(names)}
 
-def draw_yolo_box(img, class_name, x, y, w, h):
+def draw_yolo_box(img, class_name, x, y, w, h) -> None:
+    """Draw a normalized YOLO box on an image."""
     dh, dw, _ = img.shape
     l = int((x - w / 2) * dw)
     r = int((x + w / 2) * dw)
@@ -33,7 +37,8 @@ def draw_yolo_box(img, class_name, x, y, w, h):
     cv2.putText(img, class_name, (l, t - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
     return img
 
-def main():
+def main() -> None:
+    """Audit UVH-26 labels and export debug visualization samples."""
     print(f"🔍 Starting Audit on: {DATASET_ROOT}")
     yaml_path = os.path.join(DATASET_ROOT, "data.yaml")
     

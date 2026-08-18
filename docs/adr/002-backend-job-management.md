@@ -1,3 +1,8 @@
+---
+status: Accepted
+applies_to: viana-core
+---
+
 # ADR 002: Backend-Owned Job Management
 
 ## Status

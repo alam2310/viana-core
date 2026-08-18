@@ -1,11 +1,14 @@
+"""Legacy vehicle taxonomy classifier."""
+
 import json
 import os
 
 class VehicleClassifier:
-    def __init__(self, config_path="legacy/configs/vehicle_taxonomy.json"):
+    def __init__(self, config_path="legacy/configs/vehicle_taxonomy.json") -> None:
+        """Map raw detector labels to taxonomy sub-classes."""
         self.mapping = self._load_mapping(config_path)
 
-    def _load_mapping(self, path):
+    def _load_mapping(self, path) -> None:
         """Loads the JSON mapping file."""
         if not os.path.exists(path):
             raise FileNotFoundError(f"Mapping file not found at {path}")
@@ -13,7 +16,7 @@ class VehicleClassifier:
         with open(path, 'r') as f:
             return json.load(f)
 
-    def get_classification(self, raw_label):
+    def get_classification(self, raw_label) -> None:
         """
         Returns the 3-level classification for a given raw label.
         Returns 'Unknown' category if label is not found.

@@ -1,6 +1,6 @@
 # API Contracts & Data Structures
 
-Human-readable contract reference. Machine-readable schemas: `packages/contracts/schemas/`.
+Human-readable contract reference. Machine-readable schemas: `packages/contracts/schemas/`. OpenAPI: [`openapi.yaml`](../openapi.yaml).
 
 ## 1. Container Management (Host — Next.js API Routes)
 

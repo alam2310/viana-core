@@ -1,3 +1,5 @@
+"""Legacy YOLO label dataset auditor."""
+
 import os
 import glob
 import yaml
@@ -8,13 +10,14 @@ from tqdm import tqdm
 from collections import Counter
 
 class DatasetAuditor:
-    def __init__(self, data_yaml_path):
+    def __init__(self, data_yaml_path) -> None:
+        """Scan label files and emit audit samples."""
         self.yaml_path = data_yaml_path
         self.classes = []
         self.dataset_root = os.path.dirname(data_yaml_path)
         self._load_yaml()
 
-    def _load_yaml(self):
+    def _load_yaml(self) -> None:
         """Parses the data.yaml to get class names and paths."""
         with open(self.yaml_path, 'r') as f:
             data = yaml.safe_load(f)
@@ -26,7 +29,7 @@ class DatasetAuditor:
             
         print(f"✅ Loaded {len(self.classes)} classes from {self.yaml_path}")
 
-    def scan_labels(self, split='train'):
+    def scan_labels(self, split='train') -> None:
         """Scans the label directory and counts class instances."""
         labels_path = os.path.join(self.dataset_root, 'labels', split)
         
@@ -54,7 +57,7 @@ class DatasetAuditor:
                         
         return class_counts, label_files
 
-    def generate_visual_samples(self, label_files, output_dir, num_samples=5):
+    def generate_visual_samples(self, label_files, output_dir, num_samples=5) -> None:
         """Randomly selects images and draws bounding boxes (Robust Path Finding)."""
         os.makedirs(output_dir, exist_ok=True)
         if not label_files:

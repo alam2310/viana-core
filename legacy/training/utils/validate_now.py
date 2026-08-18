@@ -1,3 +1,5 @@
+"""Legacy validation helper."""
+
 from ultralytics import YOLO
 import sys
 

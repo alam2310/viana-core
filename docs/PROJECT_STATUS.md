@@ -2,6 +2,7 @@
 
 **Last updated:** 2026-08-18  
 **Current focus:** Phase 1 — Contracts & config  
+**API blocker:** CLI matrix is all stubs (`viana run` ❌). Orchestrator HTTP routes are **501 stubs only** — no GPU workers until Phase 5.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
 
@@ -19,7 +20,7 @@
 | Engine | 3 — CV core | ⬜ Not started | `src/viana/` |
 | Engine | 4 — Prescan & lines | ⬜ Not started | `src/viana/` |
 | Engine | 5 — Process & render | ⬜ Not started | `src/viana/` |
-| API | 6 — Orchestrator | ⬜ Not started | `src/orchestrator/` |
+| API | 6 — Orchestrator | ⬜ Scaffold only (501 stubs) | `src/orchestrator/` |
 | UI | 7 — Foundation | ⬜ Not started | `apps/web/` |
 | UI | 8 — Workflows | ⬜ Not started | `apps/web/` |
 | QA | 9 — Parity & hardening | ⬜ Not started | `tests/`, `legacy/PARITY.md` |
@@ -59,17 +60,21 @@
 
 UI **must** use `packages/contracts/fixtures/` until an endpoint is marked ✅.
 
+Routes exist under `src/orchestrator/routes/` but return **501** (except `GET /health`). Do not flip ✅ until workers spawn `python -m viana`.
+
 | Endpoint | Implemented | Schema | Fixture |
 |----------|-------------|--------|---------|
 | `GET /health` | ✅ stub | — | — |
-| `POST /utils/prescan` | ❌ | `prescan_response.schema.json` | `prescan_response.json` |
-| `POST /jobs` | ❌ | `job_submit.schema.json`, `job_submit_response.schema.json` | `job_submit_response.json` |
-| `GET /jobs` | ❌ | — | — |
-| `GET /jobs/{id}` | ❌ | `job_status.schema.json` | `job_status_paused.json` |
-| `POST /jobs/{id}/resume` | ❌ | — | — |
-| `POST /jobs/{id}/start-fresh` | ❌ | — | — |
-| `WS /ws/jobs` | ❌ | `telemetry.schema.json` | `telemetry_progress.json` |
-| `GET/POST /projects/{id}/profiles` | ❌ | `calibration_profile.schema.json` | — |
+| `POST /utils/prescan` | ❌ 501 | `prescan_response.schema.json` | `prescan_response.json` |
+| `POST /jobs` | ❌ 501 (422 if client sends `job_id`/`gpu_device`) | `job_submit.schema.json`, `job_submit_response.schema.json` | `job_submit_response.json` |
+| `GET /jobs` | ❌ 501 | `job_status.schema.json` (array) | — |
+| `GET /jobs/{id}` | ❌ 501 | `job_status.schema.json` | `job_status_paused.json` |
+| `POST /jobs/{id}/resume` | ❌ 501 | — | — |
+| `POST /jobs/{id}/start-fresh` | ❌ 501 | — | — |
+| `DELETE /jobs/{id}` | ❌ 501 | — | — |
+| `POST /jobs/{id}/aggregate` | ❌ 501 | — | — |
+| `WS /ws/jobs` | ❌ stub LOG then close | `telemetry.schema.json` | `telemetry_progress.json` |
+| `GET/POST /projects/{id}/profiles` | ❌ 501 | `calibration_profile.schema.json` | — |
 
 **Engine disk artifacts** (not HTTP): `checkpoint.schema.json`, `run_result.schema.json` — fixture `checkpoint_resume.json`.
 
@@ -114,6 +119,7 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | Orchestrator job/prescan/profile/WS routes scaffolded as 501 stubs; GPU workers blocked on Phase 5 CLI |
 | 2026-08-18 | Phase 1: classes.yaml / engine_defaults.yaml Pydantic loaders + tests |
 | 2026-08-18 | AgentReady round 2: requirements.txt, pattern refs, legacy docstrings |
 | 2026-08-18 | AgentReady remediation: CI, lint, OpenAPI, threat model, design docs |

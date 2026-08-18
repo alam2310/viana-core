@@ -58,6 +58,28 @@ paths:
           description: Not implemented (Phase 4)
 
   /jobs:
+    get:
+      summary: List jobs
+      operationId: listJobs
+      tags: [jobs]
+      parameters:
+        - name: project_id
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: "^[a-z0-9][a-z0-9_-]*$"
+      responses:
+        "200":
+          description: Job list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JobStatus"
+        "501":
+          description: Not implemented (Phase 6; blocked on Phase 5 engine)
     post:
       summary: Submit moving-count job
       operationId: postJob
@@ -77,8 +99,10 @@ paths:
                 $ref: "#/components/schemas/JobSubmitResponse"
         "409":
           description: Checkpoint exists; explicit resume required
+        "422":
+          description: Invalid body (including client-supplied job_id or gpu_device)
         "501":
-          description: Not implemented (Phase 6)
+          description: Not implemented (Phase 6; blocked on Phase 5 engine)
 
   /jobs/{job_id}:
     get:
@@ -100,6 +124,146 @@ paths:
                 $ref: "#/components/schemas/JobStatus"
         "404":
           description: Job not found
+        "501":
+          description: Not implemented (Phase 6; blocked on Phase 5 engine)
+    delete:
+      summary: Cancel job worker
+      operationId: deleteJob
+      tags: [jobs]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Cancelled
+        "501":
+          description: Not implemented (Phase 6; blocked on Phase 5 engine)
+
+  /jobs/{job_id}/resume:
+    post:
+      summary: Explicit resume from checkpoint
+      operationId: resumeJob
+      tags: [jobs]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Job resumed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSubmitResponse"
+        "501":
+          description: Not implemented (Phase 6; blocked on Phase 5 engine)
+
+  /jobs/{job_id}/start-fresh:
+    post:
+      summary: Delete checkpoint and restart
+      operationId: startFreshJob
+      tags: [jobs]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Job restarted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSubmitResponse"
+        "501":
+          description: Not implemented (Phase 6; blocked on Phase 5 engine)
+
+  /jobs/{job_id}/aggregate:
+    post:
+      summary: Rebuild 15-minute aggregation CSV
+      operationId: aggregateJob
+      tags: [jobs]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Aggregation rebuilt
+        "501":
+          description: Not implemented (blocked on Phase 2 viana aggregate)
+
+  /ws/jobs:
+    get:
+      summary: Job telemetry WebSocket
+      operationId: jobsTelemetry
+      tags: [jobs]
+      description: |
+        WebSocket. Payload matches packages/contracts/schemas/telemetry.schema.json.
+        Stub until Phase 5 engine stdout exists.
+      responses:
+        "101":
+          description: Switching protocols
+        "501":
+          description: Not implemented (Phase 6; blocked on Phase 5 engine)
+
+  /projects/{project_id}/profiles:
+    get:
+      summary: List calibration profiles
+      operationId: listProfiles
+      tags: [profiles]
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z0-9][a-z0-9_-]*$"
+      responses:
+        "200":
+          description: Profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalibrationProfile"
+        "501":
+          description: Not implemented (Phase 6)
+    post:
+      summary: Create calibration profile
+      operationId: createProfile
+      tags: [profiles]
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z0-9][a-z0-9_-]*$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalibrationProfile"
+      responses:
+        "201":
+          description: Profile stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalibrationProfile"
+        "501":
+          description: Not implemented (Phase 6)
 
 components:
   schemas:
@@ -172,3 +336,11 @@ components:
     JobStatusEnum:
       type: string
       enum: [PENDING, PROCESSING, PAUSED, COMPLETED, FAILED, CANCELLED]
+
+    CalibrationProfile:
+      type: object
+      description: See packages/contracts/schemas/calibration_profile.schema.json
+
+    TelemetryMessage:
+      type: object
+      description: See packages/contracts/schemas/telemetry.schema.json

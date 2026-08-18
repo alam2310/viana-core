@@ -1,12 +1,19 @@
-"""Job lifecycle routes. Handlers are 501 until Phase 5 (`viana run`)."""
+"""Job lifecycle routes — spawn ``python -m viana`` via the worker pool."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+import json
 
-from orchestrator.errors import not_implemented
+from fastapi import APIRouter, Query
+from fastapi.responses import Response
+
+from orchestrator.cli import run_viana
+from orchestrator.errors import engine_failed
 from orchestrator.logging_config import get_logger
 from orchestrator.models import JobStatus, JobSubmitRequest, JobSubmitResponse
+from orchestrator.workers.pool import get_pool
+from viana.io.checkpoint import load_checkpoint
+from viana.io.paths import artifact_paths
 
 logger = get_logger(__name__)
 
@@ -15,53 +22,68 @@ router = APIRouter(tags=["jobs"])
 
 @router.post("/jobs", status_code=201, response_model=JobSubmitResponse)
 def post_job(body: JobSubmitRequest) -> JobSubmitResponse:
-    """Accept a moving-count job. Backend will assign job_id and gpu_device."""
-    logger.info(
-        "job_submit_stub",
-        project_id=body.project_id,
-        resume=body.resume,
-        start_fresh=body.start_fresh,
-    )
-    not_implemented()
+    """Accept a moving-count job. Backend assigns job_id and gpu_device."""
+    return get_pool().submit(body)
 
 
 @router.get("/jobs", response_model=list[JobStatus])
 def list_jobs(project_id: str | None = Query(default=None)) -> list[JobStatus]:
     """List jobs, optionally filtered by project_id."""
-    logger.info("jobs_list_stub", project_id=project_id)
-    not_implemented()
+    return get_pool().list_jobs(project_id=project_id)
 
 
 @router.get("/jobs/{job_id}", response_model=JobStatus)
 def get_job(job_id: str) -> JobStatus:
     """Return job status for a single id."""
-    logger.info("job_get_stub", job_id=job_id)
-    not_implemented()
+    pool = get_pool()
+    return pool.to_status(pool.get_job(job_id))
 
 
 @router.post("/jobs/{job_id}/resume", response_model=JobSubmitResponse)
 def resume_job(job_id: str) -> JobSubmitResponse:
     """Explicit resume from checkpoint (never silent)."""
-    logger.info("job_resume_stub", job_id=job_id)
-    not_implemented()
+    return get_pool().resume(job_id)
 
 
 @router.post("/jobs/{job_id}/start-fresh", response_model=JobSubmitResponse)
 def start_fresh_job(job_id: str) -> JobSubmitResponse:
-    """Delete checkpoint and restart the job."""
-    logger.info("job_start_fresh_stub", job_id=job_id)
-    not_implemented()
+    """Delete checkpoint via engine start_fresh and restart."""
+    return get_pool().start_fresh(job_id)
 
 
-@router.delete("/jobs/{job_id}")
-def cancel_job(job_id: str) -> None:
+@router.delete("/jobs/{job_id}", status_code=204)
+def cancel_job(job_id: str) -> Response:
     """Cancel a queued or running worker."""
-    logger.info("job_cancel_stub", job_id=job_id)
-    not_implemented()
+    get_pool().cancel(job_id)
+    return Response(status_code=204)
 
 
 @router.post("/jobs/{job_id}/aggregate")
-def aggregate_job(job_id: str) -> None:
+def aggregate_job(job_id: str) -> dict[str, object]:
     """Rebuild `_15min.csv` from events (CLI `viana aggregate`)."""
-    logger.info("job_aggregate_stub", job_id=job_id)
-    not_implemented()
+    pool = get_pool()
+    job = pool.get_job(job_id)
+    ckpt = artifact_paths(job.output_dir, job.source_video_path.stem)["checkpoint"]
+    partial = False
+    if ckpt.is_file():
+        checkpoint = load_checkpoint(ckpt)
+        partial = not checkpoint.is_complete()
+    args = [
+        "aggregate",
+        "--source",
+        str(job.source_video_path),
+        "--project-id",
+        job.project_id,
+        "--output-dir",
+        str(job.output_dir),
+    ]
+    if partial:
+        args.append("--partial")
+    logger.info("viana_aggregate", job_id=job_id, args=args)
+    result = run_viana(args, timeout=120.0)
+    if result.returncode != 0:
+        engine_failed(result.stderr.strip() or result.stdout.strip() or "aggregate failed")
+    parsed: object = json.loads(result.stdout)
+    if not isinstance(parsed, dict):
+        engine_failed("aggregate stdout was not a JSON object")
+    return parsed

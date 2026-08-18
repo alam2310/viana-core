@@ -1,8 +1,8 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-19  
-**Current focus:** Phase 6 — Orchestrator (API can shell `viana run`); Phase 8 UI workflows complete (mocked)  
-**API blocker:** Orchestrator HTTP routes are **501 stubs only** until Phase 6 wires subprocess workers. Engine `viana run` / `viana resume` / `viana prescan` are implemented.  
+**Current focus:** Phase 6 — Orchestrator workers; UI remains on mocks until E2E  
+**API blocker:** none for subprocess wiring (`viana run` / `prescan` / `resume` / `aggregate` are implemented).  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
 
@@ -20,7 +20,7 @@
 | Engine | 3 — CV core | ✅ **Complete** (modules; GPU loop is Phase 5) | `src/viana/` |
 | Engine | 4 — Prescan & lines | ✅ **Complete** | `src/viana/` |
 | Engine | 5 — Process & render | ✅ **Complete** (YOLO/FFmpeg optional at runtime) | `src/viana/` |
-| API | 6 — Orchestrator | ⬜ Scaffold only (501 stubs) | `src/orchestrator/` |
+| API | 6 — Orchestrator | ✅ Workers spawn `python -m viana` | `src/orchestrator/` |
 | UI | 7 — Foundation | ✅ Scaffold complete | `apps/web/` |
 | UI | 8 — Workflows | ✅ Mocked complete | `apps/web/` |
 | QA | 9 — Parity & hardening | ⬜ Not started | `tests/`, `legacy/PARITY.md` |
@@ -66,21 +66,19 @@
 
 UI **must** use `packages/contracts/fixtures/` until an endpoint is marked ✅.
 
-Routes exist under `src/orchestrator/routes/` but return **501** (except `GET /health`). Do not flip ✅ until workers spawn `python -m viana`.
-
 | Endpoint | Implemented | Schema | Fixture |
 |----------|-------------|--------|---------|
-| `GET /health` | ✅ stub | — | — |
-| `POST /utils/prescan` | ❌ 501 | `prescan_response.schema.json` | `prescan_response.json` |
-| `POST /jobs` | ❌ 501 (422 if client sends `job_id`/`gpu_device`) | `job_submit.schema.json`, `job_submit_response.schema.json` | `job_submit_response.json` |
-| `GET /jobs` | ❌ 501 | `job_status.schema.json` (array) | — |
-| `GET /jobs/{id}` | ❌ 501 | `job_status.schema.json` | `job_status_paused.json` |
-| `POST /jobs/{id}/resume` | ❌ 501 | — | — |
-| `POST /jobs/{id}/start-fresh` | ❌ 501 | — | — |
-| `DELETE /jobs/{id}` | ❌ 501 | — | — |
-| `POST /jobs/{id}/aggregate` | ❌ 501 | — | — |
-| `WS /ws/jobs` | ❌ stub LOG then close | `telemetry.schema.json` | `telemetry_progress.json` |
-| `GET/POST /projects/{id}/profiles` | ❌ 501 | `calibration_profile.schema.json` | `calibration_profile.json` |
+| `GET /health` | ✅ | — | — |
+| `POST /utils/prescan` | ✅ shells `viana prescan`; rewrites `preview_url` | `prescan_response.schema.json` | `prescan_response.json` |
+| `POST /jobs` | ✅ 409 on incomplete checkpoint; 422 if client sends `job_id`/`gpu_device` | `job_submit.schema.json`, `job_submit_response.schema.json` | `job_submit_response.json` |
+| `GET /jobs` | ✅ | `job_status.schema.json` (array) | — |
+| `GET /jobs/{id}` | ✅ | `job_status.schema.json` | `job_status_paused.json` |
+| `POST /jobs/{id}/resume` | ✅ shells `viana resume` | — | — |
+| `POST /jobs/{id}/start-fresh` | ✅ shells `viana run` with `start_fresh` | — | — |
+| `DELETE /jobs/{id}` | ✅ | — | — |
+| `POST /jobs/{id}/aggregate` | ✅ shells `viana aggregate` | — | — |
+| `WS /ws/jobs` | ✅ stderr NDJSON → telemetry.schema.json | `telemetry.schema.json` | `telemetry_progress.json` |
+| `GET/POST /projects/{id}/profiles` | ✅ disk under `{output_dir}/profiles/` | `calibration_profile.schema.json` | `calibration_profile.json` |
 
 **Engine disk artifacts** (not HTTP): `checkpoint.schema.json`, `run_result.schema.json`, `time_map.schema.json`, `calibration_profile.schema.json` — fixtures `checkpoint_resume.json`, `time_map.json`, `calibration_profile.json`, `run_result.json`.
 
@@ -125,6 +123,7 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Phase 6: orchestrator workers spawn `python -m viana`; job queue (2 GPUs); 409 silent-resume; WS telemetry |
 | 2026-08-19 | Phase 5: viana run/resume process loop, telemetry, FFmpeg render, explicit resume |
 | 2026-08-19 | Phase 4: viana prescan OCR + line proposal + profiles + preview JPEG |
 | 2026-08-18 | Phase 8 UI workflows (mocked): prescan modal, calibration canvas, queue, paused resume/fresh |

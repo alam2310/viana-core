@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from orchestrator.hub import hub
 from orchestrator.logging_config import configure_logging, get_logger
 from orchestrator.routes import health, jobs, prescan, profiles
+from orchestrator.workers.pool import reset_pool
 from orchestrator.ws import jobs as jobs_ws
 
 logger = get_logger(__name__)
@@ -16,10 +19,13 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Application lifespan: configure logging on startup."""
+    """Application lifespan: logging, worker pool, telemetry loop binding."""
     configure_logging(json_logs=False)
-    logger.info("orchestrator_start", service="viana-orchestrator", phase=0)
+    hub.bind_loop(asyncio.get_running_loop())
+    reset_pool()
+    logger.info("orchestrator_start", service="viana-orchestrator", phase=6)
     yield
+    reset_pool()
     logger.info("orchestrator_stop", service="viana-orchestrator")
 
 
@@ -40,4 +46,4 @@ app.include_router(jobs_ws.router)
 @app.get("/")
 def root() -> dict[str, str | int]:
     """Return service identity for root probes."""
-    return {"service": "viana-orchestrator", "version": "0.1.0", "phase": 0}
+    return {"service": "viana-orchestrator", "version": "0.1.0", "phase": 6}

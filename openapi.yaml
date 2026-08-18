@@ -55,9 +55,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/PrescanResponse"
         "501":
-          description: Not implemented (Phase 4)
+          description: Unused (Phase 6 implemented)
 
-  /jobs:
+  /utils/prescan/{prescan_id}/preview.jpg:
+    get:
+      summary: Prescan preview JPEG
+      operationId: getPrescanPreview
+      tags: [utils]
+      parameters:
+        - name: prescan_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: JPEG preview
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Preview not found
     get:
       summary: List jobs
       operationId: listJobs
@@ -279,7 +299,7 @@ components:
           example: "0.1.0"
         phase:
           type: integer
-          example: 0
+          example: 6
 
     HealthResponse:
       type: object

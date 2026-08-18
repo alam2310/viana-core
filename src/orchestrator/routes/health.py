@@ -10,4 +10,4 @@ router = APIRouter()
 @router.get("/health")
 def health() -> dict[str, str | int]:
     """Liveness probe for container orchestration and UI health checks."""
-    return {"status": "ok", "phase": 0}
+    return {"status": "ok", "phase": 6}

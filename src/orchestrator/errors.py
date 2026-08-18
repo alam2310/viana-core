@@ -1,4 +1,4 @@
-"""Shared HTTP errors for orchestrator stubs."""
+"""HTTP errors for the orchestrator."""
 
 from __future__ import annotations
 
@@ -6,12 +6,22 @@ from typing import NoReturn
 
 from fastapi import HTTPException
 
-ENGINE_NOT_READY_DETAIL = (
-    "Not implemented: GPU workers require Phase 5 (python -m viana run). "
-    "CLI commands in docs/PROJECT_STATUS.md are still stubs."
-)
+
+def not_found(detail: str) -> NoReturn:
+    """Raise 404."""
+    raise HTTPException(status_code=404, detail=detail)
 
 
-def not_implemented() -> NoReturn:
-    """Raise 501 until the engine CLI can actually run jobs."""
-    raise HTTPException(status_code=501, detail=ENGINE_NOT_READY_DETAIL)
+def conflict(detail: str) -> NoReturn:
+    """Raise 409 (checkpoint / busy)."""
+    raise HTTPException(status_code=409, detail=detail)
+
+
+def bad_request(detail: str) -> NoReturn:
+    """Raise 400."""
+    raise HTTPException(status_code=400, detail=detail)
+
+
+def engine_failed(detail: str) -> NoReturn:
+    """Raise 502 when the CLI exits non-zero without a usable payload."""
+    raise HTTPException(status_code=502, detail=detail)

@@ -38,7 +38,7 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 
 ## 3. Implementation phases
 
-### Phase 0 — Monorepo scaffold ✅
+### Phase 0 — Monorepo scaffold ✅ (closed 2026-08-18 — `docs/PHASE_0_SIGNOFF.md`)
 
 ### Phase 1 — Contracts & config
 - JobConfig validation, classes/defaults loaders, schema sync, tests

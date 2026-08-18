@@ -22,6 +22,7 @@ When two documents disagree, **this table wins**.
 | **Architecture decisions** | `docs/adr/*.md` | |
 | **Production model weights** | `models/v1/itva_medium_1088p.pt` | |
 | **Pedestrian weights** | `models/pretrained/yolo11l.pt` | |
+| **Model directory guide** | `models/README.md` | UVH `public/` vs production `v1/` |
 
 ## Stale documents (read for context only)
 

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/run_result.schema.json",
+  "title": "RunResult",
+  "description": "Final job outcome written to {output_dir}/{video_stem}.run_result.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "job_id",
+    "status",
+    "source_video_path",
+    "video_stem",
+    "artifacts",
+    "completed_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "job_id": { "type": "string" },
+    "status": { "enum": ["COMPLETED", "FAILED", "CANCELLED"] },
+    "source_video_path": { "type": "string" },
+    "video_stem": { "type": "string" },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "events": { "type": "string" },
+        "aggregate_15min": { "type": "string" },
+        "processed_video": { "type": "string" },
+        "manifest": { "type": "string" },
+        "time_map": { "type": "string" }
+      }
+    },
+    "error_message": { "type": ["string", "null"] },
+    "completed_at": { "type": "string", "format": "date-time" }
+  }
+}

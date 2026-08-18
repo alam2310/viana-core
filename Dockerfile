@@ -94,4 +94,10 @@ RUN mkdir -p /root/Work && \
 
 ENV PYTHONPATH=/usr/local/lib/python3.10/site-packages:/usr/local/lib/python3.10/dist-packages
 
+# 8. Install ViAna package (viana CLI + orchestrator deps from pyproject.toml)
+COPY pyproject.toml README.md ./
+COPY src ./src
+COPY configs ./configs
+RUN pip3 install --no-cache-dir -e ".[dev]"
+
 CMD ["/bin/bash"]

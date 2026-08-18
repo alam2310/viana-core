@@ -4,15 +4,27 @@
 
 ```bash
 # From repo root
-docker compose build    # if Dockerfile changed
+docker compose build    # required after Dockerfile changes
 docker compose up -d
 docker compose exec dev bash
 
-# Inside container
+# Inside container (if image predates pyproject install, or for live mount updates)
 pip install -e ".[dev]"
 make api-dev            # FastAPI on :8000
 python -m viana --help
 ```
+
+### Local repo hygiene
+
+Gitignored artifact folders at the **repo root** (`debug_pretrain/`, `runs/`) are duplicates of `legacy/artifacts/`. Safe to delete:
+
+```bash
+rm -rf debug_pretrain/ runs/    # use sudo if Docker created files as nobody
+# or:
+./scripts/cleanup-local-artifacts.sh
+```
+
+See `legacy/artifacts/README.md` and `docs/PHASE_0_SIGNOFF.md`.
 
 Environment variables (`docker-compose.yml`):
 

@@ -1,6 +1,8 @@
 # ViAna Web UI (`apps/web`)
 
-Next.js 15 application — **not scaffolded yet** (Phase 7).
+Next.js 15 application — **stub only** (Phase 7 full scaffold).
+
+`package.json` and `tsconfig.json` are present so agents can wire `@viana/contracts` before Next.js is added.
 
 ## Purpose
 

@@ -26,18 +26,23 @@ See `docs/governance/AI_SDLC.md`.
 |------|---------|
 | `job_submit.schema.json` | UI → POST /jobs |
 | `job_submit_response.schema.json` | POST /jobs response |
+| `job_status.schema.json` | GET /jobs/{id} response |
 | `prescan_response.schema.json` | POST /utils/prescan response |
 | `events_raw.schema.json` | `{stem}_events.csv` columns |
 | `events_15min.schema.json` | `{stem}_15min.csv` columns |
 | `calibration_profile.schema.json` | Project profiles |
 | `telemetry.schema.json` | WebSocket messages |
+| `checkpoint.schema.json` | `{stem}.checkpoint.json` (engine resume) |
+| `run_result.schema.json` | `{stem}.run_result.json` (final outcome) |
 
 ## Fixtures (UI mocks)
 
 | File | Use |
 |------|-----|
 | `prescan_response.json` | Prescan modal + canvas |
+| `job_submit_response.json` | POST /jobs success mock |
 | `job_status_paused.json` | Resume / start fresh UI |
+| `checkpoint_resume.json` | Engine resume state reference |
 | `telemetry_progress.json` | Dashboard progress |
 | `telemetry_sample.json` | General WS shape reference |
 

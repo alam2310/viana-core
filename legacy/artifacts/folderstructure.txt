@@ -1,3 +1,6 @@
+# STALE SNAPSHOT — pre-v2 layout (~2026-01). Do not use for navigation.
+# Current layout: /AGENTS.md and docs/PROJECT_STATUS.md
+#
 .
 ├── audit_dataset.py
 ├── audit_uvh26.py

@@ -54,6 +54,60 @@ export interface JobSubmitResponse {
   output_dir: string;
 }
 
+export interface JobProgress {
+  current_frame: number;
+  total_frames: number;
+  processing_fps?: number;
+}
+
+/** GET /jobs/{id} response */
+export interface JobStatusResponse {
+  job_id: string;
+  status: JobStatus;
+  task_type: "ViAna_Moving";
+  source_video_path: string;
+  project_id: string;
+  output_dir: string;
+  checkpoint_exists: boolean;
+  gpu_device?: string;
+  queue_position?: number;
+  progress?: JobProgress;
+  error_message?: string | null;
+}
+
+export interface Checkpoint {
+  schema_version: 1;
+  job_id: string;
+  project_id: string;
+  source_video_path: string;
+  video_stem: string;
+  current_frame: number;
+  total_frames: number;
+  counted_track_ids?: number[];
+  events_rows_written?: number;
+  manifest_path?: string;
+  saved_at: string;
+}
+
+export interface RunResultArtifacts {
+  events?: string;
+  aggregate_15min?: string;
+  processed_video?: string;
+  manifest?: string;
+  time_map?: string;
+}
+
+export interface RunResult {
+  schema_version: 1;
+  job_id: string;
+  status: "COMPLETED" | "FAILED" | "CANCELLED";
+  source_video_path: string;
+  video_stem: string;
+  artifacts: RunResultArtifacts;
+  error_message?: string | null;
+  completed_at: string;
+}
+
 export interface VideoMeta {
   width: number;
   height: number;

@@ -1,0 +1,11 @@
+{
+  "name": "@viana/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ViAna Next.js UI — full scaffold in Phase 7",
+  "scripts": {
+    "dev": "node -e \"console.error('Next.js scaffold pending Phase 7. See apps/web/AGENTS.md'); process.exit(1)\"",
+    "build": "node -e \"console.error('Next.js scaffold pending Phase 7. See apps/web/AGENTS.md'); process.exit(1)\"",
+    "lint": "node -e \"console.error('Next.js scaffold pending Phase 7. See apps/web/AGENTS.md'); process.exit(1)\""
+  }
+}

@@ -43,14 +43,15 @@ docs/               → plans, status, UI specs, governance, ADRs
 
 ## 5. What is implemented today
 
-See **`docs/PROJECT_STATUS.md`** for the live matrix. Summary:
+See **`docs/PROJECT_STATUS.md`** for the live matrix. **Phase 0 is closed** (`docs/PHASE_0_SIGNOFF.md`). Summary:
 
 | Component | Status |
 |-----------|--------|
-| Phase 0 monorepo scaffold | Done |
+| Phase 0 monorepo scaffold | Closed |
+| Phase 1 contracts & config | Not started |
 | `viana` CLI stubs | Stubs only |
 | FastAPI `/health` | Stub |
-| Full engine / API / UI | Not started (Phases 1–8) |
+| Full engine / API / UI | Phases 1–8 |
 
 ## 6. Parallel development
 

@@ -73,14 +73,14 @@ UI displays `preview_url` on canvas with `proposed_lines` overlaid; user may edi
 }
 ```
 
-**Response:** `JobSubmitResponse` — see `job_submit_response.schema.json`.
+**Response:** `JobSubmitResponse` — see `job_submit_response.schema.json` and fixture `packages/contracts/fixtures/job_submit_response.json`.
 
 ## 6. Job lifecycle endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/jobs` | List jobs (`?project_id=`) |
-| GET | `/jobs/{id}` | Status, `checkpoint_exists`, `output_dir` |
+| GET | `/jobs/{id}` | Status — see `job_status.schema.json`, fixture `job_status_paused.json` |
 | POST | `/jobs/{id}/resume` | Explicit resume from checkpoint |
 | POST | `/jobs/{id}/start-fresh` | Delete checkpoint, restart |
 | DELETE | `/jobs/{id}` | Cancel worker |
@@ -109,6 +109,17 @@ Stored at: `{output.parent_dir}/{project_id}/profiles/{profile_id}.json`
 
 Fixtures: `packages/contracts/fixtures/telemetry_progress.json`
 
-## 9. Future task types
+## 9. Engine disk artifacts (not HTTP)
+
+Written under `{output_dir}/` per video stem. Schemas:
+
+| File | Schema |
+|------|--------|
+| `{stem}.checkpoint.json` | `checkpoint.schema.json` |
+| `{stem}.run_result.json` | `run_result.schema.json` |
+
+Fixture: `packages/contracts/fixtures/checkpoint_resume.json`
+
+## 10. Future task types
 
 `ViAnaNP_Parked` and `ViAna_Junction` are documented for platform context; **not implemented** in engine v0.1.

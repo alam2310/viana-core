@@ -2,6 +2,7 @@
 
 **Last updated:** 2026-08-18  
 **Current focus:** Phase 1 — Contracts & config  
+**Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
 
 > AI agents: update this file when you complete a phase, endpoint, or milestone. Do not rely on chat memory.
@@ -12,7 +13,7 @@
 
 | Track | Phase | Status | Owner surface |
 |-------|-------|--------|---------------|
-| Platform | 0 — Monorepo scaffold | ✅ **Complete** | repo root |
+| Platform | 0 — Monorepo scaffold | ✅ **Closed** | repo root |
 | Engine | 1 — Contracts & config | ⬜ Not started | `src/viana/` |
 | Engine | 2 — I/O & CSV | ⬜ Not started | `src/viana/` |
 | Engine | 3 — CV core | ⬜ Not started | `src/viana/` |
@@ -35,7 +36,20 @@
 - [x] `docs/ui/*` skeleton guides
 - [x] `docs/adr/` 001, 002
 - [x] Governance docs (`AGENTS.md`, this file, `docs/governance/*`)
-- [x] Models: `models/v1/`, `models/pretrained/`
+- [x] Models: `models/v1/`, `models/pretrained/`, `models/README.md`
+- [x] Engine artifact schemas: `checkpoint`, `job_status`, `run_result`
+- [x] Dockerfile installs `pip install -e ".[dev]"`
+- [x] UI stub: `apps/web/package.json`, `tsconfig.json`
+- [x] Formal sign-off: `docs/PHASE_0_SIGNOFF.md`
+
+---
+
+## Phase 1 — first tasks
+
+1. Full `JobConfig` Pydantic validation ↔ JSON schema sync
+2. `classes.yaml` / `engine_defaults.yaml` loaders + tests
+3. Wire CSV column validation to `events_*.schema.json`
+4. Optional: `.github/workflows/test.yml` for `pytest tests/viana/`
 
 ---
 
@@ -47,13 +61,15 @@ UI **must** use `packages/contracts/fixtures/` until an endpoint is marked ✅.
 |----------|-------------|--------|---------|
 | `GET /health` | ✅ stub | — | — |
 | `POST /utils/prescan` | ❌ | `prescan_response.schema.json` | `prescan_response.json` |
-| `POST /jobs` | ❌ | `job_submit.schema.json` | — |
+| `POST /jobs` | ❌ | `job_submit.schema.json`, `job_submit_response.schema.json` | `job_submit_response.json` |
 | `GET /jobs` | ❌ | — | — |
-| `GET /jobs/{id}` | ❌ | — | `job_status_paused.json` |
+| `GET /jobs/{id}` | ❌ | `job_status.schema.json` | `job_status_paused.json` |
 | `POST /jobs/{id}/resume` | ❌ | — | — |
 | `POST /jobs/{id}/start-fresh` | ❌ | — | — |
 | `WS /ws/jobs` | ❌ | `telemetry.schema.json` | `telemetry_progress.json` |
 | `GET/POST /projects/{id}/profiles` | ❌ | `calibration_profile.schema.json` | — |
+
+**Engine disk artifacts** (not HTTP): `checkpoint.schema.json`, `run_result.schema.json` — fixture `checkpoint_resume.json`.
 
 ---
 
@@ -96,6 +112,7 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | Phase 0 formally closed; hygiene pass (schemas, fixtures, Dockerfile, sign-off doc) |
 | 2026-08-18 | Repo cleanup: historical docs → `legacy/`; active specs → `docs/` |
 | 2026-08-18 | Phase 0 complete; governance docs; UI agent context in `apps/web/AGENTS.md` |
 | 2026-08-18 | v2 plan approved (event-sourced, backend jobs, monorepo) |

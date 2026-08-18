@@ -2,7 +2,7 @@
 # Regenerate: pip install -e ".[dev]" && pip freeze | grep -E '^(pydantic|fastapi|typer|uvicorn|structlog|PyYAML|pytest|httpx|ruff|mypy|bandit|import-linter|pre-commit)'
 
 pydantic==2.13.4
-pydantic_core==2.27.2
+pydantic_core==2.46.4
 PyYAML==6.0.2
 typer==0.27.1
 fastapi==0.115.12

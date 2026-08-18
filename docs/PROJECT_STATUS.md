@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-18  
-**Current focus:** Phase 4 — Prescan & lines (engine); Phase 7 UI scaffold complete  
+**Current focus:** Phase 4 — Prescan & lines (engine); Phase 8 UI workflows complete (mocked)  
 **API blocker:** `viana run` pipeline not implemented (JobConfig validation only). Orchestrator HTTP routes are **501 stubs only** — no GPU workers until Phase 5.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
@@ -22,7 +22,7 @@
 | Engine | 5 — Process & render | ⬜ Not started | `src/viana/` |
 | API | 6 — Orchestrator | ⬜ Scaffold only (501 stubs) | `src/orchestrator/` |
 | UI | 7 — Foundation | ✅ Scaffold complete | `apps/web/` |
-| UI | 8 — Workflows | ⬜ Not started | `apps/web/` |
+| UI | 8 — Workflows | ✅ Mocked complete | `apps/web/` |
 | QA | 9 — Parity & hardening | ⬜ Not started | `tests/`, `legacy/PARITY.md` |
 
 ---
@@ -123,6 +123,7 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | Phase 8 UI workflows (mocked): prescan modal, calibration canvas, queue, paused resume/fresh |
 | 2026-08-18 | Phase 3: detect/classify/track/crossing/time_map (CPU-testable; no GPU loop) |
 | 2026-08-18 | Phase 7 UI scaffold: Next.js 15, fixture api-client, host `/api/container/*`, dashboard |
 | 2026-08-18 | Phase 2: events CSV writer, viana aggregate (clock 15-min, zero-fill), checkpoint I/O |

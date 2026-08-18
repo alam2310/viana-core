@@ -51,7 +51,7 @@ See **`docs/PROJECT_STATUS.md`** for the live matrix. **Phase 0 is closed** (`do
 | Engine Phases 1–2 | Complete (see `PROJECT_STATUS.md`) |
 | Engine Phase 3+ / API workers | Not started (`viana run` still validation-only; routes 501) |
 | UI Phase 7 foundation | Complete (`apps/web`, mocks on) |
-| UI Phase 8 workflows | Not started |
+| UI Phase 8 workflows | Complete (mocked; `USE_MOCKS=true`) |
 
 ## 6. Parallel development
 

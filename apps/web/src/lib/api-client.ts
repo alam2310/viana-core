@@ -12,12 +12,17 @@ import type {
   PrescanResponse,
   TelemetryMessage,
 } from "@viana/contracts";
-import jobStatusPausedFixture from "@viana/fixtures/job_status_paused.json";
-import jobSubmitResponseFixture from "@viana/fixtures/job_submit_response.json";
 import prescanFixture from "@viana/fixtures/prescan_response.json";
 import telemetryProgressFixture from "@viana/fixtures/telemetry_progress.json";
 
 import { API_BASE_URL, USE_MOCKS } from "./env";
+import {
+  mockGetJob,
+  mockListJobs,
+  mockRecordSubmit,
+  mockResumeJob,
+  mockStartFreshJob,
+} from "./mock-jobs";
 
 /** Request body documented in docs/api_contracts.md (no TS type in contracts yet). */
 export interface PrescanRequestBody {
@@ -121,7 +126,7 @@ export async function submitJob(
 ): Promise<JobSubmitResponse> {
   const payload = toJobSubmitPayload(body);
   if (USE_MOCKS) {
-    return asContract<JobSubmitResponse>(jobSubmitResponseFixture);
+    return mockRecordSubmit(payload);
   }
   return requestJson<JobSubmitResponse>("/jobs", {
     method: "POST",
@@ -133,11 +138,7 @@ export async function listJobs(
   projectId?: string,
 ): Promise<JobStatusResponse[]> {
   if (USE_MOCKS) {
-    const jobs = [asContract<JobStatusResponse>(jobStatusPausedFixture)];
-    if (!projectId) {
-      return jobs;
-    }
-    return jobs.filter((job) => job.project_id === projectId);
+    return mockListJobs(projectId);
   }
   const query = projectId
     ? `?project_id=${encodeURIComponent(projectId)}`
@@ -147,19 +148,22 @@ export async function listJobs(
 
 export async function getJob(jobId: string): Promise<JobStatusResponse> {
   if (USE_MOCKS) {
-    const fixture = asContract<JobStatusResponse>(jobStatusPausedFixture);
-    if (jobId !== fixture.job_id) {
+    const job = mockGetJob(jobId);
+    if (!job) {
       throw new ApiClientError("Job not found", 404);
     }
-    return fixture;
+    return job;
   }
   return requestJson<JobStatusResponse>(`/jobs/${encodeURIComponent(jobId)}`);
 }
 
 export async function resumeJob(jobId: string): Promise<JobStatusResponse> {
   if (USE_MOCKS) {
-    const fixture = asContract<JobStatusResponse>(jobStatusPausedFixture);
-    return { ...fixture, job_id: jobId, status: "PROCESSING" };
+    const job = mockResumeJob(jobId);
+    if (!job) {
+      throw new ApiClientError("Job not found", 404);
+    }
+    return job;
   }
   return requestJson<JobStatusResponse>(
     `/jobs/${encodeURIComponent(jobId)}/resume`,
@@ -169,13 +173,11 @@ export async function resumeJob(jobId: string): Promise<JobStatusResponse> {
 
 export async function startFreshJob(jobId: string): Promise<JobStatusResponse> {
   if (USE_MOCKS) {
-    const fixture = asContract<JobStatusResponse>(jobStatusPausedFixture);
-    return {
-      ...fixture,
-      job_id: jobId,
-      status: "PENDING",
-      checkpoint_exists: false,
-    };
+    const job = mockStartFreshJob(jobId);
+    if (!job) {
+      throw new ApiClientError("Job not found", 404);
+    }
+    return job;
   }
   return requestJson<JobStatusResponse>(
     `/jobs/${encodeURIComponent(jobId)}/start-fresh`,

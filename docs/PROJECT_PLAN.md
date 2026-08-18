@@ -61,7 +61,7 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 ### Phase 7 — UI foundation ✅ (2026-08-18)
 - Next.js scaffold, container manager, API client, mock mode
 
-### Phase 8 — UI workflows
+### Phase 8 — UI workflows ✅ (2026-08-18, mocked)
 - Prescan, canvas, queue, paused UX
 
 ### Phase 9 — Parity & hardening

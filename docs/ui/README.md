@@ -54,9 +54,9 @@ apps/web/
 ├── src/
 │   ├── app/            ← Next.js App Router + /api/container/*
 │   ├── components/
-│   ├── features/       ← container, dashboard (queue/prescan/calibration: Phase 8)
+│   ├── features/       ← container, dashboard, queue, prescan, calibration, telemetry
 │   └── lib/            ← api-client, container-manager
 └── .env.example
 ```
 
-Phase 7 scaffold is in place (`npm run dev` in `apps/web`). Phase 8: prescan, canvas, queue, paused UX against fixtures.
+Phase 8 workflows are in `apps/web` against fixtures. Turn off mocks only when `PROJECT_STATUS.md` marks endpoints ✅.

@@ -87,7 +87,15 @@ When scaffolding `apps/web/` (stub `package.json` + `tsconfig.json` already pres
 - [x] `src/app/api/container/start/route.ts`
 - [x] Placeholder dashboard `src/app/page.tsx`
 
-Update `docs/PROJECT_STATUS.md` when Phase 7 completes.
+## 7b. Phase 8 workflow checklist
+
+- [x] Prescan modal + OCR review + frame offset
+- [x] Calibration canvas (pixel space, clamp, drag endpoints)
+- [x] Pending path queue (localStorage) + GET /jobs sync
+- [x] Paused job resume / start-fresh UX
+- [x] Telemetry_detail toggle (prefs) + mock WS panel
+
+Keep `NEXT_PUBLIC_USE_MOCKS=true` until API endpoints are ✅.
 
 ---
 

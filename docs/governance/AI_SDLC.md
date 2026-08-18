@@ -33,7 +33,7 @@ How AI agents should work on this repo to minimize context drift, hallucination,
 
 **Do not:**
 
-- Invent API endpoints not in `api_contracts.md`
+- Invent API endpoints not in `docs/api_contracts.md`
 - Invent CSV columns not in `events_*.schema.json`
 - Assume `inference_engine.py` lives under `src/` (it is `legacy/inference/`)
 - Send `job_id` / `gpu_device` from UI submit payloads
@@ -54,7 +54,7 @@ How AI agents should work on this repo to minimize context drift, hallucination,
 1. Edit packages/contracts/schemas/*.json
 2. Edit packages/contracts/typescript/index.ts
 3. Edit src/viana/config/job.py (Pydantic)
-4. Edit api_contracts.md (human summary)
+4. Edit `docs/api_contracts.md` (human summary)
 5. Update docs/PROJECT_STATUS.md if endpoint newly available
 6. Implement handler / UI consumer
 ```

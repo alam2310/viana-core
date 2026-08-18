@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Orchestrator Rules
 
-- Read `src/orchestrator/AGENTS.md` and `api_contracts.md`.
+- Read `src/orchestrator/AGENTS.md` and `docs/api_contracts.md`.
 - Spawn engine via subprocess; do not embed CV logic in routes.
 - Backend assigns `job_id` and `gpu_device`; return in `JobSubmitResponse`.
 - Max 2 concurrent GPU workers.

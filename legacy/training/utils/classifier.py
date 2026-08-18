@@ -2,7 +2,7 @@ import json
 import os
 
 class VehicleClassifier:
-    def __init__(self, config_path="configs/vehicle_taxonomy.json"):
+    def __init__(self, config_path="legacy/configs/vehicle_taxonomy.json"):
         self.mapping = self._load_mapping(config_path)
 
     def _load_mapping(self, path):

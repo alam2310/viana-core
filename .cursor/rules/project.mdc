@@ -16,4 +16,4 @@ alwaysApply: true
    - API → `src/orchestrator/AGENTS.md`
    - UI → `apps/web/AGENTS.md`
 
-Current plan: `docs/PROJECT_PLAN.md`. Architecture: `docs/ARCHITECTURE.md`.
+Current plan: `docs/PROJECT_PLAN.md`. Status: `docs/PROJECT_STATUS.md`. Architecture: `docs/ARCHITECTURE.md`. Docs index: `docs/README.md`.

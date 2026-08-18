@@ -10,7 +10,7 @@ from utils.classifier import VehicleClassifier
 
 
 def validate_mappings():
-    config_path = REPO_ROOT / "configs" / "vehicle_taxonomy.json"
+    config_path = REPO_ROOT / "legacy" / "configs" / "vehicle_taxonomy.json"
 
     try:
         classifier = VehicleClassifier(str(config_path))

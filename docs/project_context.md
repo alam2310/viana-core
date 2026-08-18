@@ -22,6 +22,6 @@ The containerized backend dynamically assigns jobs from a pending queue to isola
 *   **UI-Driven Container Lifecycle:** The UI must verify container health and automatically start the container if it is down or idle before submitting jobs.
 *   **Automated Output Routing:** Artifacts are written to `{output.parent_dir}/{project_id}/` (default `/data/viana-outputs/{project_id}/`). See `docs/ui/OUTPUT_PATHS.md`.
 *   **Backend Job Management:** `job_id` and `gpu_device` are assigned by the FastAPI orchestrator, not the UI.
-*   **Contract-Driven Development:** The frontend and backend communicate strictly via standardized JSON and WebSocket payloads (`api_contracts.md`, `packages/contracts/`).
+*   **Contract-Driven Development:** The frontend and backend communicate strictly via standardized JSON and WebSocket payloads (`docs/api_contracts.md`, `packages/contracts/`).
 *   **Monorepo:** Engine (`src/viana/`), orchestrator (`src/orchestrator/`), UI (`apps/web/`), shared contracts (`packages/contracts/`).
 *   **AI SDLC:** See `AGENTS.md`, `docs/governance/AI_SDLC.md`, `docs/PROJECT_STATUS.md`.

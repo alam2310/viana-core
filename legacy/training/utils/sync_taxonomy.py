@@ -3,7 +3,7 @@ import os
 import sys
 
 # Define the Path to your Single Source of Truth
-CONFIG_PATH = os.path.join("configs", "vehicle_taxonomy.json")
+CONFIG_PATH = os.path.join("legacy", "configs", "vehicle_taxonomy.json")
 
 def sync_taxonomy():
     """

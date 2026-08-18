@@ -10,12 +10,12 @@
 ## Read order for UI development
 
 1. `apps/web/AGENTS.md`
-2. `ui_specifications.md` (product requirements)
+2. `docs/specs/ui_specifications.md` (product requirements)
 3. `docs/ui/USER_FLOWS.md`
 4. `docs/ui/CALIBRATION_CANVAS.md`
 5. `docs/ui/API_INTEGRATION.md`
 6. `docs/ui/STATE_MACHINE.md`
-7. `api_contracts.md`
+7. `docs/api_contracts.md`
 
 ---
 

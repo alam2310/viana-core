@@ -32,7 +32,7 @@ def process_video_audit(video_path, output_csv="audit_report.csv"):
     
     # 2. Initialize the Classifier
     try:
-        classifier = VehicleClassifier("configs/vehicle_taxonomy.json")
+        classifier = VehicleClassifier("legacy/configs/vehicle_taxonomy.json")
         print("✅ Classifier loaded successfully.")
     except Exception as e:
         print(f"❌ Critical Error: {e}")

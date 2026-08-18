@@ -15,7 +15,7 @@ fixtures/          Mock JSON for UI dev when API not ready
 1. Edit `schemas/*.json`
 2. Update `typescript/index.ts`
 3. Update `src/viana/config/job.py` (Pydantic)
-4. Update `api_contracts.md`
+4. Update `docs/api_contracts.md`
 5. Update `docs/PROJECT_STATUS.md` API matrix when endpoint is implemented
 
 See `docs/governance/AI_SDLC.md`.

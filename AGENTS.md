@@ -12,7 +12,7 @@ Offline Indian traffic video analytics: detect, classify, track, count vehicles,
 |-----------|----------------|
 | **Any task** | This file → `docs/PROJECT_STATUS.md` → `docs/governance/SOURCE_OF_TRUTH.md` |
 | **Engine (`src/viana/`)** | `.cursor/rules/viana.mdc` → `docs/PROJECT_PLAN.md` § Engine → `legacy/PARITY.md` |
-| **API (`src/orchestrator/`)** | `api_contracts.md` → `packages/contracts/schemas/` → `docs/PROJECT_PLAN.md` § Orchestrator |
+| **API (`src/orchestrator/`)** | `docs/api_contracts.md` → `packages/contracts/schemas/` → `docs/PROJECT_PLAN.md` § Orchestrator |
 | **UI (`apps/web/`)** | `apps/web/AGENTS.md` → `docs/ui/README.md` → `packages/contracts/typescript/` |
 | **Contracts / types** | `packages/contracts/README.md` → update schema **before** code |
 
@@ -32,7 +32,7 @@ docs/               → plans, status, UI specs, governance, ADRs
 
 ## 4. Hard rules (all agents)
 
-1. **Never invent API fields** — check `packages/contracts/schemas/` and `api_contracts.md`.
+1. **Never invent API fields** — check `packages/contracts/schemas/` and `docs/api_contracts.md`.
 2. **Never modify `legacy/`** except path fixes; parity reference is `legacy/inference/inference_engine.py`.
 3. **Backend owns jobs** — UI must not send `job_id` or `gpu_device` on submit.
 4. **Schemas before code** — if the contract changes, update `packages/contracts/` first, then implement.
@@ -56,7 +56,7 @@ See **`docs/PROJECT_STATUS.md`** for the live matrix. Summary:
 
 - **Engine agent:** `src/viana/`, `tests/viana/`, `configs/`
 - **UI agent:** `apps/web/`, `docs/ui/`, consume `packages/contracts/`
-- **API agent:** `src/orchestrator/`, `api_contracts.md`
+- **API agent:** `src/orchestrator/`, `docs/api_contracts.md`
 
 Sync via **contracts only**. If the UI needs a new field, add it to the schema first and note it in `PROJECT_STATUS.md`.
 
@@ -71,5 +71,5 @@ make api-dev    # :8000/health
 
 ## 8. Historical docs
 
-- `blueprint.md` — Phase 0–2 research log (pre-v2); do not treat as current status.
+- `legacy/blueprint.md` — Phase 0–2 research log (pre-v2); do not treat as current status.
 - `legacy/` — discard after v2 parity sign-off.

@@ -10,7 +10,7 @@
 | Telemetry | `features/telemetry/` | WS hook, detail toggle |
 | Dashboard | `app/page.tsx` | layout, active job viewport |
 
-## Shadcn components (from ui_specifications.md)
+## Shadcn components (from `docs/specs/ui_specifications.md`)
 
 - Modal: prescan review
 - Toast: errors

@@ -11,7 +11,7 @@ from utils.classifier import VehicleClassifier
 
 
 def test_tempo_traveller_mapping():
-    config_path = REPO_ROOT / "configs" / "vehicle_taxonomy.json"
+    config_path = REPO_ROOT / "legacy" / "configs" / "vehicle_taxonomy.json"
     classifier = VehicleClassifier(str(config_path))
     result = classifier.get_classification("Tempo-traveller")
     assert result["sub_class"] == "Mini Bus"
@@ -19,7 +19,7 @@ def test_tempo_traveller_mapping():
 
 
 def test_unknown_label():
-    config_path = REPO_ROOT / "configs" / "vehicle_taxonomy.json"
+    config_path = REPO_ROOT / "legacy" / "configs" / "vehicle_taxonomy.json"
     classifier = VehicleClassifier(str(config_path))
     result = classifier.get_classification("Flying-Saucer")
     assert result["category"] == "Unknown"

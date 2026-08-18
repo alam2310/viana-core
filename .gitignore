@@ -33,3 +33,5 @@ build/
 # Legacy artifact outputs (large / reproducible)
 legacy/artifacts/runs/
 legacy/artifacts/debug_pretrain/
+debug_pretrain/
+runs/

@@ -2,9 +2,9 @@
 
 **Status tracker:** `docs/PROJECT_STATUS.md` (update when phases complete)  
 **Architecture:** `docs/ARCHITECTURE.md`  
-**API contracts:** `api_contracts.md` + `packages/contracts/schemas/`
+**API contracts:** `docs/api_contracts.md` + `packages/contracts/schemas/`
 
-Consolidated v2 plan. Historical research: `blueprint.md`.
+Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 
 ---
 

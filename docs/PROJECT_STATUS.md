@@ -96,5 +96,6 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | Repo cleanup: historical docs → `legacy/`; active specs → `docs/` |
 | 2026-08-18 | Phase 0 complete; governance docs; UI agent context in `apps/web/AGENTS.md` |
 | 2026-08-18 | v2 plan approved (event-sourced, backend jobs, monorepo) |

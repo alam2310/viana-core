@@ -57,7 +57,7 @@ When `USE_MOCKS=true`, `lib/api-client.ts` should return fixture data from `pack
 | Feature | Spec |
 |---------|------|
 | Container health + auto-start | `USER_FLOWS.md` §1 |
-| Video queue (50+) | `ui_specifications.md` |
+| Video queue (50+) | `docs/specs/ui_specifications.md` |
 | Prescan + OCR review | `USER_FLOWS.md` §2 |
 | Calibration canvas | `CALIBRATION_CANVAS.md` |
 | Progress WebSocket | `API_INTEGRATION.md` |
@@ -106,4 +106,4 @@ Container must be running for real API mode: `docker compose up -d`
 
 ## 9. Questions?
 
-If a spec is missing, add to `docs/ui/` and `api_contracts.md` **before** implementing. Do not guess API shapes.
+If a spec is missing, add to `docs/ui/` and `docs/api_contracts.md` **before** implementing. Do not guess API shapes.

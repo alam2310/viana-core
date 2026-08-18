@@ -1,6 +1,6 @@
 # Orchestrator Agent — src/orchestrator
 
-**Read first:** `/AGENTS.md` → `api_contracts.md` → `docs/PROJECT_STATUS.md`
+**Read first:** `/AGENTS.md` → `docs/api_contracts.md` → `docs/PROJECT_STATUS.md`
 
 ## Owned paths
 

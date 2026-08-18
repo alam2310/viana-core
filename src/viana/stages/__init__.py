@@ -1,2 +1,5 @@
-"""ViAna pipeline stages (Phase 3+)."""
+"""ViAna pipeline stages."""
 
+from viana.stages.aggregate import aggregate_events
+
+__all__ = ["aggregate_events"]

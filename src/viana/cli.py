@@ -8,7 +8,11 @@ from pathlib import Path
 import typer
 from pydantic import ValidationError
 
-from viana.config.job import JobConfig, load_job_config
+from viana.config.classes import load_class_taxonomy
+from viana.config.defaults import load_engine_defaults
+from viana.config.job import PROJECT_ID_PATTERN, JobConfig, load_job_config
+from viana.io.paths import artifact_paths, project_output_dir
+from viana.stages.aggregate import aggregate_events
 
 app = typer.Typer(
     name="viana",
@@ -109,21 +113,48 @@ def aggregate(
     ),
     project_id: str = typer.Option(..., "--project-id", "-p", help="Project slug."),
     partial: bool = typer.Option(False, "--partial", help="Allow aggregation on incomplete run."),
+    output_dir: Path | None = typer.Option(
+        None,
+        "--output-dir",
+        help="Project output directory. Defaults to {parent_dir}/{project_id}.",
+    ),
 ) -> None:
-    """Build 15-minute CSV from raw events (Phase 2)."""
+    """Build 15-minute CSV from raw events (no inference)."""
+    if not PROJECT_ID_PATTERN.match(project_id):
+        typer.echo("project_id must match [a-z0-9][a-z0-9_-]*", err=True)
+        raise typer.Exit(code=1)
+    resolved_output = output_dir
+    if resolved_output is None:
+        defaults = load_engine_defaults()
+        resolved_output = project_output_dir(defaults.output.parent_dir, project_id)
+    paths = artifact_paths(resolved_output, source.stem)
+    if not paths["events"].is_file():
+        typer.echo(f"Events CSV not found: {paths['events']}", err=True)
+        raise typer.Exit(code=1)
+    try:
+        rows = aggregate_events(
+            paths["events"],
+            paths["aggregate_15min"],
+            load_class_taxonomy(),
+            partial=partial,
+            checkpoint_path=paths["checkpoint"],
+        )
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        typer.echo(f"Aggregation failed: {exc}", err=True)
+        raise typer.Exit(code=1) from None
     typer.echo(
         json.dumps(
             {
-                "status": "not_implemented",
-                "phase": 2,
-                "source": str(source),
-                "project_id": project_id,
+                "status": "ok",
+                "command": "aggregate",
+                "rows": len(rows),
+                "events": str(paths["events"]),
+                "aggregate_15min": str(paths["aggregate_15min"]),
                 "partial": partial,
             },
             indent=2,
         )
     )
-    raise typer.Exit(code=2)
 
 
 def main() -> None:

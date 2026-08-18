@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-18  
-**Current focus:** Phase 2 — Engine I/O & CSV  
+**Current focus:** Phase 3 — CV core  
 **API blocker:** `viana run` pipeline not implemented (JobConfig validation only). Orchestrator HTTP routes are **501 stubs only** — no GPU workers until Phase 5.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
@@ -16,7 +16,7 @@
 |-------|-------|--------|---------------|
 | Platform | 0 — Monorepo scaffold | ✅ **Closed** | repo root |
 | Engine | 1 — Contracts & config | ✅ **Complete** | `src/viana/` |
-| Engine | 2 — I/O & CSV | ⬜ Not started | `src/viana/` |
+| Engine | 2 — I/O & CSV | ✅ **Complete** | `src/viana/` |
 | Engine | 3 — CV core | ⬜ Not started | `src/viana/` |
 | Engine | 4 — Prescan & lines | ⬜ Not started | `src/viana/` |
 | Engine | 5 — Process & render | ⬜ Not started | `src/viana/` |
@@ -52,7 +52,9 @@
 3. [x] Wire CSV column validation to `events_*.schema.json`
 4. [x] Optional: `.github/workflows/ci.yml` already runs `pytest tests/viana/`
 
-**Engine Phase 1 (2026-08-18):** `JobConfig` + `load_job_config`; `viana run`/`resume` validate JSON then exit 2; CSV column helpers in `viana.io.csv_schema`. Next: Phase 2 events.csv / aggregate / checkpoint.
+**Engine Phase 1 (2026-08-18):** `JobConfig` + `load_job_config`; `viana run`/`resume` validate JSON then exit 2; CSV column helpers in `viana.io.csv_schema`.
+
+**Engine Phase 2 (2026-08-18):** `{stem}_events.csv` writer (`viana.io.events`), `viana aggregate` clock 15-min grid (`viana.stages.aggregate`), checkpoint read/write (`viana.io.checkpoint`). Next: Phase 3 detect/classify/track/crossing.
 
 ---
 
@@ -87,7 +89,7 @@ Routes exist under `src/orchestrator/routes/` but return **501** (except `GET /h
 | `viana prescan` | ❌ stub | Phase 4; exit 2 |
 | `viana run` | 🔄 JobConfig validation | Valid JSON required; pipeline Phase 3–5 |
 | `viana resume` | 🔄 JobConfig validation | Requires `resume=true`; pipeline Phase 5 |
-| `viana aggregate` | ❌ stub | Phase 2 |
+| `viana aggregate` | ✅ | Events CSV → `{stem}_15min.csv`; `--partial` for incomplete runs |
 
 ---
 
@@ -119,6 +121,7 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | Phase 2: events CSV writer, viana aggregate (clock 15-min, zero-fill), checkpoint I/O |
 | 2026-08-18 | Phase 1 complete: JobConfig schema sync, CSV column contracts, CLI config validation |
 | 2026-08-18 | Orchestrator job/prescan/profile/WS routes scaffolded as 501 stubs; GPU workers blocked on Phase 5 CLI |
 | 2026-08-18 | Phase 1: classes.yaml / engine_defaults.yaml Pydantic loaders + tests |

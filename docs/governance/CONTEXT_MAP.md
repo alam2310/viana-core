@@ -14,7 +14,8 @@ Quick index for AI agents. **Start at `AGENTS.md`**, not here.
 | Build CV engine | `src/viana/AGENTS.md`, `legacy/inference/inference_engine.py` |
 | Build FastAPI API | `src/orchestrator/AGENTS.md`, `docs/api_contracts.md` |
 | Build Next.js UI | `apps/web/AGENTS.md`, `docs/ui/README.md` |
-| Add API field | `packages/contracts/schemas/` first |
+| Add API field | `packages/contracts/schemas/` first — `docs/governance/CONTRACT_SYNC.md` |
+| Run parallel agent chats | `docs/governance/KICKOFF_PROMPTS.md` |
 | Mock API in UI | `packages/contracts/fixtures/` |
 | Compare old vs new counts | `legacy/PARITY.md` |
 | Understand vehicle classes | `configs/classes.yaml`, `legacy/docs/VEHICLE_CLASSIFICATION.md` |

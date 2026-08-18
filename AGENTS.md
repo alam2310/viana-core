@@ -35,7 +35,7 @@ docs/               → plans, status, UI specs, governance, ADRs
 1. **Never invent API fields** — check `packages/contracts/schemas/` and `docs/api_contracts.md`.
 2. **Never modify `legacy/`** except path fixes; parity reference is `legacy/inference/inference_engine.py`.
 3. **Backend owns jobs** — UI must not send `job_id` or `gpu_device` on submit.
-4. **Schemas before code** — if the contract changes, update `packages/contracts/` first, then implement.
+4. **Schemas before code** — if the contract changes, update `packages/contracts/` first; see `docs/governance/CONTRACT_SYNC.md` for parallel UI/API/engine rules.
 5. **Update `docs/PROJECT_STATUS.md`** when completing a phase or API endpoint.
 6. **Record decisions** in `docs/adr/` when architecture changes.
 7. **No inline 15-min aggregation in the GPU loop** — events CSV first, aggregate separately (ADR 001).
@@ -60,6 +60,8 @@ See **`docs/PROJECT_STATUS.md`** for the live matrix. **Phase 0 is closed** (`do
 - **API agent:** `src/orchestrator/`, `docs/api_contracts.md`
 
 Sync via **contracts only**. If the UI needs a new field, add it to the schema first and note it in `PROJECT_STATUS.md`.
+
+**Parallel chats:** See `docs/governance/PARALLEL_AGENTS.md` and `docs/governance/KICKOFF_PROMPTS.md`.
 
 ## 7. Verification commands
 

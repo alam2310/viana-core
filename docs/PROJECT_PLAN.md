@@ -52,8 +52,8 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 ### Phase 4 — Prescan ✅ (2026-08-19)
 - OCR (EasyOCR optional), line proposal, profiles, `viana prescan` preview JPEG
 
-### Phase 5 — Process & render
-- Main loop, telemetry, FFmpeg, resume
+### Phase 5 — Process & render ✅ (2026-08-19)
+- Main loop, telemetry, FFmpeg overlay, explicit resume (`viana run` / `viana resume`)
 
 ### Phase 6 — Orchestrator
 - FastAPI routes, worker pool, WebSocket

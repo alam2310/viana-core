@@ -119,7 +119,7 @@ Written under `{output_dir}/` per video stem. Schemas:
 |------|--------|
 | `{stem}.checkpoint.json` | `checkpoint.schema.json` |
 | `{stem}.run_result.json` | `run_result.schema.json` |
-| `{stem}.time_map.json` | `time_map.schema.json` |
+| `{stem}.run_result.json` | `run_result.schema.json` |
 
 Fixture: `packages/contracts/fixtures/checkpoint_resume.json`. Time map fixture: `time_map.json`.
 
@@ -128,6 +128,10 @@ Fixture: `packages/contracts/fixtures/checkpoint_resume.json`. Time map fixture:
 `python -m viana run --config job.json` and `viana resume` read `job_config.schema.json`.
 
 The orchestrator writes this file after assigning `job_id`, `gpu_device`, and `output_dir`. The UI must **not** send `JobConfig` on `POST /jobs` (use `job_submit.schema.json` only).
+
+`python -m viana run --config job.json` processes the video (events CSV, checkpoint, time map, optional FFmpeg `{stem}_processed.mp4`). `viana resume` continues from `{stem}.checkpoint.json` only when `resume=true`. Telemetry JSON lines go to **stderr**; the final `RunResult` is stdout.
+
+Do **not** compute 15-minute bins in this loop — use `viana aggregate` (ADR 001).
 
 Fixture: `packages/contracts/fixtures/job_config.json`.
 

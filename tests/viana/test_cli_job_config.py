@@ -1,4 +1,4 @@
-"""CLI JobConfig validation (pipeline still not implemented)."""
+"""CLI JobConfig validation and run/resume guards."""
 
 from __future__ import annotations
 
@@ -13,15 +13,12 @@ from viana.config.files import repo_root
 runner = CliRunner()
 
 
-def test_run_validates_job_config_then_not_implemented() -> None:
-    """viana run accepts a valid JobConfig and exits 2 until Phase 3."""
+def test_run_missing_source_video() -> None:
+    """viana run validates JobConfig then fails if the source video is absent."""
     fixture = repo_root() / "packages" / "contracts" / "fixtures" / "job_config.json"
     result = runner.invoke(app, ["run", "--config", str(fixture)])
-    assert result.exit_code == 2
-    payload = json.loads(result.stdout)
-    assert payload["status"] == "not_implemented"
-    assert payload["job_id"] == "job_mock_001"
-    assert payload["command"] == "run"
+    assert result.exit_code == 1
+    assert "not found" in result.stderr.lower() or "not found" in result.output.lower()
 
 
 def test_run_rejects_missing_config(tmp_path: Path) -> None:

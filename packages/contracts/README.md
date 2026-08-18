@@ -50,6 +50,7 @@ See `docs/governance/AI_SDLC.md`.
 | `checkpoint_resume.json` | Engine resume state reference |
 | `job_config.json` | Engine CLI JobConfig (not an HTTP mock) |
 | `time_map.json` | Engine time-map anchors |
+| `run_result.json` | Engine `{stem}.run_result.json` |
 | `telemetry_progress.json` | Dashboard progress |
 | `telemetry_sample.json` | General WS shape reference |
 

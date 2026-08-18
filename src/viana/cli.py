@@ -12,9 +12,15 @@ from viana.config.classes import load_class_taxonomy
 from viana.config.defaults import load_engine_defaults
 from viana.config.job import PROJECT_ID_PATTERN, JobConfig, load_job_config
 from viana.io.paths import artifact_paths, project_output_dir
+from viana.io.run_result import RunResult
 from viana.stages.aggregate import aggregate_events
 from viana.stages.ocr import optional_easyocr_reader
 from viana.stages.prescan import run_prescan
+from viana.stages.process import (
+    CheckpointExistsError,
+    MissingCheckpointError,
+    run_moving_count,
+)
 
 app = typer.Typer(
     name="viana",
@@ -33,6 +39,26 @@ def _load_job_config_or_exit(config: Path) -> JobConfig:
     except (ValidationError, json.JSONDecodeError, ValueError) as exc:
         typer.echo(f"Invalid JobConfig: {exc}", err=True)
         raise typer.Exit(code=1) from None
+
+
+def _emit_run_result(result: RunResult) -> None:
+    """Print RunResult JSON; non-COMPLETED jobs exit 1."""
+    typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
+    if result.status != "COMPLETED":
+        raise typer.Exit(code=1)
+
+
+def _run_pipeline(job: JobConfig, *, resume: bool) -> None:
+    """Execute the moving-count loop and print RunResult JSON."""
+    try:
+        result = run_moving_count(job, resume=resume)
+    except (CheckpointExistsError, MissingCheckpointError, FileNotFoundError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from None
+    except (OSError, ValueError, RuntimeError) as exc:
+        typer.echo(f"Run failed: {exc}", err=True)
+        raise typer.Exit(code=1) from None
+    _emit_run_result(result)
 
 
 @app.command()
@@ -77,25 +103,12 @@ def prescan(
 def run(
     config: Path = typer.Option(..., "--config", "-c", help="Path to JobConfig JSON file."),
 ) -> None:
-    """Run full moving-count pipeline (Phase 3+)."""
+    """Run full moving-count pipeline (events CSV; no inline 15-min bins)."""
     job = _load_job_config_or_exit(config)
     if job.resume:
         typer.echo("Use `viana resume` when resume is true.", err=True)
         raise typer.Exit(code=1)
-    typer.echo(
-        json.dumps(
-            {
-                "status": "not_implemented",
-                "phase": 3,
-                "command": "run",
-                "job_id": job.job_id,
-                "gpu_device": job.gpu_device,
-                "output_dir": str(job.output_dir),
-            },
-            indent=2,
-        )
-    )
-    raise typer.Exit(code=2)
+    _run_pipeline(job, resume=False)
 
 
 @app.command()
@@ -107,18 +120,7 @@ def resume(
     if not job.resume:
         typer.echo("viana resume requires resume=true in JobConfig.", err=True)
         raise typer.Exit(code=1)
-    typer.echo(
-        json.dumps(
-            {
-                "status": "not_implemented",
-                "phase": 5,
-                "command": "resume",
-                "job_id": job.job_id,
-            },
-            indent=2,
-        )
-    )
-    raise typer.Exit(code=2)
+    _run_pipeline(job, resume=True)
 
 
 @app.command()

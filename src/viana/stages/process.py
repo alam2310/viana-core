@@ -23,8 +23,8 @@ from viana.stages.ocr import OcrReader, optional_easyocr_reader, parse_osd_hits
 from viana.stages.prescan import VideoMeta
 from viana.stages.render import FfmpegRenderer, FrameRenderer, NullRenderer
 from viana.stages.time_map import TimeMap, save_time_map, time_map_from_metadata
-from viana.stages.video import VideoFrame, iter_cv2_frames
 from viana.stages.ultralytics_detect import UltralyticsDualDetector
+from viana.stages.video import VideoFrame, iter_cv2_frames
 
 FrameDetector = Callable[[VideoFrame], tuple[list[Detection], list[Detection]]]
 TelemetryEmit = Callable[[TelemetryMessage], None]

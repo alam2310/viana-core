@@ -1,7 +1,8 @@
 # Project Status (Living Document)
 
-**Last updated:** 2026-08-18  
-**Current focus:** Phase 1 — Contracts & config  
+**Last updated:** 2026-08-19  
+**Current focus:** Phase 6 — Orchestrator (API can shell `viana run`); Phase 8 UI workflows complete (mocked)  
+**API blocker:** Orchestrator HTTP routes are **501 stubs only** until Phase 6 wires subprocess workers. Engine `viana run` / `viana resume` / `viana prescan` are implemented.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
 
@@ -14,14 +15,14 @@
 | Track | Phase | Status | Owner surface |
 |-------|-------|--------|---------------|
 | Platform | 0 — Monorepo scaffold | ✅ **Closed** | repo root |
-| Engine | 1 — Contracts & config | ⬜ Not started | `src/viana/` |
-| Engine | 2 — I/O & CSV | ⬜ Not started | `src/viana/` |
-| Engine | 3 — CV core | ⬜ Not started | `src/viana/` |
-| Engine | 4 — Prescan & lines | ⬜ Not started | `src/viana/` |
-| Engine | 5 — Process & render | ⬜ Not started | `src/viana/` |
-| API | 6 — Orchestrator | ⬜ Not started | `src/orchestrator/` |
-| UI | 7 — Foundation | ⬜ Not started | `apps/web/` |
-| UI | 8 — Workflows | ⬜ Not started | `apps/web/` |
+| Engine | 1 — Contracts & config | ✅ **Complete** | `src/viana/` |
+| Engine | 2 — I/O & CSV | ✅ **Complete** | `src/viana/` |
+| Engine | 3 — CV core | ✅ **Complete** (modules; GPU loop is Phase 5) | `src/viana/` |
+| Engine | 4 — Prescan & lines | ✅ **Complete** | `src/viana/` |
+| Engine | 5 — Process & render | ✅ **Complete** (YOLO/FFmpeg optional at runtime) | `src/viana/` |
+| API | 6 — Orchestrator | ⬜ Scaffold only (501 stubs) | `src/orchestrator/` |
+| UI | 7 — Foundation | ✅ Scaffold complete | `apps/web/` |
+| UI | 8 — Workflows | ✅ Mocked complete | `apps/web/` |
 | QA | 9 — Parity & hardening | ⬜ Not started | `tests/`, `legacy/PARITY.md` |
 
 ---
@@ -39,17 +40,25 @@
 - [x] Models: `models/v1/`, `models/pretrained/`, `models/README.md`
 - [x] Engine artifact schemas: `checkpoint`, `job_status`, `run_result`
 - [x] Dockerfile installs `pip install -e ".[dev]"`
-- [x] UI stub: `apps/web/package.json`, `tsconfig.json`
+- [x] UI: Next.js 15 scaffold in `apps/web/` (Phase 7)
 - [x] Formal sign-off: `docs/PHASE_0_SIGNOFF.md`
 
 ---
 
 ## Phase 1 — first tasks
 
-1. Full `JobConfig` Pydantic validation ↔ JSON schema sync
-2. `classes.yaml` / `engine_defaults.yaml` loaders + tests
-3. Wire CSV column validation to `events_*.schema.json`
-4. Optional: `.github/workflows/test.yml` for `pytest tests/viana/`
+1. [x] Full `JobConfig` Pydantic validation ↔ JSON schema sync
+2. [x] `classes.yaml` / `engine_defaults.yaml` loaders + tests
+3. [x] Wire CSV column validation to `events_*.schema.json`
+4. [x] Optional: `.github/workflows/ci.yml` already runs `pytest tests/viana/`
+
+**Engine Phase 1 (2026-08-18):** `JobConfig` + `load_job_config`; `viana run`/`resume` validate JSON then exit 2; CSV column helpers in `viana.io.csv_schema`.
+
+**Engine Phase 2 (2026-08-18):** `{stem}_events.csv` writer (`viana.io.events`), `viana aggregate` clock 15-min grid (`viana.stages.aggregate`), checkpoint read/write (`viana.io.checkpoint`).
+
+**Engine Phase 3 (2026-08-18):** detect merge/NMS, IoU tracker, heuristic classify, once-per-track crossing, time map (`viana.stages.cv_core`). `viana run` still exit-2 until Phase 5 opens video + weights.
+
+**Engine Phase 5 (2026-08-19):** `viana run` / `viana resume` open the video, run `FrameCVEngine`, append `{stem}_events.csv`, write checkpoints/time_map/run_result, emit telemetry JSON on stderr. No 15-min bins in the frame loop. Live YOLO + FFmpeg need container extras; tests inject frames/detectors.
 
 ---
 
@@ -57,19 +66,23 @@
 
 UI **must** use `packages/contracts/fixtures/` until an endpoint is marked ✅.
 
+Routes exist under `src/orchestrator/routes/` but return **501** (except `GET /health`). Do not flip ✅ until workers spawn `python -m viana`.
+
 | Endpoint | Implemented | Schema | Fixture |
 |----------|-------------|--------|---------|
 | `GET /health` | ✅ stub | — | — |
-| `POST /utils/prescan` | ❌ | `prescan_response.schema.json` | `prescan_response.json` |
-| `POST /jobs` | ❌ | `job_submit.schema.json`, `job_submit_response.schema.json` | `job_submit_response.json` |
-| `GET /jobs` | ❌ | — | — |
-| `GET /jobs/{id}` | ❌ | `job_status.schema.json` | `job_status_paused.json` |
-| `POST /jobs/{id}/resume` | ❌ | — | — |
-| `POST /jobs/{id}/start-fresh` | ❌ | — | — |
-| `WS /ws/jobs` | ❌ | `telemetry.schema.json` | `telemetry_progress.json` |
-| `GET/POST /projects/{id}/profiles` | ❌ | `calibration_profile.schema.json` | — |
+| `POST /utils/prescan` | ❌ 501 | `prescan_response.schema.json` | `prescan_response.json` |
+| `POST /jobs` | ❌ 501 (422 if client sends `job_id`/`gpu_device`) | `job_submit.schema.json`, `job_submit_response.schema.json` | `job_submit_response.json` |
+| `GET /jobs` | ❌ 501 | `job_status.schema.json` (array) | — |
+| `GET /jobs/{id}` | ❌ 501 | `job_status.schema.json` | `job_status_paused.json` |
+| `POST /jobs/{id}/resume` | ❌ 501 | — | — |
+| `POST /jobs/{id}/start-fresh` | ❌ 501 | — | — |
+| `DELETE /jobs/{id}` | ❌ 501 | — | — |
+| `POST /jobs/{id}/aggregate` | ❌ 501 | — | — |
+| `WS /ws/jobs` | ❌ stub LOG then close | `telemetry.schema.json` | `telemetry_progress.json` |
+| `GET/POST /projects/{id}/profiles` | ❌ 501 | `calibration_profile.schema.json` | `calibration_profile.json` |
 
-**Engine disk artifacts** (not HTTP): `checkpoint.schema.json`, `run_result.schema.json` — fixture `checkpoint_resume.json`.
+**Engine disk artifacts** (not HTTP): `checkpoint.schema.json`, `run_result.schema.json`, `time_map.schema.json`, `calibration_profile.schema.json` — fixtures `checkpoint_resume.json`, `time_map.json`, `calibration_profile.json`, `run_result.json`.
 
 ---
 
@@ -77,10 +90,10 @@ UI **must** use `packages/contracts/fixtures/` until an endpoint is marked ✅.
 
 | Command | Implemented | Notes |
 |---------|-------------|-------|
-| `viana prescan` | ❌ stub | Phase 4 |
-| `viana run` | ❌ stub | Phase 3–5 |
-| `viana resume` | ❌ stub | Phase 5 |
-| `viana aggregate` | ❌ stub | Phase 2 |
+| `viana prescan` | ✅ | Preview JPEG + PrescanResponse JSON on stdout |
+| `viana run` | ✅ | Events CSV + checkpoint + run_result; YOLO/OpenCV at runtime |
+| `viana resume` | ✅ | Explicit checkpoint continue; no silent resume |
+| `viana aggregate` | ✅ | Events CSV → `{stem}_15min.csv`; `--partial` for incomplete runs |
 
 ---
 
@@ -112,6 +125,15 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Phase 5: viana run/resume process loop, telemetry, FFmpeg render, explicit resume |
+| 2026-08-19 | Phase 4: viana prescan OCR + line proposal + profiles + preview JPEG |
+| 2026-08-18 | Phase 8 UI workflows (mocked): prescan modal, calibration canvas, queue, paused resume/fresh |
+| 2026-08-18 | Phase 3: detect/classify/track/crossing/time_map (CPU-testable; no GPU loop) |
+| 2026-08-18 | Phase 7 UI scaffold: Next.js 15, fixture api-client, host `/api/container/*`, dashboard |
+| 2026-08-18 | Phase 2: events CSV writer, viana aggregate (clock 15-min, zero-fill), checkpoint I/O |
+| 2026-08-18 | Phase 1 complete: JobConfig schema sync, CSV column contracts, CLI config validation |
+| 2026-08-18 | Orchestrator job/prescan/profile/WS routes scaffolded as 501 stubs; GPU workers blocked on Phase 5 CLI |
+| 2026-08-18 | Phase 1: classes.yaml / engine_defaults.yaml Pydantic loaders + tests |
 | 2026-08-18 | AgentReady round 2: requirements.txt, pattern refs, legacy docstrings |
 | 2026-08-18 | AgentReady remediation: CI, lint, OpenAPI, threat model, design docs |
 | 2026-08-18 | Phase 0 formally closed; hygiene pass (schemas, fixtures, Dockerfile, sign-off doc) |

@@ -1,16 +1,10 @@
 # ViAna Web UI (`apps/web`)
 
-Next.js 15 application — **stub only** (Phase 7 full scaffold).
+Next.js 15 host application: container lifecycle on the host, job UI against FastAPI in Docker (`http://localhost:8000`).
 
-`package.json` and `tsconfig.json` are present so agents can wire `@viana/contracts` before Next.js is added.
+Until endpoints are marked ✅ in `docs/PROJECT_STATUS.md`, keep `NEXT_PUBLIC_USE_MOCKS=true` (fixtures in `packages/contracts/fixtures/`).
 
-## Purpose
-
-- Container lifecycle on the **host** (docker ps/start via Next.js API routes)
-- Job queue UI talking to **container FastAPI** at `http://localhost:8000`
-- Pre-scan review, calibration canvas, telemetry WebSocket
-
-## Setup (when implemented)
+## Setup
 
 ```bash
 cd apps/web
@@ -19,8 +13,10 @@ cp .env.example .env.local
 npm run dev
 ```
 
+Open http://localhost:3000
+
 ## Shared types
 
 Import from `@viana/contracts` (path alias → `packages/contracts/typescript`).
 
-See `docs/ui/DEVELOPMENT_GUIDE.md` for full workflow.
+See `docs/ui/DEVELOPMENT_GUIDE.md`.

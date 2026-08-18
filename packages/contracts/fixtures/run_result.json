@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "job_id": "job_mock_001",
+  "status": "COMPLETED",
+  "source_video_path": "/data/projects/nh48/videos/2026-03-15_09-00.mp4",
+  "video_stem": "2026-03-15_09-00",
+  "artifacts": {
+    "events": "/data/viana-outputs/nh48/2026-03-15_09-00_events.csv",
+    "time_map": "/data/viana-outputs/nh48/2026-03-15_09-00.time_map.json"
+  },
+  "error_message": null,
+  "completed_at": "2026-03-15T10:00:00Z"
+}

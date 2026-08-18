@@ -2,10 +2,33 @@
   "name": "@viana/web",
   "version": "0.1.0",
   "private": true,
-  "description": "ViAna Next.js UI — full scaffold in Phase 7",
+  "description": "ViAna Next.js UI — host container manager and job dashboard",
   "scripts": {
-    "dev": "node -e \"console.error('Next.js scaffold pending Phase 7. See apps/web/AGENTS.md'); process.exit(1)\"",
-    "build": "node -e \"console.error('Next.js scaffold pending Phase 7. See apps/web/AGENTS.md'); process.exit(1)\"",
-    "lint": "node -e \"console.error('Next.js scaffold pending Phase 7. See apps/web/AGENTS.md'); process.exit(1)\""
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.511.0",
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwind-merge": "^3.3.0",
+    "yaml": "^2.8.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/node": "^22.16.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "eslint": "^9.31.0",
+    "eslint-config-next": "^15.5.0",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.8.3"
   }
 }

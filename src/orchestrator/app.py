@@ -8,7 +8,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from orchestrator.logging_config import configure_logging, get_logger
-from orchestrator.routes import health
+from orchestrator.routes import health, jobs, prescan, profiles
+from orchestrator.ws import jobs as jobs_ws
 
 logger = get_logger(__name__)
 
@@ -30,6 +31,10 @@ app = FastAPI(
 )
 
 app.include_router(health.router, tags=["health"])
+app.include_router(jobs.router)
+app.include_router(prescan.router)
+app.include_router(profiles.router)
+app.include_router(jobs_ws.router)
 
 
 @app.get("/")

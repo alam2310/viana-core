@@ -50,13 +50,16 @@ How AI agents should work on this repo to minimize context drift, hallucination,
 
 ## 4. Contract change workflow
 
+Full cross-track rules: **`docs/governance/CONTRACT_SYNC.md`**
+
 ```
 1. Edit packages/contracts/schemas/*.json
 2. Edit packages/contracts/typescript/index.ts
-3. Edit src/viana/config/job.py (Pydantic)
-4. Edit `docs/api_contracts.md` (human summary)
-5. Update docs/PROJECT_STATUS.md if endpoint newly available
-6. Implement handler / UI consumer
+3. Add/update packages/contracts/fixtures/*.json (if UI mocks the shape)
+4. Edit src/viana/config/job.py (Pydantic)
+5. Edit docs/api_contracts.md + openapi.yaml (if HTTP)
+6. Update docs/PROJECT_STATUS.md if endpoint newly available
+7. Implement handler / UI consumer (other tracks wait for steps 1–6)
 ```
 
 ---
@@ -69,7 +72,9 @@ How AI agents should work on this repo to minimize context drift, hallucination,
 | API | `src/orchestrator/` | Spawns CLI; owns job state |
 | UI | `apps/web/`, `docs/ui/` | Consumes contracts only |
 
-**Conflict resolution:** `packages/contracts/` wins over any implementation.
+**Conflict resolution:** `packages/contracts/` wins over any implementation. See `CONTRACT_SYNC.md`.
+
+**Parallel development:** `PARALLEL_AGENTS.md`, kickoff prompts in `KICKOFF_PROMPTS.md`.
 
 ---
 

@@ -1,0 +1,24 @@
+{
+  "task_type": "ViAna_Moving",
+  "source_video_path": "/data/projects/nh48/videos/2026-03-15_09-00.mp4",
+  "project_id": "nh48",
+  "metadata": {
+    "user_start_time": "09:00:00",
+    "user_start_date": "15-03-2026",
+    "location": "NH48 Km42"
+  },
+  "task_parameters": {
+    "horizon_line": { "start": [120, 400], "end": [1800, 520] },
+    "counting_line": { "start": [80, 900], "end": [1840, 780] },
+    "confidence_threshold": 0.75,
+    "use_heuristic_truck_split": true,
+    "render_video": true,
+    "telemetry_detail": false
+  },
+  "calibration_profile_id": "morning_northbound",
+  "resume": false,
+  "start_fresh": false,
+  "job_id": "job_mock_001",
+  "gpu_device": "cuda:0",
+  "output_dir": "/data/viana-outputs/nh48"
+}

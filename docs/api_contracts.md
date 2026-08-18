@@ -47,6 +47,8 @@ Default `output.parent_dir`: `/data/viana-outputs` (`configs/engine_defaults.yam
 
 UI displays `preview_url` on canvas with `proposed_lines` overlaid; user may edit before submit.
 
+Engine CLI: `python -m viana prescan --source … --project-id … [--frame-offset] [--output-dir]`. Stdout is `PrescanResponse` JSON. `preview_url` is the disk path `{output_dir}/prescan/{prescan_id}_preview.jpg` (orchestrator rewrites this to an HTTP URL). Profiles are listed from `{output_dir}/profiles/*.json`.
+
 ## 5. POST /jobs — JobSubmitRequest
 
 ```json
@@ -89,7 +91,7 @@ UI displays `preview_url` on canvas with `proposed_lines` overlaid; user may edi
 
 ## 7. Calibration profiles
 
-Stored at: `{output.parent_dir}/{project_id}/profiles/{profile_id}.json`
+Stored at: `{output.parent_dir}/{project_id}/profiles/{profile_id}.json` (schema `calibration_profile.schema.json`, fixture `calibration_profile.json`). Engine load/save is `viana.io.profiles`; HTTP routes remain orchestrator.
 
 | Method | Path |
 |--------|------|
@@ -117,9 +119,22 @@ Written under `{output_dir}/` per video stem. Schemas:
 |------|--------|
 | `{stem}.checkpoint.json` | `checkpoint.schema.json` |
 | `{stem}.run_result.json` | `run_result.schema.json` |
+| `{stem}.run_result.json` | `run_result.schema.json` |
 
-Fixture: `packages/contracts/fixtures/checkpoint_resume.json`
+Fixture: `packages/contracts/fixtures/checkpoint_resume.json`. Time map fixture: `time_map.json`.
 
-## 10. Future task types
+## 10. Engine CLI JobConfig (not HTTP)
+
+`python -m viana run --config job.json` and `viana resume` read `job_config.schema.json`.
+
+The orchestrator writes this file after assigning `job_id`, `gpu_device`, and `output_dir`. The UI must **not** send `JobConfig` on `POST /jobs` (use `job_submit.schema.json` only).
+
+`python -m viana run --config job.json` processes the video (events CSV, checkpoint, time map, optional FFmpeg `{stem}_processed.mp4`). `viana resume` continues from `{stem}.checkpoint.json` only when `resume=true`. Telemetry JSON lines go to **stderr**; the final `RunResult` is stdout.
+
+Do **not** compute 15-minute bins in this loop — use `viana aggregate` (ADR 001).
+
+Fixture: `packages/contracts/fixtures/job_config.json`.
+
+## 11. Future task types
 
 `ViAnaNP_Parked` and `ViAna_Junction` are documented for platform context; **not implemented** in engine v0.1.

@@ -61,7 +61,7 @@ packages = ["viana", "orchestrator"]
 exclude = ["legacy"]
 
 [[tool.mypy.overrides]]
-module = ["typer", "typer.*"]
+module = ["typer", "typer.*", "yaml", "yaml.*", "cv2", "easyocr", "ultralytics"]
 ignore_missing_imports = true
 
 [tool.bandit]

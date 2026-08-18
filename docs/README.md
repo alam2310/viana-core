@@ -12,7 +12,7 @@
 | [`ops/TMUX_README.md`](ops/TMUX_README.md) | tmux cheat sheet for long-running jobs |
 | [`specs/engine_specifications.md`](specs/engine_specifications.md) | Engine requirements |
 | [`specs/ui_specifications.md`](specs/ui_specifications.md) | UI product requirements |
-| [`governance/`](governance/) | AI SDLC rules |
+| [`governance/`](governance/) | AI SDLC rules, contract sync, kickoff prompts |
 | [`design/`](design/) | Design intent (invariants, preconditions) |
 | [`ui/`](ui/) | UI development guides |
 | [`adr/`](adr/) | Architecture decisions |

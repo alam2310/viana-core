@@ -1,0 +1,79 @@
+"""Ultralytics dual-model detector (optional; tests inject a fake detector)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from viana.config.defaults import DetectionDefaults
+from viana.config.files import repo_root
+from viana.domain.boxes import Detection
+from viana.stages.video import VideoFrame
+
+
+def resolve_weights_path(path: Path) -> Path:
+    """Resolve model weights relative to the repo root when needed."""
+    if path.is_file():
+        return path
+    candidate = repo_root() / path
+    if candidate.is_file():
+        return candidate
+    raise FileNotFoundError(f"Model weights not found: {path}")
+
+
+class UltralyticsDualDetector:
+    """Vehicle YOLO + pedestrian YOLO on the assigned ``cuda:0`` / ``cuda:1`` device."""
+
+    def __init__(
+        self,
+        vehicle_weights: Path,
+        pedestrian_weights: Path,
+        *,
+        device: str,
+        detection: DetectionDefaults,
+    ) -> None:
+        try:
+            from ultralytics import YOLO
+        except ImportError as exc:
+            raise RuntimeError("ultralytics is required for live YOLO inference") from exc
+        self._vehicle = YOLO(str(resolve_weights_path(vehicle_weights)))
+        self._pedestrian = YOLO(str(resolve_weights_path(pedestrian_weights)))
+        self._device = device
+        self._imgsz = detection.imgsz
+        self._conf = detection.confidence_threshold
+
+    def detect(self, frame: VideoFrame) -> tuple[list[Detection], list[Detection]]:
+        """Run both models on ``frame.image`` (must be a BGR array)."""
+        if frame.image is None:
+            return [], []
+        vehicles = self._predict(self._vehicle, frame.image)
+        people = self._predict(self._pedestrian, frame.image)
+        return vehicles, people
+
+    def _predict(self, model: Any, image: object) -> list[Detection]:
+        results = model.predict(
+            image,
+            device=self._device,
+            imgsz=self._imgsz,
+            conf=self._conf,
+            verbose=False,
+        )
+        detections: list[Detection] = []
+        if not results:
+            return detections
+        boxes = results[0].boxes
+        if boxes is None:
+            return detections
+        for box in boxes:
+            xyxy = box.xyxy[0].tolist()
+            detections.append(
+                Detection(
+                    x1=float(xyxy[0]),
+                    y1=float(xyxy[1]),
+                    x2=float(xyxy[2]),
+                    y2=float(xyxy[3]),
+                    confidence=float(box.conf[0]),
+                    class_id=int(box.cls[0]),
+                )
+            )
+        return detections

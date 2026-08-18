@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/engine_defaults.schema.json",
+  "title": "EngineDefaults",
+  "description": "Engine default thresholds and paths (configs/engine_defaults.yaml). Overridable per job via task_parameters.",
+  "type": "object",
+  "required": ["models", "detection", "classification", "ocr", "pipeline", "output"],
+  "additionalProperties": false,
+  "properties": {
+    "models": { "$ref": "#/$defs/ModelPaths" },
+    "detection": { "$ref": "#/$defs/DetectionDefaults" },
+    "classification": { "$ref": "#/$defs/ClassificationDefaults" },
+    "ocr": { "$ref": "#/$defs/OcrDefaults" },
+    "pipeline": { "$ref": "#/$defs/PipelineDefaults" },
+    "output": { "$ref": "#/$defs/OutputDefaults" }
+  },
+  "$defs": {
+    "ModelPaths": {
+      "type": "object",
+      "required": ["vehicle", "pedestrian"],
+      "additionalProperties": false,
+      "properties": {
+        "vehicle": { "type": "string", "minLength": 1 },
+        "pedestrian": { "type": "string", "minLength": 1 }
+      }
+    },
+    "DetectionDefaults": {
+      "type": "object",
+      "required": ["confidence_threshold", "imgsz", "nms_threshold", "suppression_ioa"],
+      "additionalProperties": false,
+      "properties": {
+        "confidence_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+        "imgsz": { "type": "integer", "minimum": 1 },
+        "nms_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+        "suppression_ioa": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "ClassificationDefaults": {
+      "type": "object",
+      "required": [
+        "use_heuristic_truck_split",
+        "lock_frames",
+        "perspective_scale",
+        "trailer_ratio",
+        "lcv_max_area",
+        "mcv_max_area"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "use_heuristic_truck_split": { "type": "boolean" },
+        "lock_frames": { "type": "integer", "minimum": 1 },
+        "perspective_scale": { "type": "number" },
+        "trailer_ratio": { "type": "number" },
+        "lcv_max_area": { "type": "number", "minimum": 0 },
+        "mcv_max_area": { "type": "number", "minimum": 0 }
+      }
+    },
+    "OcrDefaults": {
+      "type": "object",
+      "required": ["min_confidence", "recalibration_interval_sec", "drift_threshold_sec"],
+      "additionalProperties": false,
+      "properties": {
+        "min_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "recalibration_interval_sec": { "type": "number", "minimum": 0 },
+        "drift_threshold_sec": { "type": "number", "minimum": 0 }
+      }
+    },
+    "PipelineDefaults": {
+      "type": "object",
+      "required": [
+        "checkpoint_interval_frames",
+        "telemetry_progress_frames",
+        "telemetry_detail_progress_frames"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_interval_frames": { "type": "integer", "minimum": 1 },
+        "telemetry_progress_frames": { "type": "integer", "minimum": 1 },
+        "telemetry_detail_progress_frames": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "OutputDefaults": {
+      "type": "object",
+      "required": ["parent_dir"],
+      "additionalProperties": false,
+      "properties": {
+        "parent_dir": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@
     },
     "metadata": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "user_start_time": { "type": "string" },
         "user_start_date": { "type": "string" },
@@ -35,6 +36,7 @@
     "LineSegment": {
       "type": "object",
       "required": ["start", "end"],
+      "additionalProperties": false,
       "properties": {
         "start": { "$ref": "#/$defs/Point" },
         "end": { "$ref": "#/$defs/Point" }
@@ -43,6 +45,7 @@
     "ViAnaTaskParameters": {
       "type": "object",
       "required": ["horizon_line", "counting_line"],
+      "additionalProperties": false,
       "properties": {
         "horizon_line": { "$ref": "#/$defs/LineSegment" },
         "counting_line": { "$ref": "#/$defs/LineSegment" },

@@ -46,22 +46,22 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 ### Phase 2 — Engine I/O & CSV
 - events.csv, aggregate.py, checkpoint.py
 
-### Phase 3 — CV core
+### Phase 3 — CV core ✅ (2026-08-18)
 - detect, classify, track, crossing, time_map (port from legacy)
 
-### Phase 4 — Prescan
-- OCR, line proposal, profiles
+### Phase 4 — Prescan ✅ (2026-08-19)
+- OCR (EasyOCR optional), line proposal, profiles, `viana prescan` preview JPEG
 
-### Phase 5 — Process & render
-- Main loop, telemetry, FFmpeg, resume
+### Phase 5 — Process & render ✅ (2026-08-19)
+- Main loop, telemetry, FFmpeg overlay, explicit resume (`viana run` / `viana resume`)
 
 ### Phase 6 — Orchestrator
 - FastAPI routes, worker pool, WebSocket
 
-### Phase 7 — UI foundation
+### Phase 7 — UI foundation ✅ (2026-08-18)
 - Next.js scaffold, container manager, API client, mock mode
 
-### Phase 8 — UI workflows
+### Phase 8 — UI workflows ✅ (2026-08-18, mocked)
 - Prescan, canvas, queue, paused UX
 
 ### Phase 9 — Parity & hardening

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/job_config.schema.json",
+  "title": "JobConfig",
+  "description": "Engine CLI JSON for `viana run` / `viana resume`. Includes backend-assigned job_id, gpu_device, and output_dir. The UI must not send this object on POST /jobs.",
+  "type": "object",
+  "required": [
+    "task_type",
+    "source_video_path",
+    "project_id",
+    "task_parameters",
+    "job_id",
+    "gpu_device",
+    "output_dir"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "task_type": { "const": "ViAna_Moving" },
+    "source_video_path": { "type": "string", "minLength": 1 },
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "user_start_time": { "type": "string" },
+        "user_start_date": { "type": "string" },
+        "location": { "type": "string" }
+      }
+    },
+    "task_parameters": { "$ref": "#/$defs/ViAnaTaskParameters" },
+    "calibration_profile_id": { "type": "string" },
+    "resume": { "type": "boolean", "default": false },
+    "start_fresh": { "type": "boolean", "default": false },
+    "job_id": { "type": "string", "minLength": 1 },
+    "gpu_device": { "type": "string", "pattern": "^cuda:[01]$" },
+    "output_dir": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "Point": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "LineSegment": {
+      "type": "object",
+      "required": ["start", "end"],
+      "additionalProperties": false,
+      "properties": {
+        "start": { "$ref": "#/$defs/Point" },
+        "end": { "$ref": "#/$defs/Point" }
+      }
+    },
+    "ViAnaTaskParameters": {
+      "type": "object",
+      "required": ["horizon_line", "counting_line"],
+      "additionalProperties": false,
+      "properties": {
+        "horizon_line": { "$ref": "#/$defs/LineSegment" },
+        "counting_line": { "$ref": "#/$defs/LineSegment" },
+        "confidence_threshold": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.75 },
+        "use_heuristic_truck_split": { "type": "boolean", "default": true },
+        "render_video": { "type": "boolean", "default": true },
+        "telemetry_detail": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}

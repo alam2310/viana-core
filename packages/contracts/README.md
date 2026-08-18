@@ -25,6 +25,7 @@ See `docs/governance/AI_SDLC.md`.
 | File | Purpose |
 |------|---------|
 | `job_submit.schema.json` | UI → POST /jobs |
+| `job_config.schema.json` | Engine CLI JSON (`viana run` / `viana resume`) |
 | `job_submit_response.schema.json` | POST /jobs response |
 | `job_status.schema.json` | GET /jobs/{id} response |
 | `prescan_response.schema.json` | POST /utils/prescan response |
@@ -34,15 +35,22 @@ See `docs/governance/AI_SDLC.md`.
 | `telemetry.schema.json` | WebSocket messages |
 | `checkpoint.schema.json` | `{stem}.checkpoint.json` (engine resume) |
 | `run_result.schema.json` | `{stem}.run_result.json` (final outcome) |
+| `time_map.schema.json` | `{stem}.time_map.json` (OCR / user wall-clock anchors) |
+| `classes.schema.json` | `configs/classes.yaml` (YOLO id → reporting hierarchy) |
+| `engine_defaults.schema.json` | `configs/engine_defaults.yaml` (thresholds, model paths) |
 
 ## Fixtures (UI mocks)
 
 | File | Use |
 |------|-----|
 | `prescan_response.json` | Prescan modal + canvas |
+| `calibration_profile.json` | Project calibration profile |
 | `job_submit_response.json` | POST /jobs success mock |
 | `job_status_paused.json` | Resume / start fresh UI |
 | `checkpoint_resume.json` | Engine resume state reference |
+| `job_config.json` | Engine CLI JobConfig (not an HTTP mock) |
+| `time_map.json` | Engine time-map anchors |
+| `run_result.json` | Engine `{stem}.run_result.json` |
 | `telemetry_progress.json` | Dashboard progress |
 | `telemetry_sample.json` | General WS shape reference |
 

@@ -12,7 +12,7 @@
 ## Local development
 
 ```bash
-# 1. Container (GPU)
+# 1. Container (GPU) — required only when NEXT_PUBLIC_USE_MOCKS=false
 docker compose up -d
 docker compose exec dev bash
 
@@ -23,8 +23,12 @@ pip install -e ".[dev]"
 make api-dev
 # → http://localhost:8000/health
 
-# 4. UI (on host, when scaffolded)
-cd apps/web && npm run dev
+# 4. UI (on host)
+cd apps/web
+cp .env.example .env.local   # keep NEXT_PUBLIC_USE_MOCKS=true until API ✅
+npm install
+npm run dev
+# → http://localhost:3000
 ```
 
 ## Environment variables
@@ -34,6 +38,8 @@ cd apps/web && npm run dev
 | `VIANA_DATA_ROOT` | host `docker-compose` | Mount host data to `/data` |
 | `VIANA_OUTPUT_PARENT` | container | Default output parent dir |
 | `NEXT_PUBLIC_API_URL` | `apps/web` | FastAPI base URL |
+| `NEXT_PUBLIC_USE_MOCKS` | `apps/web` | `true` until API endpoints are ✅ |
+| `ORCHESTRATOR_CONFIG_PATH` | `apps/web` (server) | Host path to `docker/orchestrator_config.yaml` |
 
 ## Contracts
 

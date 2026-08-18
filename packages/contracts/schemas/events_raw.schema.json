@@ -4,6 +4,7 @@
   "title": "RawCrossingEventRow",
   "description": "One row in {stem}_events.csv",
   "type": "object",
+  "additionalProperties": false,
   "required": [
     "event_id", "job_id", "video_file", "track_id", "frame_index",
     "video_pts_ms", "class_name", "direction", "confidence"

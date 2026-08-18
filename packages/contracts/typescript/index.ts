@@ -45,6 +45,16 @@ export interface JobSubmitRequest {
   start_fresh?: boolean;
 }
 
+/**
+ * Engine CLI JSON (`viana run` / `viana resume`).
+ * Backend assigns job_id, gpu_device, output_dir — UI must not POST this object.
+ */
+export interface JobConfig extends JobSubmitRequest {
+  job_id: string;
+  gpu_device: string;
+  output_dir: string;
+}
+
 /** Orchestrator → UI after POST /jobs */
 export interface JobSubmitResponse {
   job_id: string;
@@ -129,13 +139,26 @@ export interface ProposedLines {
   confidence: number;
 }
 
+export type CalibrationProfileSource = "user_drawn" | "auto_proposed" | "user_edited";
+
+/** `{parent_dir}/{project_id}/profiles/{profile_id}.json` */
+export interface CalibrationProfile {
+  profile_id: string;
+  profile_name: string;
+  reference_resolution: [number, number];
+  horizon_line: LineSegment;
+  counting_line: LineSegment;
+  created_at?: string;
+  source?: CalibrationProfileSource;
+}
+
 export interface PrescanResponse {
   prescan_id: string;
   video_meta: VideoMeta;
   ocr: PrescanOCR;
   proposed_lines?: ProposedLines | null;
   preview_url: string;
-  profiles?: unknown[];
+  profiles?: CalibrationProfile[];
 }
 
 export type TelemetryType = "PROGRESS" | "MOVING_EVENT" | "LOG";
@@ -145,4 +168,90 @@ export interface TelemetryMessage {
   status?: JobStatus;
   telemetry_type: TelemetryType;
   data: Record<string, unknown>;
+}
+
+/** YOLO class id → analytics hierarchy (`configs/classes.yaml`). */
+export interface VehicleClass {
+  id: number;
+  name: string;
+  category: string;
+  class_type: string;
+  sub_class: string;
+  aggregate: boolean;
+}
+
+export interface ClassTaxonomy {
+  classes: VehicleClass[];
+}
+
+export interface ModelPaths {
+  vehicle: string;
+  pedestrian: string;
+}
+
+export interface DetectionDefaults {
+  confidence_threshold: number;
+  imgsz: number;
+  nms_threshold: number;
+  suppression_ioa: number;
+}
+
+export interface ClassificationDefaults {
+  use_heuristic_truck_split: boolean;
+  lock_frames: number;
+  perspective_scale: number;
+  trailer_ratio: number;
+  lcv_max_area: number;
+  mcv_max_area: number;
+}
+
+export interface OcrDefaults {
+  min_confidence: number;
+  recalibration_interval_sec: number;
+  drift_threshold_sec: number;
+}
+
+export interface PipelineDefaults {
+  checkpoint_interval_frames: number;
+  telemetry_progress_frames: number;
+  telemetry_detail_progress_frames: number;
+}
+
+export interface OutputDefaults {
+  parent_dir: string;
+}
+
+/** Engine defaults (`configs/engine_defaults.yaml`). Overridable per job. */
+export interface EngineDefaults {
+  models: ModelPaths;
+  detection: DetectionDefaults;
+  classification: ClassificationDefaults;
+  ocr: OcrDefaults;
+  pipeline: PipelineDefaults;
+  output: OutputDefaults;
+}
+
+export type WallTimeSource =
+  | "ocr_recalibrated"
+  | "ocr_anchor"
+  | "user_fallback"
+  | "unavailable";
+
+export interface TimeAnchor {
+  video_pts_ms: number;
+  wall_time: string;
+  source: WallTimeSource;
+  ocr_confidence?: number | null;
+  date?: string | null;
+  location?: string | null;
+}
+
+/** `{stem}.time_map.json` — maps video PTS to wall clock. */
+export interface TimeMap {
+  schema_version: 1;
+  job_id: string;
+  video_stem: string;
+  anchors: TimeAnchor[];
+  user_start_date?: string | null;
+  user_start_time?: string | null;
 }

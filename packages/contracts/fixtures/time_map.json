@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "job_id": "job_mock_001",
+  "video_stem": "2026-03-15_09-00",
+  "anchors": [
+    {
+      "video_pts_ms": 0,
+      "wall_time": "2026-03-15T09:00:00Z",
+      "source": "ocr_anchor",
+      "ocr_confidence": 0.92,
+      "date": "15-03-2026",
+      "location": "NH48 Km42"
+    }
+  ],
+  "user_start_date": "15-03-2026",
+  "user_start_time": "09:00:00"
+}

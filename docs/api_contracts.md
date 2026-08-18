@@ -117,8 +117,9 @@ Written under `{output_dir}/` per video stem. Schemas:
 |------|--------|
 | `{stem}.checkpoint.json` | `checkpoint.schema.json` |
 | `{stem}.run_result.json` | `run_result.schema.json` |
+| `{stem}.time_map.json` | `time_map.schema.json` |
 
-Fixture: `packages/contracts/fixtures/checkpoint_resume.json`
+Fixture: `packages/contracts/fixtures/checkpoint_resume.json`. Time map fixture: `time_map.json`.
 
 ## 10. Engine CLI JobConfig (not HTTP)
 

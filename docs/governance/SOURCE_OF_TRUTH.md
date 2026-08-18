@@ -10,6 +10,7 @@ When two documents disagree, **this table wins**.
 | **TypeScript types** | `packages/contracts/typescript/index.ts` | Must match schemas |
 | **Python job models** | `src/viana/config/job.py` | Must match schemas |
 | **Engine CLI JobConfig** | `packages/contracts/schemas/job_config.schema.json` | Includes backend `job_id` / `gpu_device` / `output_dir` |
+| **Time map artifact** | `packages/contracts/schemas/time_map.schema.json` | `{stem}.time_map.json` |
 | **Human API summary** | `docs/api_contracts.md` | Must match schemas |
 | **OpenAPI spec** | `openapi.yaml` | Must match `api_contracts.md` |
 | **Threat model** | `THREAT_MODEL.md` | Security scope |

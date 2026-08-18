@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-18  
-**Current focus:** Phase 3 — CV core (engine); Phase 7 UI scaffold complete  
+**Current focus:** Phase 4 — Prescan & lines (engine); Phase 7 UI scaffold complete  
 **API blocker:** `viana run` pipeline not implemented (JobConfig validation only). Orchestrator HTTP routes are **501 stubs only** — no GPU workers until Phase 5.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
@@ -17,7 +17,7 @@
 | Platform | 0 — Monorepo scaffold | ✅ **Closed** | repo root |
 | Engine | 1 — Contracts & config | ✅ **Complete** | `src/viana/` |
 | Engine | 2 — I/O & CSV | ✅ **Complete** | `src/viana/` |
-| Engine | 3 — CV core | ⬜ Not started | `src/viana/` |
+| Engine | 3 — CV core | ✅ **Complete** (modules; GPU loop is Phase 5) | `src/viana/` |
 | Engine | 4 — Prescan & lines | ⬜ Not started | `src/viana/` |
 | Engine | 5 — Process & render | ⬜ Not started | `src/viana/` |
 | API | 6 — Orchestrator | ⬜ Scaffold only (501 stubs) | `src/orchestrator/` |
@@ -54,7 +54,9 @@
 
 **Engine Phase 1 (2026-08-18):** `JobConfig` + `load_job_config`; `viana run`/`resume` validate JSON then exit 2; CSV column helpers in `viana.io.csv_schema`.
 
-**Engine Phase 2 (2026-08-18):** `{stem}_events.csv` writer (`viana.io.events`), `viana aggregate` clock 15-min grid (`viana.stages.aggregate`), checkpoint read/write (`viana.io.checkpoint`). Next: Phase 3 detect/classify/track/crossing.
+**Engine Phase 2 (2026-08-18):** `{stem}_events.csv` writer (`viana.io.events`), `viana aggregate` clock 15-min grid (`viana.stages.aggregate`), checkpoint read/write (`viana.io.checkpoint`).
+
+**Engine Phase 3 (2026-08-18):** detect merge/NMS, IoU tracker, heuristic classify, once-per-track crossing, time map (`viana.stages.cv_core`). `viana run` still exit-2 until Phase 5 opens video + weights.
 
 ---
 
@@ -78,7 +80,7 @@ Routes exist under `src/orchestrator/routes/` but return **501** (except `GET /h
 | `WS /ws/jobs` | ❌ stub LOG then close | `telemetry.schema.json` | `telemetry_progress.json` |
 | `GET/POST /projects/{id}/profiles` | ❌ 501 | `calibration_profile.schema.json` | — |
 
-**Engine disk artifacts** (not HTTP): `checkpoint.schema.json`, `run_result.schema.json` — fixture `checkpoint_resume.json`.
+**Engine disk artifacts** (not HTTP): `checkpoint.schema.json`, `run_result.schema.json`, `time_map.schema.json` — fixtures `checkpoint_resume.json`, `time_map.json`.
 
 ---
 
@@ -87,7 +89,7 @@ Routes exist under `src/orchestrator/routes/` but return **501** (except `GET /h
 | Command | Implemented | Notes |
 |---------|-------------|-------|
 | `viana prescan` | ❌ stub | Phase 4; exit 2 |
-| `viana run` | 🔄 JobConfig validation | Valid JSON required; pipeline Phase 3–5 |
+| `viana run` | 🔄 JobConfig validation | CV core ready; GPU loop Phase 5 |
 | `viana resume` | 🔄 JobConfig validation | Requires `resume=true`; pipeline Phase 5 |
 | `viana aggregate` | ✅ | Events CSV → `{stem}_15min.csv`; `--partial` for incomplete runs |
 
@@ -121,6 +123,7 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | Phase 3: detect/classify/track/crossing/time_map (CPU-testable; no GPU loop) |
 | 2026-08-18 | Phase 7 UI scaffold: Next.js 15, fixture api-client, host `/api/container/*`, dashboard |
 | 2026-08-18 | Phase 2: events CSV writer, viana aggregate (clock 15-min, zero-fill), checkpoint I/O |
 | 2026-08-18 | Phase 1 complete: JobConfig schema sync, CSV column contracts, CLI config validation |

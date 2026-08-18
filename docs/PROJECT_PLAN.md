@@ -46,7 +46,7 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 ### Phase 2 — Engine I/O & CSV
 - events.csv, aggregate.py, checkpoint.py
 
-### Phase 3 — CV core
+### Phase 3 — CV core ✅ (2026-08-18)
 - detect, classify, track, crossing, time_map (port from legacy)
 
 ### Phase 4 — Prescan

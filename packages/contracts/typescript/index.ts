@@ -217,3 +217,28 @@ export interface EngineDefaults {
   pipeline: PipelineDefaults;
   output: OutputDefaults;
 }
+
+export type WallTimeSource =
+  | "ocr_recalibrated"
+  | "ocr_anchor"
+  | "user_fallback"
+  | "unavailable";
+
+export interface TimeAnchor {
+  video_pts_ms: number;
+  wall_time: string;
+  source: WallTimeSource;
+  ocr_confidence?: number | null;
+  date?: string | null;
+  location?: string | null;
+}
+
+/** `{stem}.time_map.json` — maps video PTS to wall clock. */
+export interface TimeMap {
+  schema_version: 1;
+  job_id: string;
+  video_stem: string;
+  anchors: TimeAnchor[];
+  user_start_date?: string | null;
+  user_start_time?: string | null;
+}

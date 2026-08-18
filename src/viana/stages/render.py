@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
+import subprocess  # nosec B404
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -88,7 +88,7 @@ class FfmpegRenderer:
         if ffmpeg is None:
             raise RuntimeError("ffmpeg not found on PATH")
         path.parent.mkdir(parents=True, exist_ok=True)
-        self._proc = subprocess.Popen(  # noqa: S603
+        self._proc = subprocess.Popen(  # noqa: S603  # nosec B603
             [
                 ffmpeg,
                 "-y",

@@ -4,6 +4,7 @@
   "title": "Aggregate15MinRow",
   "description": "One row in {stem}_15min.csv (vehicle classes only, zero-filled grid)",
   "type": "object",
+  "additionalProperties": false,
   "required": [
     "window_start", "window_end", "class_name", "direction", "count", "partial"
   ],

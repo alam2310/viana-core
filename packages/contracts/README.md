@@ -25,6 +25,7 @@ See `docs/governance/AI_SDLC.md`.
 | File | Purpose |
 |------|---------|
 | `job_submit.schema.json` | UI → POST /jobs |
+| `job_config.schema.json` | Engine CLI JSON (`viana run` / `viana resume`) |
 | `job_submit_response.schema.json` | POST /jobs response |
 | `job_status.schema.json` | GET /jobs/{id} response |
 | `prescan_response.schema.json` | POST /utils/prescan response |
@@ -45,6 +46,7 @@ See `docs/governance/AI_SDLC.md`.
 | `job_submit_response.json` | POST /jobs success mock |
 | `job_status_paused.json` | Resume / start fresh UI |
 | `checkpoint_resume.json` | Engine resume state reference |
+| `job_config.json` | Engine CLI JobConfig (not an HTTP mock) |
 | `telemetry_progress.json` | Dashboard progress |
 | `telemetry_sample.json` | General WS shape reference |
 

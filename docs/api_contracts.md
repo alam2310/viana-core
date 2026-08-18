@@ -120,6 +120,14 @@ Written under `{output_dir}/` per video stem. Schemas:
 
 Fixture: `packages/contracts/fixtures/checkpoint_resume.json`
 
-## 10. Future task types
+## 10. Engine CLI JobConfig (not HTTP)
+
+`python -m viana run --config job.json` and `viana resume` read `job_config.schema.json`.
+
+The orchestrator writes this file after assigning `job_id`, `gpu_device`, and `output_dir`. The UI must **not** send `JobConfig` on `POST /jobs` (use `job_submit.schema.json` only).
+
+Fixture: `packages/contracts/fixtures/job_config.json`.
+
+## 11. Future task types
 
 `ViAnaNP_Parked` and `ViAna_Junction` are documented for platform context; **not implemented** in engine v0.1.

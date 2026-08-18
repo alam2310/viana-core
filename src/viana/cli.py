@@ -6,12 +6,27 @@ import json
 from pathlib import Path
 
 import typer
+from pydantic import ValidationError
+
+from viana.config.job import JobConfig, load_job_config
 
 app = typer.Typer(
     name="viana",
     help="ViAna moving-count analytics engine (CLI-first).",
     no_args_is_help=True,
 )
+
+
+def _load_job_config_or_exit(config: Path) -> JobConfig:
+    """Parse JobConfig JSON or exit 1 on missing/invalid files."""
+    try:
+        return load_job_config(config)
+    except FileNotFoundError:
+        typer.echo(f"Config not found: {config}", err=True)
+        raise typer.Exit(code=1) from None
+    except (ValidationError, json.JSONDecodeError, ValueError) as exc:
+        typer.echo(f"Invalid JobConfig: {exc}", err=True)
+        raise typer.Exit(code=1) from None
 
 
 @app.command()
@@ -27,7 +42,7 @@ def prescan(
         json.dumps(
             {
                 "status": "not_implemented",
-                "phase": 0,
+                "phase": 4,
                 "command": "prescan",
                 "source": str(source),
                 "project_id": project_id,
@@ -44,11 +59,22 @@ def run(
     config: Path = typer.Option(..., "--config", "-c", help="Path to JobConfig JSON file."),
 ) -> None:
     """Run full moving-count pipeline (Phase 3+)."""
-    if not config.is_file():
-        typer.echo(f"Config not found: {config}", err=True)
+    job = _load_job_config_or_exit(config)
+    if job.resume:
+        typer.echo("Use `viana resume` when resume is true.", err=True)
         raise typer.Exit(code=1)
     typer.echo(
-        json.dumps({"status": "not_implemented", "phase": 0, "config": str(config)}, indent=2)
+        json.dumps(
+            {
+                "status": "not_implemented",
+                "phase": 3,
+                "command": "run",
+                "job_id": job.job_id,
+                "gpu_device": job.gpu_device,
+                "output_dir": str(job.output_dir),
+            },
+            indent=2,
+        )
     )
     raise typer.Exit(code=2)
 
@@ -58,8 +84,20 @@ def resume(
     config: Path = typer.Option(..., "--config", "-c", help="JobConfig JSON with resume intent."),
 ) -> None:
     """Resume from checkpoint (explicit trigger only)."""
+    job = _load_job_config_or_exit(config)
+    if not job.resume:
+        typer.echo("viana resume requires resume=true in JobConfig.", err=True)
+        raise typer.Exit(code=1)
     typer.echo(
-        json.dumps({"status": "not_implemented", "phase": 0, "config": str(config)}, indent=2)
+        json.dumps(
+            {
+                "status": "not_implemented",
+                "phase": 5,
+                "command": "resume",
+                "job_id": job.job_id,
+            },
+            indent=2,
+        )
     )
     raise typer.Exit(code=2)
 
@@ -72,12 +110,12 @@ def aggregate(
     project_id: str = typer.Option(..., "--project-id", "-p", help="Project slug."),
     partial: bool = typer.Option(False, "--partial", help="Allow aggregation on incomplete run."),
 ) -> None:
-    """Build 15-minute CSV from raw events (Phase 5)."""
+    """Build 15-minute CSV from raw events (Phase 2)."""
     typer.echo(
         json.dumps(
             {
                 "status": "not_implemented",
-                "phase": 0,
+                "phase": 2,
                 "source": str(source),
                 "project_id": project_id,
                 "partial": partial,

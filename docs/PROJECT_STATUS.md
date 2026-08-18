@@ -1,8 +1,8 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-18  
-**Current focus:** Phase 1 — Contracts & config  
-**API blocker:** CLI matrix is all stubs (`viana run` ❌). Orchestrator HTTP routes are **501 stubs only** — no GPU workers until Phase 5.  
+**Current focus:** Phase 2 — Engine I/O & CSV  
+**API blocker:** `viana run` pipeline not implemented (JobConfig validation only). Orchestrator HTTP routes are **501 stubs only** — no GPU workers until Phase 5.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
 
@@ -15,7 +15,7 @@
 | Track | Phase | Status | Owner surface |
 |-------|-------|--------|---------------|
 | Platform | 0 — Monorepo scaffold | ✅ **Closed** | repo root |
-| Engine | 1 — Contracts & config | 🔄 In progress | `src/viana/` |
+| Engine | 1 — Contracts & config | ✅ **Complete** | `src/viana/` |
 | Engine | 2 — I/O & CSV | ⬜ Not started | `src/viana/` |
 | Engine | 3 — CV core | ⬜ Not started | `src/viana/` |
 | Engine | 4 — Prescan & lines | ⬜ Not started | `src/viana/` |
@@ -47,12 +47,12 @@
 
 ## Phase 1 — first tasks
 
-1. Full `JobConfig` Pydantic validation ↔ JSON schema sync
+1. [x] Full `JobConfig` Pydantic validation ↔ JSON schema sync
 2. [x] `classes.yaml` / `engine_defaults.yaml` loaders + tests
-3. Wire CSV column validation to `events_*.schema.json`
-4. Optional: `.github/workflows/test.yml` for `pytest tests/viana/`
+3. [x] Wire CSV column validation to `events_*.schema.json`
+4. [x] Optional: `.github/workflows/ci.yml` already runs `pytest tests/viana/`
 
-**Engine config loaders (2026-08-18):** `viana.config.classes.load_class_taxonomy` and `viana.config.defaults.load_engine_defaults`. Schemas: `packages/contracts/schemas/classes.schema.json`, `engine_defaults.schema.json`.
+**Engine Phase 1 (2026-08-18):** `JobConfig` + `load_job_config`; `viana run`/`resume` validate JSON then exit 2; CSV column helpers in `viana.io.csv_schema`. Next: Phase 2 events.csv / aggregate / checkpoint.
 
 ---
 
@@ -84,9 +84,9 @@ Routes exist under `src/orchestrator/routes/` but return **501** (except `GET /h
 
 | Command | Implemented | Notes |
 |---------|-------------|-------|
-| `viana prescan` | ❌ stub | Phase 4 |
-| `viana run` | ❌ stub | Phase 3–5 |
-| `viana resume` | ❌ stub | Phase 5 |
+| `viana prescan` | ❌ stub | Phase 4; exit 2 |
+| `viana run` | 🔄 JobConfig validation | Valid JSON required; pipeline Phase 3–5 |
+| `viana resume` | 🔄 JobConfig validation | Requires `resume=true`; pipeline Phase 5 |
 | `viana aggregate` | ❌ stub | Phase 2 |
 
 ---
@@ -119,6 +119,7 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | Phase 1 complete: JobConfig schema sync, CSV column contracts, CLI config validation |
 | 2026-08-18 | Orchestrator job/prescan/profile/WS routes scaffolded as 501 stubs; GPU workers blocked on Phase 5 CLI |
 | 2026-08-18 | Phase 1: classes.yaml / engine_defaults.yaml Pydantic loaders + tests |
 | 2026-08-18 | AgentReady round 2: requirements.txt, pattern refs, legacy docstrings |

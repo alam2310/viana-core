@@ -45,6 +45,16 @@ export interface JobSubmitRequest {
   start_fresh?: boolean;
 }
 
+/**
+ * Engine CLI JSON (`viana run` / `viana resume`).
+ * Backend assigns job_id, gpu_device, output_dir — UI must not POST this object.
+ */
+export interface JobConfig extends JobSubmitRequest {
+  job_id: string;
+  gpu_device: string;
+  output_dir: string;
+}
+
 /** Orchestrator → UI after POST /jobs */
 export interface JobSubmitResponse {
   job_id: string;

@@ -8,12 +8,22 @@ from pathlib import Path
 _ENV_CONFIGS_DIR = "VIANA_CONFIGS_DIR"
 
 
+def repo_root() -> Path:
+    """Return the monorepo root (parent of ``src/``) from this package path."""
+    return Path(__file__).resolve().parents[3]
+
+
 def repo_configs_dir() -> Path:
     """Return the configs directory next to this source tree when present.
 
     Layout: ``<repo>/src/viana/config/files.py`` → ``<repo>/configs``.
     """
-    return Path(__file__).resolve().parents[3] / "configs"
+    return repo_root() / "configs"
+
+
+def contracts_schemas_dir() -> Path:
+    """Return ``packages/contracts/schemas`` under the monorepo root."""
+    return repo_root() / "packages" / "contracts" / "schemas"
 
 
 def resolve_configs_dir(explicit: Path | None = None) -> Path:
@@ -40,6 +50,5 @@ def resolve_configs_dir(explicit: Path | None = None) -> Path:
         if resolved.is_dir():
             return resolved
     raise FileNotFoundError(
-        "Could not find a configs directory. Pass an explicit path or set "
-        f"{_ENV_CONFIGS_DIR}."
+        f"Could not find a configs directory. Pass an explicit path or set {_ENV_CONFIGS_DIR}."
     )

@@ -1,9 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://viana.local/schemas/job_submit.schema.json",
-  "title": "JobSubmitRequest",
+  "$id": "https://viana.local/schemas/job_config.schema.json",
+  "title": "JobConfig",
+  "description": "Engine CLI JSON for `viana run` / `viana resume`. Includes backend-assigned job_id, gpu_device, and output_dir. The UI must not send this object on POST /jobs.",
   "type": "object",
-  "required": ["task_type", "source_video_path", "project_id", "task_parameters"],
+  "required": [
+    "task_type",
+    "source_video_path",
+    "project_id",
+    "task_parameters",
+    "job_id",
+    "gpu_device",
+    "output_dir"
+  ],
   "additionalProperties": false,
   "properties": {
     "task_type": { "const": "ViAna_Moving" },
@@ -24,7 +33,10 @@
     "task_parameters": { "$ref": "#/$defs/ViAnaTaskParameters" },
     "calibration_profile_id": { "type": "string" },
     "resume": { "type": "boolean", "default": false },
-    "start_fresh": { "type": "boolean", "default": false }
+    "start_fresh": { "type": "boolean", "default": false },
+    "job_id": { "type": "string", "minLength": 1 },
+    "gpu_device": { "type": "string", "pattern": "^cuda:[01]$" },
+    "output_dir": { "type": "string", "minLength": 1 }
   },
   "$defs": {
     "Point": {

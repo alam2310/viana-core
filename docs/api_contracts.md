@@ -47,6 +47,8 @@ Default `output.parent_dir`: `/data/viana-outputs` (`configs/engine_defaults.yam
 
 UI displays `preview_url` on canvas with `proposed_lines` overlaid; user may edit before submit.
 
+Engine CLI: `python -m viana prescan --source … --project-id … [--frame-offset] [--output-dir]`. Stdout is `PrescanResponse` JSON. `preview_url` is the disk path `{output_dir}/prescan/{prescan_id}_preview.jpg` (orchestrator rewrites this to an HTTP URL). Profiles are listed from `{output_dir}/profiles/*.json`.
+
 ## 5. POST /jobs — JobSubmitRequest
 
 ```json
@@ -89,7 +91,7 @@ UI displays `preview_url` on canvas with `proposed_lines` overlaid; user may edi
 
 ## 7. Calibration profiles
 
-Stored at: `{output.parent_dir}/{project_id}/profiles/{profile_id}.json`
+Stored at: `{output.parent_dir}/{project_id}/profiles/{profile_id}.json` (schema `calibration_profile.schema.json`, fixture `calibration_profile.json`). Engine load/save is `viana.io.profiles`; HTTP routes remain orchestrator.
 
 | Method | Path |
 |--------|------|

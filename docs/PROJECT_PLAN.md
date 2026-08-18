@@ -49,8 +49,8 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 ### Phase 3 — CV core ✅ (2026-08-18)
 - detect, classify, track, crossing, time_map (port from legacy)
 
-### Phase 4 — Prescan
-- OCR, line proposal, profiles
+### Phase 4 — Prescan ✅ (2026-08-19)
+- OCR (EasyOCR optional), line proposal, profiles, `viana prescan` preview JPEG
 
 ### Phase 5 — Process & render
 - Main loop, telemetry, FFmpeg, resume

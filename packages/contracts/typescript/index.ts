@@ -139,13 +139,26 @@ export interface ProposedLines {
   confidence: number;
 }
 
+export type CalibrationProfileSource = "user_drawn" | "auto_proposed" | "user_edited";
+
+/** `{parent_dir}/{project_id}/profiles/{profile_id}.json` */
+export interface CalibrationProfile {
+  profile_id: string;
+  profile_name: string;
+  reference_resolution: [number, number];
+  horizon_line: LineSegment;
+  counting_line: LineSegment;
+  created_at?: string;
+  source?: CalibrationProfileSource;
+}
+
 export interface PrescanResponse {
   prescan_id: string;
   video_meta: VideoMeta;
   ocr: PrescanOCR;
   proposed_lines?: ProposedLines | null;
   preview_url: string;
-  profiles?: unknown[];
+  profiles?: CalibrationProfile[];
 }
 
 export type TelemetryType = "PROGRESS" | "MOVING_EVENT" | "LOG";

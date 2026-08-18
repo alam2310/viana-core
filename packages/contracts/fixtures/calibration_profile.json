@@ -1,0 +1,9 @@
+{
+  "profile_id": "morning_northbound",
+  "profile_name": "Morning northbound",
+  "reference_resolution": [1920, 1080],
+  "horizon_line": { "start": [120, 400], "end": [1800, 520] },
+  "counting_line": { "start": [80, 900], "end": [1840, 780] },
+  "created_at": "2026-03-15T09:00:00Z",
+  "source": "user_drawn"
+}

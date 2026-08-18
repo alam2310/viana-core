@@ -13,6 +13,8 @@ from viana.config.defaults import load_engine_defaults
 from viana.config.job import PROJECT_ID_PATTERN, JobConfig, load_job_config
 from viana.io.paths import artifact_paths, project_output_dir
 from viana.stages.aggregate import aggregate_events
+from viana.stages.ocr import optional_easyocr_reader
+from viana.stages.prescan import run_prescan
 
 app = typer.Typer(
     name="viana",
@@ -40,22 +42,35 @@ def prescan(
     frame_offset: float = typer.Option(
         0.0, "--frame-offset", help="Seconds into video for preview frame."
     ),
+    output_dir: Path | None = typer.Option(
+        None,
+        "--output-dir",
+        help="Project output directory. Defaults to {parent_dir}/{project_id}.",
+    ),
 ) -> None:
-    """Sample video, OCR metadata, propose calibration lines (Phase 4)."""
-    typer.echo(
-        json.dumps(
-            {
-                "status": "not_implemented",
-                "phase": 4,
-                "command": "prescan",
-                "source": str(source),
-                "project_id": project_id,
-                "frame_offset": frame_offset,
-            },
-            indent=2,
+    """Sample video, OCR metadata, propose calibration lines, write preview JPEG."""
+    if not PROJECT_ID_PATTERN.match(project_id):
+        typer.echo("project_id must match [a-z0-9][a-z0-9_-]*", err=True)
+        raise typer.Exit(code=1)
+    if not source.is_file():
+        typer.echo(f"Video not found: {source}", err=True)
+        raise typer.Exit(code=1)
+    resolved_output = output_dir
+    if resolved_output is None:
+        defaults = load_engine_defaults()
+        resolved_output = project_output_dir(defaults.output.parent_dir, project_id)
+    try:
+        result = run_prescan(
+            source,
+            project_id,
+            frame_offset_sec=frame_offset,
+            output_dir=resolved_output,
+            ocr_reader=optional_easyocr_reader(),
         )
-    )
-    raise typer.Exit(code=2)
+    except (OSError, ValueError, RuntimeError, FileNotFoundError) as exc:
+        typer.echo(f"Prescan failed: {exc}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
 
 
 @app.command()

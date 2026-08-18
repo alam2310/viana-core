@@ -44,6 +44,7 @@ See `docs/governance/AI_SDLC.md`.
 | File | Use |
 |------|-----|
 | `prescan_response.json` | Prescan modal + canvas |
+| `calibration_profile.json` | Project calibration profile |
 | `job_submit_response.json` | POST /jobs success mock |
 | `job_status_paused.json` | Resume / start fresh UI |
 | `checkpoint_resume.json` | Engine resume state reference |

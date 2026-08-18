@@ -1,7 +1,7 @@
 # Pinned Python dependencies for reproducible installs (CI + local dev).
 # Regenerate: pip install -e ".[dev]" && pip freeze | grep -E '^(pydantic|fastapi|typer|uvicorn|structlog|PyYAML|pytest|httpx|ruff|mypy|bandit|import-linter|pre-commit)'
 
-pydantic==2.10.6
+pydantic==2.13.4
 pydantic_core==2.27.2
 PyYAML==6.0.2
 typer==0.15.2

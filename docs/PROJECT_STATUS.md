@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-18  
-**Current focus:** Phase 3 — CV core  
+**Current focus:** Phase 3 — CV core (engine); Phase 7 UI scaffold complete  
 **API blocker:** `viana run` pipeline not implemented (JobConfig validation only). Orchestrator HTTP routes are **501 stubs only** — no GPU workers until Phase 5.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Canonical plan:** `docs/PROJECT_PLAN.md`
@@ -21,7 +21,7 @@
 | Engine | 4 — Prescan & lines | ⬜ Not started | `src/viana/` |
 | Engine | 5 — Process & render | ⬜ Not started | `src/viana/` |
 | API | 6 — Orchestrator | ⬜ Scaffold only (501 stubs) | `src/orchestrator/` |
-| UI | 7 — Foundation | ⬜ Not started | `apps/web/` |
+| UI | 7 — Foundation | ✅ Scaffold complete | `apps/web/` |
 | UI | 8 — Workflows | ⬜ Not started | `apps/web/` |
 | QA | 9 — Parity & hardening | ⬜ Not started | `tests/`, `legacy/PARITY.md` |
 
@@ -40,7 +40,7 @@
 - [x] Models: `models/v1/`, `models/pretrained/`, `models/README.md`
 - [x] Engine artifact schemas: `checkpoint`, `job_status`, `run_result`
 - [x] Dockerfile installs `pip install -e ".[dev]"`
-- [x] UI stub: `apps/web/package.json`, `tsconfig.json`
+- [x] UI: Next.js 15 scaffold in `apps/web/` (Phase 7)
 - [x] Formal sign-off: `docs/PHASE_0_SIGNOFF.md`
 
 ---
@@ -121,6 +121,7 @@ See `docs/PROJECT_PLAN.md` and `docs/adr/`.
 
 | Date | Change |
 |------|--------|
+| 2026-08-18 | Phase 7 UI scaffold: Next.js 15, fixture api-client, host `/api/container/*`, dashboard |
 | 2026-08-18 | Phase 2: events CSV writer, viana aggregate (clock 15-min, zero-fill), checkpoint I/O |
 | 2026-08-18 | Phase 1 complete: JobConfig schema sync, CSV column contracts, CLI config validation |
 | 2026-08-18 | Orchestrator job/prescan/profile/WS routes scaffolded as 501 stubs; GPU workers blocked on Phase 5 CLI |

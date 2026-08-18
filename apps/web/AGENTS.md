@@ -79,13 +79,13 @@ When `USE_MOCKS=true`, `lib/api-client.ts` should return fixture data from `pack
 
 When scaffolding `apps/web/` (stub `package.json` + `tsconfig.json` already present):
 
-- [x] `package.json` with scripts `dev`, `build`, `lint` (stub — exits until Next.js scaffold)
+- [x] `package.json` with scripts `dev`, `build`, `lint`
 - [x] Path alias `@viana/contracts` → `../../packages/contracts/typescript`
-- [ ] `src/lib/api-client.ts` with mock/real switch
-- [ ] `src/lib/container-manager.ts` (host docker)
-- [ ] `src/app/api/container/status/route.ts`
-- [ ] `src/app/api/container/start/route.ts`
-- [ ] Placeholder dashboard `src/app/page.tsx`
+- [x] `src/lib/api-client.ts` with mock/real switch
+- [x] `src/lib/container-manager.ts` (host docker)
+- [x] `src/app/api/container/status/route.ts`
+- [x] `src/app/api/container/start/route.ts`
+- [x] Placeholder dashboard `src/app/page.tsx`
 
 Update `docs/PROJECT_STATUS.md` when Phase 7 completes.
 

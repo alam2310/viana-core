@@ -50,13 +50,13 @@ Set `NEXT_PUBLIC_USE_MOCKS=true` (see `apps/web/.env.example`).
 ```
 apps/web/
 ├── AGENTS.md           ← start here
-├── package.json        ← created in Phase 7
+├── package.json
 ├── src/
-│   ├── app/            ← Next.js App Router
+│   ├── app/            ← Next.js App Router + /api/container/*
 │   ├── components/
-│   ├── features/       ← container, queue, prescan, calibration, telemetry
+│   ├── features/       ← container, dashboard (queue/prescan/calibration: Phase 8)
 │   └── lib/            ← api-client, container-manager
 └── .env.example
 ```
 
-Phase 7 scaffolds the app. **Parallel UI work before Phase 7:** build against fixtures + write components per `COMPONENT_MAP.md`.
+Phase 7 scaffold is in place (`npm run dev` in `apps/web`). Phase 8: prescan, canvas, queue, paused UX against fixtures.

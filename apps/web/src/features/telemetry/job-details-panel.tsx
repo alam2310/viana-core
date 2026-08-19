@@ -1,13 +1,8 @@
 "use client";
 
-import type { JobStatusResponse, TelemetryMessage } from "@viana/contracts";
+import type { JobStatusResponse } from "@viana/contracts";
 
 import { Aggregate15MinTable } from "@/features/telemetry/aggregate-15min-table";
-import { CrossingsTable } from "@/features/telemetry/crossings-table";
-import {
-  crossingsFromTelemetry,
-  progressFromTelemetry,
-} from "@/features/telemetry/telemetry-formatters";
 import {
   statusBadgeClass,
   statusLabel,
@@ -55,7 +50,7 @@ function OutputFilesList({
             {file.hostPath ? (
               <button
                 type="button"
-                className="text-left text-sky-700 underline hover:text-sky-900 dark:text-sky-400 dark:hover:text-sky-300"
+                className="cursor-pointer text-left text-primary underline hover:opacity-80"
                 onClick={() => {
                   void openPathInFileManager(file.hostPath!).catch(() => undefined);
                 }}
@@ -101,11 +96,9 @@ function metadataBlock(job: JobStatusResponse) {
 
 export function JobDetailsPanel({
   job,
-  messages,
   mountConfig,
 }: {
   job: JobStatusResponse | null;
-  messages: TelemetryMessage[];
   mountConfig: MountConfig | null;
 }) {
   if (!job) {
@@ -121,17 +114,6 @@ export function JobDetailsPanel({
     );
   }
 
-  const progress = progressFromTelemetry(messages, job.job_id);
-  const meta = job.confirmed_metadata ?? job.proposed_metadata;
-  const crossings = crossingsFromTelemetry(
-    messages,
-    job.job_id,
-    job.progress?.processing_fps ?? progress?.fps,
-    {
-      startTime: meta?.user_start_time,
-      startDate: meta?.user_start_date,
-    },
-  );
   const errorText = formatJobErrorMessage(job.error_message);
   const stem = videoStem(job.source_video_path);
   const csvHostPath =
@@ -169,17 +151,6 @@ export function JobDetailsPanel({
         ) : null}
 
         {metadataBlock(job)}
-
-        {job.status !== "COMPLETED" && crossings.length > 0 ? (
-          <details className="rounded border border-border">
-            <summary className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-muted">
-              Recent crossings ({crossings.length})
-            </summary>
-            <div className="border-t border-border px-1 pb-1">
-              <CrossingsTable rows={crossings} maxRows={8} />
-            </div>
-          </details>
-        ) : null}
 
         {job.status === "COMPLETED" && csvHostPath ? (
           <details className="rounded border border-border">

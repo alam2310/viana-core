@@ -34,11 +34,6 @@ import {
   validateMetadataFields,
 } from "@/lib/validation";
 
-const DARK_GHOST_BTN =
-  "dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200";
-const DARK_OUTLINE_BTN =
-  "dark:border-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200";
-
 function mergeOcrMetadata(
   prev: {
     user_start_time: string;
@@ -326,7 +321,6 @@ export function PrescanReviewModal({
             type="button"
             size="sm"
             variant="ghost"
-            className={DARK_GHOST_BTN}
             onClick={onClose}
           >
             Close
@@ -385,7 +379,6 @@ export function PrescanReviewModal({
                 type="button"
                 size="sm"
                 variant="outline"
-                className={DARK_OUTLINE_BTN}
                 disabled={rescanning || loading}
                 onClick={() => void rescanAtOffset(offset)}
               >
@@ -462,7 +455,6 @@ export function PrescanReviewModal({
                 <Button
                   type="button"
                   variant="outline"
-                  className={DARK_OUTLINE_BTN}
                   onClick={onClose}
                 >
                   Cancel

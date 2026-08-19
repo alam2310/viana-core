@@ -4,9 +4,10 @@ import type { JobStatusResponse } from "@viana/contracts";
 
 import {
   IconCancel,
+  IconPause,
   IconFolder,
   IconMonitor,
-  IconPlay,
+  IconResume,
   IconRestart,
   IconRetry,
   IconReview,
@@ -192,7 +193,7 @@ export function JobQueueTable({
                     >
                       {isReviewable(job.status) ? (
                         <RoundIconButton
-                          label="Review prescan"
+                          label="Review Prescan"
                           variant="info"
                           size="sm"
                           onClick={() => onReview(job)}
@@ -202,7 +203,7 @@ export function JobQueueTable({
                       ) : null}
                       {job.status === "PRESCAN_FAILED" ? (
                         <RoundIconButton
-                          label="Retry pre-scan"
+                          label="Retry Prescan"
                           variant="warning"
                           size="sm"
                           disabled={busyId === job.job_id}
@@ -213,7 +214,7 @@ export function JobQueueTable({
                       ) : null}
                       {job.status === "PROCESSING" ? (
                         <RoundIconButton
-                          label="Monitor live"
+                          label="Monitor Live"
                           variant="success"
                           size="sm"
                           onClick={() => onMonitor(job)}
@@ -221,21 +222,32 @@ export function JobQueueTable({
                           <IconMonitor size={16} />
                         </RoundIconButton>
                       ) : null}
+                      {job.status === "PROCESSING" ? (
+                        <RoundIconButton
+                          label="Pause Job"
+                          size="sm"
+                          variant="warning"
+                          disabled={busyId === job.job_id}
+                          onClick={() => onCancel(job.job_id)}
+                        >
+                          <IconPause size={16} />
+                        </RoundIconButton>
+                      ) : null}
                       {job.status === "PAUSED" ? (
                         <RoundIconButton
-                          label="Resume job"
+                          label="Resume Job"
                           variant="success"
                           size="sm"
                           disabled={busyId === job.job_id}
                           onClick={() => onResume(job.job_id)}
                         >
-                          <IconPlay size={16} />
+                          <IconResume size={16} />
                         </RoundIconButton>
                       ) : null}
                       {(job.status === "PAUSED" ||
                         job.status === "FAILED") && (
                         <RoundIconButton
-                          label="Resubmit — overwrite existing output"
+                          label="Start Fresh Job"
                           variant="accent"
                           size="sm"
                           disabled={busyId === job.job_id}
@@ -246,7 +258,7 @@ export function JobQueueTable({
                       )}
                       {job.status === "COMPLETED" ? (
                         <RoundIconButton
-                          label="Open output directory"
+                          label="Open Output Directory"
                           variant="info"
                           size="sm"
                           onClick={() => onOpenOutput(job)}
@@ -256,7 +268,7 @@ export function JobQueueTable({
                       ) : null}
                       {isCancellable(job.status) ? (
                         <RoundIconButton
-                          label="Cancel job"
+                          label="Stop Job"
                           size="sm"
                           variant="danger"
                           disabled={busyId === job.job_id}

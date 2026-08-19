@@ -396,7 +396,6 @@ export function Dashboard() {
         ) : (
           <JobDetailsPanel
             job={detailsJob}
-            messages={telemetry}
             mountConfig={mountConfig}
           />
         )}

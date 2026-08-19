@@ -52,7 +52,7 @@ export function TelemetryPanel({
           </p>
           {crossings.length > 0 ? (
             <div>
-              <h3 className="text-xs font-medium text-muted">Recent crossings</h3>
+              <h3 className="text-xs font-medium text-muted">Live Crossings</h3>
               <ul className="mt-1 max-h-24 overflow-y-auto text-xs">
                 {crossings.slice(-5).reverse().map((row) => (
                   <li key={row.id}>

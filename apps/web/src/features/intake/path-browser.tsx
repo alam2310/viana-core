@@ -8,11 +8,6 @@ import type { MountConfig } from "@/lib/container-paths";
 import { readBrowsePath, writeBrowsePath } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 
-const DARK_GHOST_BTN =
-  "dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200";
-const DARK_OUTLINE_BTN =
-  "dark:border-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200";
-
 export type PickerPurpose = "intake" | "output_dir";
 
 async function fetchBrowse(path?: string): Promise<FsBrowseResponse> {
@@ -180,7 +175,6 @@ export function PathBrowser({
               type="button"
               size="sm"
               variant="ghost"
-              className={DARK_GHOST_BTN}
               onClick={onClose}
             >
               Cancel
@@ -279,7 +273,6 @@ export function PathBrowser({
             <Button
               type="button"
               variant="outline"
-              className={DARK_OUTLINE_BTN}
               onClick={onClose}
             >
               Close

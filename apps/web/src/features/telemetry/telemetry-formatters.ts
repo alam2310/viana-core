@@ -139,13 +139,6 @@ function formatWallClockTime(date: Date): string {
   return `${h}:${m}:${s}`;
 }
 
-function formatWallClockDate(date: Date): string {
-  const d = String(date.getDate()).padStart(2, "0");
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const y = date.getFullYear();
-  return `${d}-${m}-${y}`;
-}
-
 function formatEventTimestamp(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -168,7 +161,7 @@ function formatEventTimestamp(value: string): string {
     return `${inlineHms[1]}:${inlineHms[2]}:${inlineHms[3]}`;
   }
 
-  return trimmed;
+  return "—";
 }
 
 function eventTimeFromFrame(
@@ -188,14 +181,7 @@ function eventTimeFromFrame(
     return frameToClock(frame, fps);
   }
   const event = new Date(base.getTime() + (frame / fps) * 1000);
-  const sameDay =
-    event.getDate() === base.getDate() &&
-    event.getMonth() === base.getMonth() &&
-    event.getFullYear() === base.getFullYear();
-  if (sameDay) {
-    return formatWallClockTime(event);
-  }
-  return `${formatWallClockDate(event)} ${formatWallClockTime(event)}`;
+  return formatWallClockTime(event);
 }
 
 export function crossingsFromTelemetry(

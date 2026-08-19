@@ -35,7 +35,7 @@ export function MonitorSidebar({
     <aside className="flex h-full flex-col rounded-lg border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
-          <h2 className="text-sm font-semibold">Live monitor</h2>
+          <h2 className="text-sm font-semibold">Live Monitor</h2>
           <p className="font-mono text-xs text-muted">
             {videoStem(job.source_video_path)}
           </p>
@@ -44,7 +44,6 @@ export function MonitorSidebar({
           type="button"
           size="sm"
           variant="ghost"
-          className="dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           onClick={onClose}
         >
           Close
@@ -63,7 +62,7 @@ export function MonitorSidebar({
         </p>
 
         <details className="mt-4 rounded border border-border">
-          <summary className="cursor-pointer px-3 py-1.5 text-xs font-semibold tracking-wide text-muted uppercase">
+          <summary className="cursor-pointer px-3 py-1.5 text-xs font-semibold tracking-wide text-muted">
             Live Crossings ({crossings.length})
           </summary>
           <div className="border-t border-border px-1 pb-1">

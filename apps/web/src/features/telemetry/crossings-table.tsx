@@ -23,7 +23,7 @@ export function CrossingsTable({
       <table className="w-full text-left text-xs leading-tight">
         <thead className="sticky top-0 bg-card">
           <tr>
-            <th className="px-2 py-0.5 font-medium text-muted">Time</th>
+            <th className="px-2 py-0.5 font-medium text-muted">Time (HH:MM:SS)</th>
             <th className="px-2 py-0.5 font-medium text-muted">Class</th>
             <th className="px-2 py-0.5 text-center font-medium text-muted">
               Dir

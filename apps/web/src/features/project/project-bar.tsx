@@ -78,7 +78,6 @@ export function ProjectBar({
               type="button"
               size="sm"
               variant="outline"
-              className="dark:border-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
               onClick={onBrowseOutputDir}
             >
               Browse

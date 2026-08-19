@@ -108,6 +108,24 @@ export function IconCancel({ size = 18 }: { size?: number }) {
   );
 }
 
+export function IconPause({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <rect x="6" y="5" width="4" height="14" rx="1" />
+      <rect x="14" y="5" width="4" height="14" rx="1" />
+    </svg>
+  );
+}
+
+export function IconResume({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <rect x="5" y="5" width="3" height="14" rx="1" />
+      <path d="M10 5v14l9-7z" />
+    </svg>
+  );
+}
+
 export function IconFolder({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

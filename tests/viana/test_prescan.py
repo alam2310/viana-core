@@ -98,6 +98,7 @@ def test_run_prescan_writes_preview_and_response(tmp_path: Path) -> None:
         sampler=sampler,
         ocr_reader=ocr_reader,
         prescan_id="prescan_test_001",
+        auto_skip_dark_frames=False,
     )
     assert result.prescan_id == "prescan_test_001"
     assert result.video_meta.width == 1920
@@ -108,3 +109,17 @@ def test_run_prescan_writes_preview_and_response(tmp_path: Path) -> None:
     assert preview.is_file()
     assert preview.read_bytes()[:3] == b"\xff\xd8\xff"
     assert result.preview_url == str(preview)
+
+
+def test_find_best_frame_offset_respects_explicit_scrub() -> None:
+    """User scrub offset bypasses dark-frame auto-skip (G7)."""
+    from viana.stages.prescan import find_best_frame_offset
+
+    offset = find_best_frame_offset(
+        Path("/nonexistent.mp4"),
+        requested_offset_sec=12.5,
+        scan_sec=30.0,
+        step_sec=1.0,
+        luminance_threshold=28.0,
+    )
+    assert offset == 12.5

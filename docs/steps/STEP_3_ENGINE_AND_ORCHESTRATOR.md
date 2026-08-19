@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ⬜ Not started — see [`TRACKER.md`](TRACKER.md) |
+| **Status** | ✅ Complete — see [`TRACKER.md`](TRACKER.md) |
 | **Chat** | **New** — Engine + API (workers) |
 | **Blocks** | Step 4 |
 | **Blocked by** | Step 2 ✅ |
@@ -21,15 +21,15 @@ Implement **prescan engine behavior** and **orchestrator workers** on top of Ste
 
 | ID | Item | Owner | Status |
 |----|------|-------|--------|
-| G7 | Auto-skip dark/blocked opening frames in prescan sampler | Engine | ⬜ |
-| G8 | Live frame preview on scrub (prescan re-run or frame endpoint) | Engine + API | ⬜ |
-| G9 | ETA + crossing count on job status / telemetry | API + WS | ⬜ |
-| G12 | Auto-aggregate on job `COMPLETED` | Orchestrator | ⬜ |
-| G13 | Prescan worker queue — bulk intake prescan | API + `workers/pool.py` | ⬜ |
-| G19 | Partial `_processed.mp4` HTTP serving (range requests) | API | ⬜ |
-| — | Wire `POST /utils/prescan` → job lifecycle (`PRESCAN_RUNNING` → `AWAITING_REVIEW`) | API | ⬜ |
-| — | GPU workers pick up only `READY` jobs | `workers/pool.py` | ⬜ |
-| — | Retry prescan: `PRESCAN_FAILED` → `PRESCAN_PENDING` | Orchestrator | ⬜ |
+| G7 | Auto-skip dark/blocked opening frames in prescan sampler | Engine | ✅ |
+| G8 | Live frame preview on scrub (prescan re-run or frame endpoint) | Engine + API | ✅ |
+| G9 | ETA + crossing count on job status / telemetry | API + WS | ✅ |
+| G12 | Auto-aggregate on job `COMPLETED` | Orchestrator | ✅ |
+| G13 | Prescan worker queue — bulk intake prescan | API + `workers/pool.py` | ✅ |
+| G19 | Partial `_processed.mp4` HTTP serving (range requests) | API | ✅ |
+| — | Wire `POST /utils/prescan` → job lifecycle (`PRESCAN_RUNNING` → `AWAITING_REVIEW`) | API | ✅ |
+| — | GPU workers pick up only `READY` jobs | `workers/pool.py` | ✅ |
+| — | Retry prescan: `PRESCAN_FAILED` → `PRESCAN_PENDING` | Orchestrator | ✅ |
 
 ---
 
@@ -50,13 +50,13 @@ Implement **prescan engine behavior** and **orchestrator workers** on top of Ste
 
 ## Exit criteria
 
-- [ ] Intake job → prescan runs → `AWAITING_REVIEW` with proposals persisted
-- [ ] Confirm → `READY` → worker starts on GPU
-- [ ] Bulk folder intake prescan queues correctly
-- [ ] Auto-aggregate fires on `COMPLETED`
-- [ ] Partial MP4 servable for live monitor (Step 4 consumes)
-- [ ] Tests pass
-- [ ] `AGENT_PROGRESS.md` Step 3 checklist done
+- [x] Intake job → prescan runs → `AWAITING_REVIEW` with proposals persisted
+- [x] Confirm → `READY` → worker starts on GPU
+- [x] Bulk folder intake prescan queues correctly
+- [x] Auto-aggregate fires on `COMPLETED`
+- [x] Partial MP4 servable for live monitor (Step 4 consumes)
+- [x] Tests pass
+- [x] `AGENT_PROGRESS.md` Step 3 checklist done
 
 ---
 
@@ -64,4 +64,5 @@ Implement **prescan engine behavior** and **orchestrator workers** on top of Ste
 
 | Date | Note |
 |------|------|
+| 2026-08-19 | Step 3 complete: prescan queue, G7–G9/G12/G13/G19, `LineSegment.assert_within_frame` fix |
 | 2026-08-19 | Split from Step 2; engine + orchestrator workers |

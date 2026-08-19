@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from orchestrator.hub import hub
 from orchestrator.logging_config import configure_logging, get_logger
-from orchestrator.routes import health, jobs, prescan, profiles
+from orchestrator.routes import artifacts, health, jobs, prescan, profiles
 from orchestrator.workers.pool import reset_pool
 from orchestrator.ws import jobs as jobs_ws
 
@@ -53,6 +53,7 @@ app.add_middleware(
 
 app.include_router(health.router, tags=["health"])
 app.include_router(jobs.router)
+app.include_router(artifacts.router)
 app.include_router(prescan.router)
 app.include_router(profiles.router)
 app.include_router(jobs_ws.router)

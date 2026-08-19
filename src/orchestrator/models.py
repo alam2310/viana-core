@@ -46,6 +46,8 @@ class JobProgress(BaseModel):
     current_frame: int = Field(ge=0)
     total_frames: int = Field(ge=0)
     processing_fps: float | None = Field(default=None, ge=0)
+    eta_sec: float | None = Field(default=None, ge=0)
+    crossing_count: int | None = Field(default=None, ge=0)
 
 
 class JobStatus(BaseModel):

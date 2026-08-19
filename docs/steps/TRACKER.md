@@ -1,7 +1,7 @@
 # Step tracker (living)
 
 **Last updated:** 2026-08-19  
-**Current Step:** **3** — Engine prescan & orchestrator  
+**Current Step:** **4** — UI implementation  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
 **Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)
 
@@ -15,7 +15,7 @@
 |------|------|--------|------------|---------|-----------|
 | **1** | UX discovery & design | ✅ Complete | UX discovery | 2026-08-19 | 2026-08-19 |
 | **2** | Contracts & API foundation | ✅ Complete | Contract + API | 2026-08-19 | 2026-08-19 |
-| **3** | Engine prescan & orchestrator | ⬜ Not started | New — Engine + workers | — | — |
+| **3** | Engine prescan & orchestrator | ✅ Complete | Engine + workers | 2026-08-19 | 2026-08-19 |
 | **4** | UI implementation | ⬜ Not started | New — UI v2 | — | — |
 | **5** | E2E verification | ⬜ Not started | UI v2 or QA | — | — |
 | **6** | Hardening backlog | ⬜ Not started | Per item | — | — |
@@ -56,13 +56,13 @@ Detail: [`STEP_2_CONTRACTS_AND_API.md`](STEP_2_CONTRACTS_AND_API.md)
 
 | Item | Status |
 |------|--------|
-| Prescan worker queue (G13) | ⬜ |
-| Dark-frame skip (G7) | ⬜ |
-| Frame preview (G8) | ⬜ |
-| GPU gate — `READY` only | ⬜ |
-| Auto-aggregate (G12) | ⬜ |
-| Partial MP4 serving (G19) | ⬜ |
-| ETA + crossings (G9) | ⬜ |
+| Prescan worker queue (G13) | ✅ |
+| Dark-frame skip (G7) | ✅ |
+| Frame preview (G8) | ✅ |
+| GPU gate — `READY` only | ✅ |
+| Auto-aggregate (G12) | ✅ |
+| Partial MP4 serving (G19) | ✅ |
+| ETA + crossings (G9) | ✅ |
 
 Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
@@ -108,6 +108,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Step 3 complete: prescan worker queue, dark-frame skip, auto-aggregate, partial MP4, ETA/crossings |
 | 2026-08-19 | Step 2 complete: JobStatus lifecycle, intake + prescan confirm APIs |
 | 2026-08-19 | Six-step plan: split backend into Step 2 (contracts/API) + Step 3 (engine/workers) |
 | 2026-08-19 | Step 1 complete |

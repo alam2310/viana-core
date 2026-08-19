@@ -28,5 +28,10 @@ pipeline:
   telemetry_progress_frames: 300
   telemetry_detail_progress_frames: 30
 
+prescan:
+  dark_frame_luminance_threshold: 28
+  dark_frame_scan_sec: 30.0
+  dark_frame_step_sec: 1.0
+
 output:
   parent_dir: /data/viana-outputs

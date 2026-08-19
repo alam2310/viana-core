@@ -106,6 +106,8 @@ export interface JobProgress {
   current_frame: number;
   total_frames: number;
   processing_fps?: number;
+  eta_sec?: number;
+  crossing_count?: number;
 }
 
 /** GET /jobs/{id} response */

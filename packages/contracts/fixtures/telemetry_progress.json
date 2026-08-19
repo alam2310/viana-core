@@ -5,6 +5,8 @@
   "data": {
     "current_frame": 5000,
     "total_frames": 90000,
-    "processing_fps": 22.1
+    "processing_fps": 22.1,
+    "eta_sec": 3846.2,
+    "crossing_count": 142
   }
 }

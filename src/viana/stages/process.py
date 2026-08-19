@@ -336,6 +336,9 @@ def run_moving_count(
                 )
                 if processed % progress_every == 0 or processed == total_frames:
                     elapsed = max(time.perf_counter() - t0, 1e-6)
+                    fps_val = round(processed / elapsed, 2)
+                    remaining = max(0, total_frames - processed)
+                    eta_sec = round(remaining / fps_val, 1) if fps_val > 0 else None
                     emit(
                         TelemetryMessage(
                             job_id=job.job_id,
@@ -344,7 +347,9 @@ def run_moving_count(
                             data={
                                 "current_frame": processed,
                                 "total_frames": total_frames,
-                                "processing_fps": round(processed / elapsed, 2),
+                                "processing_fps": fps_val,
+                                "crossing_count": events_rows,
+                                **({"eta_sec": eta_sec} if eta_sec is not None else {}),
                             },
                         )
                     )

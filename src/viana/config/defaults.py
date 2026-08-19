@@ -72,6 +72,16 @@ class OutputDefaults(BaseModel):
     parent_dir: Path
 
 
+class PrescanDefaults(BaseModel):
+    """Prescan sampler tuning (dark-frame skip, scrub preview)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    dark_frame_luminance_threshold: float = Field(ge=0.0, le=255.0)
+    dark_frame_scan_sec: float = Field(ge=0.0)
+    dark_frame_step_sec: float = Field(gt=0.0)
+
+
 class EngineDefaults(BaseModel):
     """Validated engine defaults (overridable per job)."""
 
@@ -82,6 +92,7 @@ class EngineDefaults(BaseModel):
     classification: ClassificationDefaults
     ocr: OcrDefaults
     pipeline: PipelineDefaults
+    prescan: PrescanDefaults
     output: OutputDefaults
 
     def apply_task_overrides(self, params: ViAnaTaskParameters) -> EngineDefaults:

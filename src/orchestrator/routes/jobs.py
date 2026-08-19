@@ -33,6 +33,21 @@ def patch_job_prescan(job_id: str, body: JobPrescanConfirmRequest) -> JobStatus:
     return get_pool().confirm_prescan(job_id, body)
 
 
+@router.post("/jobs/{job_id}/prescan/retry", response_model=JobStatus)
+def retry_job_prescan(job_id: str) -> JobStatus:
+    """Retry prescan after ``PRESCAN_FAILED`` → ``PRESCAN_PENDING``."""
+    return get_pool().retry_prescan(job_id)
+
+
+@router.get("/jobs/{job_id}/prescan/preview")
+def get_job_prescan_preview(
+    job_id: str,
+    frame_offset_sec: float = Query(default=0.0, ge=0.0),
+) -> dict[str, object]:
+    """Re-run prescan at ``frame_offset_sec`` for scrub preview (G8)."""
+    return get_pool().prescan_preview(job_id, frame_offset_sec)
+
+
 @router.post("/jobs", status_code=201, response_model=JobSubmitResponse)
 def post_job(body: JobSubmitRequest) -> JobSubmitResponse:
     """Accept a moving-count job. Backend assigns job_id and gpu_device."""

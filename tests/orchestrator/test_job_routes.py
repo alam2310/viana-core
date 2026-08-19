@@ -18,6 +18,7 @@ from orchestrator.workers.pool import (
     CHECKPOINT_CONFLICT,
     GPU_DEVICES,
     MAX_CONCURRENT_GPU_JOBS,
+    MAX_CONCURRENT_PRESCAN_JOBS,
     WorkerPool,
     get_pool,
     reset_pool,
@@ -165,6 +166,25 @@ def _instant_popen(*_args: object, **_kwargs: object) -> InstantPopen:
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """Isolated pool + output dir; default spawn finishes immediately."""
     monkeypatch.setenv("VIANA_OUTPUT_PARENT", str(tmp_path))
+
+    def fake_run_viana(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+        if args and args[0] == "prescan":
+            return CompletedProcess(
+                args=list(args),
+                returncode=1,
+                stdout="",
+                stderr="prescan skipped in tests",
+            )
+        if args and args[0] == "aggregate":
+            return CompletedProcess(
+                args=list(args),
+                returncode=0,
+                stdout=json.dumps({"status": "ok", "command": "aggregate", "rows": 0}),
+                stderr="",
+            )
+        raise AssertionError(f"unexpected run_viana call: {args}")
+
+    monkeypatch.setattr("orchestrator.workers.pool.run_viana", fake_run_viana)
     monkeypatch.setattr("orchestrator.workers.pool.start_viana_process", _instant_popen)
     reset_pool()
     with TestClient(app) as test_client:
@@ -417,7 +437,12 @@ def test_post_jobs_intake_creates_prescan_pending(client: TestClient) -> None:
     job_id = body["jobs"][0]["job_id"]
     status = client.get(f"/jobs/{job_id}")
     assert status.status_code == 200
-    assert status.json()["status"] == "PRESCAN_PENDING"
+    assert status.json()["status"] in {
+        "PRESCAN_PENDING",
+        "PRESCAN_RUNNING",
+        "AWAITING_REVIEW",
+        "PRESCAN_FAILED",
+    }
 
 
 def test_post_jobs_intake_output_dir_override(client: TestClient, tmp_path: Path) -> None:
@@ -489,6 +514,7 @@ def test_patch_prescan_rejects_wrong_status(client: TestClient) -> None:
 def test_worker_pool_max_two_gpus() -> None:
     """Queue design: at most two concurrent GPU devices."""
     assert MAX_CONCURRENT_GPU_JOBS == 2
+    assert MAX_CONCURRENT_PRESCAN_JOBS == 2
     assert GPU_DEVICES == ("cuda:0", "cuda:1")
     pool = WorkerPool()
     first = pool.assign_gpu(set())
@@ -497,3 +523,218 @@ def test_worker_pool_max_two_gpus() -> None:
     assert first == "cuda:0"
     assert second == "cuda:1"
     assert third is None
+
+
+def _prescan_stdout(preview: Path) -> str:
+    return json.dumps(
+        {
+            "prescan_id": "prescan_abc",
+            "video_meta": {
+                "width": 1920,
+                "height": 1080,
+                "fps": 25.0,
+                "duration_sec": 1.0,
+                "frame_count": 25,
+            },
+            "ocr": {
+                "time": "09:00:00",
+                "date": "15-03-2026",
+                "location": "NH48 Km42",
+                "confidence": 0.82,
+            },
+            "proposed_lines": {
+                "horizon_line": VALID_SUBMIT["task_parameters"]["horizon_line"],
+                "counting_line": VALID_SUBMIT["task_parameters"]["counting_line"],
+                "confidence": 0.75,
+            },
+            "preview_url": str(preview),
+            "profiles": [],
+        }
+    )
+
+
+def test_intake_prescan_worker_reaches_awaiting_review(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Intake job runs prescan worker → AWAITING_REVIEW with proposals (G13)."""
+    preview = tmp_path / "nh48" / "prescan" / "prescan_abc_preview.jpg"
+    preview.parent.mkdir(parents=True, exist_ok=True)
+    preview.write_bytes(b"\xff\xd8\xff")
+    stdout = _prescan_stdout(preview)
+
+    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+        if args and args[0] == "prescan":
+            return CompletedProcess(args=list(args), returncode=0, stdout=stdout, stderr="")
+        return CompletedProcess(args=list(args), returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("orchestrator.workers.pool.run_viana", fake_run)
+    reset_pool()
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    assert intake.status_code == 201
+    job_id = intake.json()["jobs"][0]["job_id"]
+    pool = get_pool()
+    pool.wait_for_status(job_id, "AWAITING_REVIEW", "PRESCAN_FAILED", timeout=5.0)
+    status = client.get(f"/jobs/{job_id}")
+    payload = status.json()
+    assert payload["status"] == "AWAITING_REVIEW"
+    assert payload["proposed_metadata"]["user_start_time"] == "09:00:00"
+    assert payload["proposed_preview_url"] == "/utils/prescan/prescan_abc/preview.jpg"
+
+
+def test_retry_prescan_from_failed(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PRESCAN_FAILED → retry → AWAITING_REVIEW."""
+    preview = tmp_path / "nh48" / "prescan" / "prescan_abc_preview.jpg"
+    preview.parent.mkdir(parents=True, exist_ok=True)
+    preview.write_bytes(b"\xff\xd8\xff")
+    stdout = _prescan_stdout(preview)
+    calls = {"prescan": 0}
+
+    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+        if args and args[0] == "prescan":
+            calls["prescan"] += 1
+            if calls["prescan"] == 1:
+                return CompletedProcess(
+                    args=list(args), returncode=1, stdout="", stderr="ocr timeout"
+                )
+            return CompletedProcess(args=list(args), returncode=0, stdout=stdout, stderr="")
+        return CompletedProcess(args=list(args), returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("orchestrator.workers.pool.run_viana", fake_run)
+    reset_pool()
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    job_id = intake.json()["jobs"][0]["job_id"]
+    get_pool().wait_for_status(job_id, "PRESCAN_FAILED", timeout=5.0)
+    assert client.get(f"/jobs/{job_id}").json()["status"] == "PRESCAN_FAILED"
+    retry = client.post(f"/jobs/{job_id}/prescan/retry")
+    assert retry.status_code == 200
+    get_pool().wait_for_status(job_id, "AWAITING_REVIEW", timeout=5.0)
+    assert client.get(f"/jobs/{job_id}").json()["status"] == "AWAITING_REVIEW"
+
+
+def test_job_prescan_preview_at_offset(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """GET /jobs/{id}/prescan/preview runs prescan at scrub offset (G8)."""
+    preview = tmp_path / "nh48" / "prescan" / "prescan_scrub_preview.jpg"
+    preview.parent.mkdir(parents=True, exist_ok=True)
+    preview.write_bytes(b"\xff\xd8\xff")
+    captured: dict[str, float] = {}
+
+    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+        if args and args[0] == "prescan":
+            captured["frame_offset"] = float(args[args.index("--frame-offset") + 1])
+            payload = json.loads(_prescan_stdout(preview))
+            payload["prescan_id"] = "prescan_scrub"
+            payload["preview_url"] = str(preview)
+            return CompletedProcess(
+                args=list(args),
+                returncode=0,
+                stdout=json.dumps(payload),
+                stderr="",
+            )
+        return CompletedProcess(args=list(args), returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("orchestrator.workers.pool.run_viana", fake_run)
+    reset_pool()
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    job_id = intake.json()["jobs"][0]["job_id"]
+    get_pool().stub_awaiting_review(job_id)
+    response = client.get(f"/jobs/{job_id}/prescan/preview?frame_offset_sec=15.0")
+    assert response.status_code == 200
+    assert captured["frame_offset"] == 15.0
+    assert response.json()["preview_url"] == "/utils/prescan/prescan_scrub/preview.jpg"
+
+
+def test_partial_processed_mp4_served(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """GET /artifacts/{id}/partial.mp4 returns growing file (G19)."""
+    output_dir = project_output_dir(tmp_path, "nh48")
+    mp4 = artifact_paths(output_dir, STEM)["processed_video"]
+    mp4.parent.mkdir(parents=True, exist_ok=True)
+    mp4.write_bytes(b"\x00\x00\x00\x18ftypmp42")
+    submitted = client.post("/jobs", json=VALID_SUBMIT)
+    job_id = submitted.json()["job_id"]
+    pool = get_pool()
+    job = pool.get_job(job_id)
+    job.status = "PROCESSING"
+    response = client.get(f"/artifacts/{job_id}/partial.mp4")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("video/mp4")
+
+
+def test_auto_aggregate_on_completed(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """COMPLETED job triggers background aggregate (G12)."""
+    aggregate_calls: list[list[str]] = []
+
+    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+        if args and args[0] == "aggregate":
+            aggregate_calls.append(list(args))
+            return CompletedProcess(
+                args=list(args),
+                returncode=0,
+                stdout=json.dumps({"status": "ok", "command": "aggregate", "rows": 0}),
+                stderr="",
+            )
+        raise AssertionError(f"unexpected run_viana call: {args}")
+
+    monkeypatch.setattr("orchestrator.workers.pool.run_viana", fake_run)
+    submitted = client.post("/jobs", json=VALID_SUBMIT)
+    job_id = submitted.json()["job_id"]
+    get_pool().wait_job(job_id, timeout=5.0)
+    import time
+
+    deadline = time.time() + 2.0
+    while time.time() < deadline and not aggregate_calls:
+        time.sleep(0.05)
+    assert aggregate_calls
+    assert aggregate_calls[0][0] == "aggregate"
+
+
+def test_progress_telemetry_includes_eta_and_crossings(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WS PROGRESS carries eta_sec and crossing_count (G9)."""
+    line = json.dumps(
+        {
+            "job_id": "pending",
+            "status": "PROCESSING",
+            "telemetry_type": "PROGRESS",
+            "data": {
+                "current_frame": 50,
+                "total_frames": 100,
+                "processing_fps": 25.0,
+                "crossing_count": 3,
+            },
+        }
+    )
+
+    class ProgressPopen(InstantPopen):
+        def __init__(self) -> None:
+            super().__init__(_run_result_json("job_eta"), line + "\n")
+
+    monkeypatch.setattr(
+        "orchestrator.workers.pool.start_viana_process",
+        lambda *_args, **_kwargs: ProgressPopen(),
+    )
+    reset_pool()
+    with client.websocket_connect("/ws/jobs") as websocket:
+        response = client.post("/jobs", json=VALID_SUBMIT)
+        assert response.status_code == 201
+        payload = websocket.receive_json()
+    assert payload["telemetry_type"] == "PROGRESS"
+    assert payload["data"]["eta_sec"] == 2.0
+    assert payload["data"]["crossing_count"] == 3

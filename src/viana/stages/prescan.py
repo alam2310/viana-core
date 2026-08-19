@@ -102,6 +102,68 @@ def _encode_bgr_jpeg(frame: object) -> bytes | None:
     return bytes(buffer)
 
 
+def _frame_mean_luminance(frame: object) -> float:
+    """Return mean grayscale luminance (0–255) for dark-frame detection."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return 255.0
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return float(np.mean(gray))
+
+
+def find_best_frame_offset(
+    source: Path,
+    *,
+    requested_offset_sec: float,
+    scan_sec: float,
+    step_sec: float,
+    luminance_threshold: float,
+) -> float:
+    """Pick the first non-dark frame in the opening scan window (G7).
+
+    When ``requested_offset_sec`` is > 0 the caller's scrub position wins.
+    Otherwise scan from t=0 and skip frames below ``luminance_threshold``.
+    """
+    if requested_offset_sec > 0:
+        return requested_offset_sec
+    try:
+        import cv2
+    except ImportError as exc:
+        raise RuntimeError("opencv-python is required to sample video") from exc
+    if not source.is_file():
+        raise FileNotFoundError(f"Video not found: {source}")
+    capture = cv2.VideoCapture(str(source))
+    if not capture.isOpened():
+        raise ValueError(f"Could not open video: {source}")
+    try:
+        fps = float(capture.get(cv2.CAP_PROP_FPS)) or 25.0
+        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        duration_sec = frame_count / fps if fps > 0 and frame_count > 0 else 0.0
+        if duration_sec <= 0:
+            return 0.0
+        limit = min(scan_sec, max(0.0, duration_sec - (1.0 / fps)))
+        best_offset = 0.0
+        best_luminance = -1.0
+        offset = 0.0
+        while offset <= limit:
+            capture.set(cv2.CAP_PROP_POS_MSEC, offset * 1000.0)
+            ok, frame = capture.read()
+            if not ok:
+                break
+            luminance = _frame_mean_luminance(frame)
+            if luminance >= luminance_threshold:
+                return offset
+            if luminance > best_luminance:
+                best_luminance = luminance
+                best_offset = offset
+            offset += step_sec
+        return best_offset
+    finally:
+        capture.release()
+
+
 def sample_video_cv2(source: Path, frame_offset_sec: float) -> SampledVideo:
     """Open ``source`` with OpenCV and grab a frame at ``frame_offset_sec``."""
     if not source.is_file():
@@ -171,15 +233,25 @@ def run_prescan(
     sampler: VideoSampler | None = None,
     ocr_reader: OcrReader | None = None,
     prescan_id: str | None = None,
+    auto_skip_dark_frames: bool = True,
 ) -> PrescanResponse:
     """Produce a PrescanResponse and write ``{prescan_id}_preview.jpg``."""
     if not PROJECT_ID_PATTERN.match(project_id):
         raise ValueError("project_id must match [a-z0-9][a-z0-9_-]*")
     if frame_offset_sec < 0:
         raise ValueError("frame_offset must be >= 0")
-    probe = sampler or sample_video_cv2
-    sampled = probe(source, frame_offset_sec)
     defaults = load_engine_defaults()
+    resolved_offset = frame_offset_sec
+    if auto_skip_dark_frames and frame_offset_sec == 0.0 and sampler is None:
+        resolved_offset = find_best_frame_offset(
+            source,
+            requested_offset_sec=frame_offset_sec,
+            scan_sec=defaults.prescan.dark_frame_scan_sec,
+            step_sec=defaults.prescan.dark_frame_step_sec,
+            luminance_threshold=defaults.prescan.dark_frame_luminance_threshold,
+        )
+    probe = sampler or sample_video_cv2
+    sampled = probe(source, resolved_offset)
     parsed, ocr_conf = _ocr_from_sample(sampled, defaults.ocr.min_confidence, ocr_reader)
     profiles = list_profiles(output_dir)
     lines = propose_lines(sampled.meta.width, sampled.meta.height, profiles)

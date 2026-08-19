@@ -51,6 +51,15 @@ class LineSegment(BaseModel):
             raise ValueError("line endpoints must differ")
         return self
 
+    def assert_within_frame(self, width: int, height: int, label: str) -> None:
+        """Raise when either endpoint lies outside ``[0, width) × [0, height)``."""
+        if width < 1 or height < 1:
+            raise ValueError("frame dimensions must be positive")
+        for name, point in (("start", self.start), ("end", self.end)):
+            x, y = point
+            if x < 0 or y < 0 or x >= width or y >= height:
+                raise ValueError(f"{label} {name} ({x}, {y}) outside {width}x{height} frame")
+
 
 class JobMetadata(BaseModel):
     """Optional user-supplied metadata (OCR fallback / report headers)."""

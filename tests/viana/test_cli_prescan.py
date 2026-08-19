@@ -13,8 +13,6 @@ from viana.stages.prescan import SampledVideo, VideoMeta
 
 runner = CliRunner()
 
-runner = CliRunner()
-
 
 def test_cli_prescan_missing_video(tmp_path: Path) -> None:
     """Missing source files exit 1."""
@@ -52,6 +50,10 @@ def test_cli_prescan_json_and_preview(monkeypatch: pytest.MonkeyPatch, tmp_path:
             frame=None,
         )
 
+    monkeypatch.setattr(
+        "viana.stages.prescan.find_best_frame_offset",
+        lambda *_args, **_kwargs: 0.0,
+    )
     monkeypatch.setattr("viana.stages.prescan.sample_video_cv2", sampler)
     monkeypatch.setattr("viana.cli.optional_easyocr_reader", lambda: (lambda _f: []))
     result = runner.invoke(

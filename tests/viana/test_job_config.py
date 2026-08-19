@@ -77,7 +77,7 @@ def test_geometry_within_frame() -> None:
     """Calibration lines must sit inside pixel bounds."""
     job = load_job_config(_fixture_job_config())
     job.validate_geometry(1920, 1080)
-    with pytest.raises(ValueError, match="outside frame"):
+    with pytest.raises(ValueError, match=r"outside \d+x\d+ frame"):
         job.validate_geometry(100, 100)
 
 

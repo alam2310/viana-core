@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 
 import type { Aggregate15MinRow } from "@/lib/parse-15min-csv";
-import { fetch15MinCsv, parse15MinCsv } from "@/lib/parse-15min-csv";
+import {
+  fetch15MinCsv,
+  formatAggregateWindow,
+  parse15MinCsv,
+} from "@/lib/parse-15min-csv";
 
 export function Aggregate15MinTable({ csvHostPath }: { csvHostPath: string }) {
   const [rows, setRows] = useState<Aggregate15MinRow[]>([]);
@@ -82,11 +86,11 @@ export function Aggregate15MinTable({ csvHostPath }: { csvHostPath: string }) {
         <tbody>
           {rows.map((row) => (
             <tr
-              key={`${row.windowStart}-${row.windowEnd}-${row.vehicleClass}`}
+              key={`${row.date}-${row.windowStart}-${row.windowEnd}-${row.vehicleClass}`}
               className="border-t border-border"
             >
               <td className="truncate px-1.5 py-0.5 font-mono whitespace-nowrap">
-                {row.windowLabel}
+                {formatAggregateWindow(row.windowStart, row.windowEnd)}
               </td>
               <td className="truncate px-1.5 py-0.5 whitespace-nowrap">
                 {row.vehicleClass}

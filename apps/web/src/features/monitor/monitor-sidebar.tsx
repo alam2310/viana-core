@@ -64,16 +64,14 @@ export function MonitorSidebar({
 
         <details className="mt-4 rounded border border-border">
           <summary className="cursor-pointer px-3 py-1.5 text-xs font-semibold tracking-wide text-muted uppercase">
-            Live crossings ({crossings.length})
+            Live Crossings ({crossings.length})
           </summary>
           <div className="border-t border-border px-1 pb-1">
             {crossings.length > 0 ? (
               <CrossingsTable rows={crossings} maxRows={30} />
             ) : (
               <p className="px-2 py-2 text-xs text-muted">
-                Crossings appear here when vehicles pass the counting line. If none
-                show, the engine may not be emitting crossing events yet (see backend
-                tracker).
+                Crossings appear here when vehicles pass the counting line.
               </p>
             )}
           </div>

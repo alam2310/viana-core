@@ -146,6 +146,31 @@ function formatWallClockDate(date: Date): string {
   return `${d}-${m}-${y}`;
 }
 
+function formatEventTimestamp(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "—";
+  }
+
+  // API can emit ISO timestamps or HH:MM:SS strings; normalize display.
+  const hmsOnly = trimmed.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+  if (hmsOnly) {
+    return trimmed;
+  }
+
+  const isoOrDateTime = new Date(trimmed);
+  if (!Number.isNaN(isoOrDateTime.getTime())) {
+    return formatWallClockTime(isoOrDateTime);
+  }
+
+  const inlineHms = trimmed.match(/(\d{2}):(\d{2}):(\d{2})/);
+  if (inlineHms) {
+    return `${inlineHms[1]}:${inlineHms[2]}:${inlineHms[3]}`;
+  }
+
+  return trimmed;
+}
+
 function eventTimeFromFrame(
   frame: number,
   fps: number,
@@ -202,7 +227,8 @@ export function crossingsFromTelemetry(
       id: `${msg.job_id}-${rows.length}-${frame ?? 0}`,
       time:
         typeof data.event_timestamp === "string" && data.event_timestamp.trim()
-          ? data.event_timestamp
+          ? formatEventTimestamp(data.event_timestamp)
+          // Residual fallback: old payloads without event_timestamp.
           : frame !== undefined && fps
             ? eventTimeFromFrame(
                 frame,

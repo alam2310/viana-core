@@ -45,8 +45,8 @@
 | `POST /jobs/{id}/prescan/retry` | 3 | `job-queue-table.tsx` |
 | `GET /jobs` | 2 | `dashboard.tsx` |
 | `GET /jobs/{id}/prescan/preview` | 3 | `prescan-review-modal.tsx` — **Re-scan OCR** only (stabilization S05) |
-| `GET /artifacts/{id}/source.mp4` | stab S02 | `prescan-review-modal.tsx` — frame scrub via video seek (planned) |
-| `/api/proxy/source` | stab S03 | Same-origin proxy for source MP4 (planned) |
+| `GET /artifacts/{id}/source.mp4` | stab S02 | `calibration-canvas.tsx` — frame scrub via video seek |
+| `/api/proxy/source` | stab S03 | Same-origin proxy for source MP4 (`api-client.sourceVideoUrl`) |
 | `/api/proxy/preview` | 4 | `calibration-canvas.tsx` — prescan JPEG |
 | `GET /api/fs/browse` | 4 | `path-browser.tsx` (Next.js route) |
 | `GET /artifacts/.../partial.mp4` | 3 | `monitor-sidebar.tsx` |

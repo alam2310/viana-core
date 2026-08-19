@@ -8,6 +8,13 @@ The UI on the host manages the Docker container. See `docker/orchestrator_config
 
 The **container** runs FastAPI on port `8000` (see `docker-compose.yml`).
 
+**Same-origin proxies** (Next.js App Router, whitelist paths only):
+
+| Route | Upstream | Consumer |
+|-------|----------|----------|
+| `GET /api/proxy/preview?path=` | Orchestrator prescan JPEG | Calibration canvas initial frame |
+| `GET /api/proxy/source?path=` | `GET /artifacts/{id}/source.mp4` (forwards `Range`) | Prescan review frame scrub |
+
 ## 2. Job Ownership
 
 | Field | Set by |
@@ -131,7 +138,7 @@ Response: full `JobStatus` with `confirmed_metadata` and `confirmed_task_paramet
 | POST | `/jobs/intake` | Register path(s) → `PRESCAN_PENDING` |
 | PATCH | `/jobs/{id}/prescan` | Confirm review → `READY` |
 | POST | `/jobs/{id}/prescan/retry` | `PRESCAN_FAILED` → `PRESCAN_PENDING` |
-| GET | `/jobs/{id}/prescan/preview` | Re-run prescan at `frame_offset_sec` (scrub preview) |
+| GET | `/jobs/{id}/prescan/preview` | Re-run prescan OCR at `frame_offset_sec` (**Re-scan OCR** button only; frame scrub uses `source.mp4`) |
 | GET | `/artifacts/{id}/source.mp4` | Intake source MP4 with HTTP Range (prescan review scrub; `PRESCAN_*`, `AWAITING_REVIEW`, `READY`) |
 | GET | `/artifacts/{id}/partial.mp4` | Partial `_processed.mp4` with HTTP Range (live monitor) |
 | GET | `/jobs` | List jobs (`?project_id=`) |

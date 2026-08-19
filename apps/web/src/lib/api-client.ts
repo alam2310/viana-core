@@ -265,6 +265,13 @@ export function partialVideoUrl(jobId: string): string {
   return resolveApiAssetUrl(`/artifacts/${encodeURIComponent(jobId)}/partial.mp4`);
 }
 
+/** Same-origin URL for intake source MP4 (browser seek + canvas drawImage). */
+export function sourceVideoUrl(jobId: string): string {
+  const path = `/artifacts/${encodeURIComponent(jobId)}/source.mp4`;
+  const params = new URLSearchParams({ path });
+  return `/api/proxy/source?${params}`;
+}
+
 export async function prescan(
   body: PrescanRequestBody,
 ): Promise<PrescanResponse> {
@@ -447,6 +454,7 @@ export const apiClient = {
   prescanPreview,
   previewImageUrl,
   partialVideoUrl,
+  sourceVideoUrl,
   prescan,
   submitJob,
   listJobs,

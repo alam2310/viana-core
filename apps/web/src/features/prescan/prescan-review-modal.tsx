@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   ConfirmedJobMetadata,
   JobStatusResponse,
@@ -12,13 +12,14 @@ import {
   CalibrationCanvas,
   formatLineCoords,
 } from "@/features/calibration/calibration-canvas";
-import { initialVideoMeta } from "@/features/prescan/prescan-meta";
+import { initialVideoMeta, estimateVideoMetaFromLines } from "@/features/prescan/prescan-meta";
 import { Button } from "@/components/ui/button";
 import {
   confirmPrescan,
   prescanPreview,
   previewImageUrl,
   saveProfile,
+  sourceVideoUrl,
 } from "@/lib/api-client";
 import {
   clampLine,
@@ -103,8 +104,6 @@ export function PrescanReviewModal({
   const [applyToOthers, setApplyToOthers] = useState(false);
   const [saveAsProfile, setSaveAsProfile] = useState(false);
   const [profileId, setProfileId] = useState("session");
-  const frameRequestRef = useRef(0);
-  const skipInitialFrameFetch = useRef(true);
 
   const previewUrl = previewPath
     ? previewImageUrl(previewPath, previewToken)
@@ -113,7 +112,6 @@ export function PrescanReviewModal({
   useEffect(() => {
     setLoading(false);
     setError(null);
-    skipInitialFrameFetch.current = true;
 
     const estimated = initialVideoMeta(job);
     if (estimated) {
@@ -161,49 +159,6 @@ export function PrescanReviewModal({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per job
   }, [job.job_id]);
-
-  useEffect(() => {
-    if (skipInitialFrameFetch.current) {
-      skipInitialFrameFetch.current = false;
-      return;
-    }
-    if (offset === 0 && job.proposed_preview_url) {
-      setPreviewPath(job.proposed_preview_url);
-      setPreviewToken(Date.now());
-      return;
-    }
-    const requestId = frameRequestRef.current + 1;
-    frameRequestRef.current = requestId;
-    const timer = window.setTimeout(() => {
-      void loadFrameAtOffset(offset, requestId);
-    }, 500);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounced per offset
-  }, [offset, job.job_id]);
-
-  async function loadFrameAtOffset(frameOffset: number, requestId: number) {
-    setFrameLoading(true);
-    setError(null);
-    try {
-      const preview = await prescanPreview(job.job_id, frameOffset);
-      if (frameRequestRef.current !== requestId) {
-        return;
-      }
-      setPreviewPath(preview.preview_url);
-      setPreviewToken(Date.now());
-      if (preview.video_meta) {
-        setVideoMeta(preview.video_meta);
-      }
-    } catch (err) {
-      if (frameRequestRef.current === requestId) {
-        setError(err instanceof Error ? err.message : String(err));
-      }
-    } finally {
-      if (frameRequestRef.current === requestId) {
-        setFrameLoading(false);
-      }
-    }
-  }
 
   async function rescanAtOffset(frameOffset: number) {
     setRescanning(true);
@@ -274,10 +229,10 @@ export function PrescanReviewModal({
         );
         for (const other of others) {
           let lines = taskParams;
-          const otherPreview = await prescanPreview(other.job_id, 0);
+          const otherEstimated = estimateVideoMetaFromLines(other.proposed_lines);
           if (
-            otherPreview.video_meta.width !== meta.width ||
-            otherPreview.video_meta.height !== meta.height
+            otherEstimated &&
+            (otherEstimated.width !== meta.width || otherEstimated.height !== meta.height)
           ) {
             lines = {
               ...taskParams,
@@ -285,15 +240,15 @@ export function PrescanReviewModal({
                 taskParams.horizon_line,
                 meta.width,
                 meta.height,
-                otherPreview.video_meta.width,
-                otherPreview.video_meta.height,
+                otherEstimated.width,
+                otherEstimated.height,
               ),
               counting_line: scaleLine(
                 taskParams.counting_line,
                 meta.width,
                 meta.height,
-                otherPreview.video_meta.width,
-                otherPreview.video_meta.height,
+                otherEstimated.width,
+                otherEstimated.height,
               ),
             };
           }
@@ -402,6 +357,10 @@ export function PrescanReviewModal({
                 horizon={horizon}
                 counting={counting}
                 previewUrl={previewUrl}
+                sourceVideoUrl={sourceVideoUrl(job.job_id)}
+                frameOffsetSec={offset}
+                onVideoMeta={setVideoMeta}
+                onFrameLoading={setFrameLoading}
                 onChange={(next) => {
                   setHorizon(next.horizon);
                   setCounting(next.counting);

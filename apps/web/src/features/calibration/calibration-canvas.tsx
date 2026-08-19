@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { LineSegment, Point } from "@viana/contracts";
+import type { LineSegment, Point, VideoMeta } from "@viana/contracts";
 
 import { clampLine, clampPoint } from "@/lib/geometry";
 import { cn } from "@/lib/utils";
@@ -110,6 +110,10 @@ export function CalibrationCanvas({
   counting,
   onChange,
   previewUrl,
+  sourceVideoUrl,
+  frameOffsetSec = 0,
+  onVideoMeta,
+  onFrameLoading,
   className,
 }: {
   width: number;
@@ -118,11 +122,18 @@ export function CalibrationCanvas({
   counting: LineSegment;
   onChange: (next: { horizon: LineSegment; counting: LineSegment }) => void;
   previewUrl?: string | null;
+  sourceVideoUrl?: string | null;
+  frameOffsetSec?: number;
+  onVideoMeta?: (meta: VideoMeta) => void;
+  onFrameLoading?: (loading: boolean) => void;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [preview, setPreview] = useState<HTMLImageElement | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
+  const [videoFrameTick, setVideoFrameTick] = useState(0);
   const displayWidth = 720;
   const scale = displayWidth / width;
   const displayHeight = Math.round(height * scale);
@@ -174,6 +185,84 @@ export function CalibrationCanvas({
   }, [previewUrl]);
 
   useEffect(() => {
+    if (!sourceVideoUrl) {
+      setVideoReady(false);
+      return;
+    }
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    let cancelled = false;
+    setVideoReady(false);
+    onFrameLoading?.(true);
+
+    const onLoadedMetadata = () => {
+      if (cancelled) {
+        return;
+      }
+      const fps = 25;
+      const durationSec = video.duration;
+      onVideoMeta?.({
+        width: video.videoWidth,
+        height: video.videoHeight,
+        fps,
+        duration_sec: durationSec,
+        frame_count: Math.round(durationSec * fps),
+      });
+      video.currentTime = frameOffsetSec;
+    };
+
+    const onSeeked = () => {
+      if (cancelled) {
+        return;
+      }
+      setVideoReady(true);
+      setVideoFrameTick((tick) => tick + 1);
+      onFrameLoading?.(false);
+    };
+
+    const onError = () => {
+      if (!cancelled) {
+        setVideoReady(false);
+        onFrameLoading?.(false);
+      }
+    };
+
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    video.addEventListener("seeked", onSeeked);
+    video.addEventListener("error", onError);
+    video.src = sourceVideoUrl;
+    video.load();
+
+    return () => {
+      cancelled = true;
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("seeked", onSeeked);
+      video.removeEventListener("error", onError);
+      video.removeAttribute("src");
+      video.load();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bind once per source URL
+  }, [sourceVideoUrl]);
+
+  useEffect(() => {
+    if (!sourceVideoUrl || !videoReady) {
+      return;
+    }
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+    if (Math.abs(video.currentTime - frameOffsetSec) < 0.05) {
+      return;
+    }
+    onFrameLoading?.(true);
+    video.currentTime = frameOffsetSec;
+  }, [frameOffsetSec, sourceVideoUrl, videoReady, onFrameLoading]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
@@ -184,7 +273,15 @@ export function CalibrationCanvas({
     }
     ctx.fillStyle = "#111827";
     ctx.fillRect(0, 0, displayWidth, displayHeight);
-    if (preview) {
+    const video = videoRef.current;
+    const useVideo =
+      sourceVideoUrl &&
+      video &&
+      videoReady &&
+      video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
+    if (useVideo) {
+      ctx.drawImage(video, 0, 0, displayWidth, displayHeight);
+    } else if (preview) {
       ctx.drawImage(preview, 0, 0, displayWidth, displayHeight);
     } else {
       ctx.strokeStyle = "#374151";
@@ -228,7 +325,7 @@ export function CalibrationCanvas({
 
     drawLine(horizon, "#dc2626", "Horizon");
     drawLine(counting, "#16a34a", "Counting");
-  }, [counting, displayHeight, horizon, preview, scale]);
+  }, [counting, displayHeight, horizon, preview, scale, sourceVideoUrl, videoFrameTick, videoReady]);
 
   function eventDisplayPoint(event: React.MouseEvent<HTMLCanvasElement>): Point {
     const canvas = canvasRef.current;
@@ -306,15 +403,22 @@ export function CalibrationCanvas({
   }
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={displayWidth}
-      height={displayHeight}
-      className={cn("w-full cursor-crosshair rounded border border-neutral-300", className)}
-      onMouseDown={onPointerDown}
-      onMouseMove={onPointerMove}
-      onMouseUp={() => setDrag(null)}
-      onMouseLeave={() => setDrag(null)}
-    />
+    <>
+      {sourceVideoUrl ? (
+        <video ref={videoRef} className="hidden" preload="auto" muted playsInline>
+          <track kind="captions" />
+        </video>
+      ) : null}
+      <canvas
+        ref={canvasRef}
+        width={displayWidth}
+        height={displayHeight}
+        className={cn("w-full cursor-crosshair rounded border border-neutral-300", className)}
+        onMouseDown={onPointerDown}
+        onMouseMove={onPointerMove}
+        onMouseUp={() => setDrag(null)}
+        onMouseLeave={() => setDrag(null)}
+      />
+    </>
   );
 }

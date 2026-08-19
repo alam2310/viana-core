@@ -70,6 +70,7 @@ module = [
     "ultralytics",
     "trackers",
     "trackers.*",
+    "supervision",
     "numpy",
     "numpy.*",
 ]

@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from viana.config.job import (
+    GPU_DEVICE_PATTERN,
     PROJECT_ID_PATTERN,
     JobMetadata,
     JobStatusLiteral,
@@ -21,9 +22,6 @@ from viana.config.job import (
 from viana.config.job import (
     JobSubmitRequest as EngineJobSubmitRequest,
 )
-from viana.config.job import (
-    JobSubmitResponse as EngineJobSubmitResponse,
-)
 
 
 class JobSubmitRequest(EngineJobSubmitRequest):
@@ -32,12 +30,24 @@ class JobSubmitRequest(EngineJobSubmitRequest):
     model_config = ConfigDict(extra="forbid")
 
 
-class JobSubmitResponse(EngineJobSubmitResponse):
+class JobSubmitResponse(BaseModel):
     """POST /jobs 201 body — job_submit_response.schema.json."""
 
     model_config = ConfigDict(extra="forbid")
 
+    job_id: str
+    status: JobStatusLiteral
+    gpu_device: str
+    queue_position: int
     output_dir: str
+
+    @field_validator("gpu_device")
+    @classmethod
+    def validate_gpu_device(cls, value: str) -> str:
+        """Restrict assignment to the two locked GPU slots."""
+        if not GPU_DEVICE_PATTERN.match(value):
+            raise ValueError("gpu_device must match cuda:0 or cuda:1")
+        return value
 
 
 class JobProgress(BaseModel):

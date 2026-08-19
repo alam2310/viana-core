@@ -17,7 +17,6 @@ from orchestrator.logging_config import get_logger
 from orchestrator.models import (
     JobProgress,
     JobStatus,
-    JobStatusLiteral,
     JobSubmitRequest,
     JobSubmitResponse,
 )
@@ -30,6 +29,7 @@ from viana.config.job import (
     JobIntakeResponse,
     JobMetadata,
     JobPrescanConfirmRequest,
+    JobStatusLiteral,
     ProposedLines,
     ViAnaTaskParameters,
 )

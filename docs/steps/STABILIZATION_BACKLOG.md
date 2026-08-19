@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 0 | 1 | 6 | 8 / 8 active |
+| 0 | 1 | 11 | 8 / 13 active |
 
 **Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
@@ -39,6 +39,11 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S13** | F010 | B/C | no | — | Growing `_processed.mp4` streamable during job (moov/fragmented MP4) | open |
 | **S14** | F011 | C | no | — | Emit `MOVING_EVENT` without `telemetry_detail` gate; include crossing timestamp | open |
 | **S15** | F012 | B/D | no | — | 15-min CSV schema: add `date` column; change `window_start`/`window_end` to HH:MM | open |
+| **S16** | F013 | A | no | — | Theme toggle regression: action buttons keep dark styling after returning to light mode | open |
+| **S17** | F014 | A | no | — | Remove duplicate `Recent crossing` table from job details widget | open |
+| **S18** | F015 | A/C | no | S14 | Normalize live monitor crossing title + `HH:MM:SS` actual-time formatter | open |
+| **S19** | F016 | A/B/C | no | S12 | Fix queue video length / ETA inflation and validate MP4 codec metadata in container | open |
+| **S20** | F010 | A/B | no | S13 | UI cannot render in-progress processed MP4 even when file is playable natively | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
@@ -63,6 +68,11 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S13** | 1. `PROCESSING` job 2. Open live monitor 3. Try partial MP4 in VLC | **Expected:** `_processed.mp4` playable while growing. **Actual:** file not playable until job completes (moov atom at end). | `src/viana/stages/process.py` video writer, or HLS segment endpoint | — | Step 4 UI chat |
 | **S14** | 1. Confirm prescan with `telemetry_detail: true` 2. Monitor during `PROCESSING` | **Expected:** `MOVING_EVENT` on WS for every crossing with wall-clock or video timestamp. **Actual:** events gated on `telemetry_detail`; no timestamp in payload (frame_index only). **UI workaround (2026-08-19):** crossings table derives wall-clock from `user_start_time` + `user_start_date` + `frame_index`/`fps` until API emits `event_timestamp`. | `process.py` emit block, `telemetry.schema.json`, `telemetry-formatters.ts` | — | Step 4 UI chat |
 | **S15** | 1. Generate `_15min.csv` 2. Inspect header/rows | **Expected:** `date` (DD-MM-YYYY or ISO date) plus `window_start`/`window_end` as `HH:MM` to avoid client-side ISO parsing. **Actual:** CSV emits ISO datetime in `window_start`/`window_end`; UI currently parses ISO and derives HH:MM. | `events_15min.schema.json`, aggregate writer, contracts TS sync; then update UI parser to consume new format directly | — | Step 4 UI chat |
+| **S16** | 1. Switch to dark theme 2. Return to light theme 3. Visit intake, prescan dialogs, and live monitor | **Expected:** button colors and variants re-compute on every theme change. **Actual:** several buttons remain in dark-style colors after switching back to light. Repro controls: top widget `Output directory` browse button; Select Files dialog `Cancel` + `Add all videos` + `Add selected`; Prescan review dialog `Close` + `Cancel` + `Re-scan OCR`; Live monitor dialog `Close`. | Lane A (`apps/web/`): inspect variant token mapping and theme-driven class/state updates in project/intake + prescan-review + live-monitor components; ensure dark↔light toggles are symmetric and not cached/stale. | — | Step 4 UI chat |
+| **S17** | 1. Open job details widget 2. Open live monitor for same job | **Expected:** crossings are shown in one canonical place (live monitor `Live crossing` view), avoiding duplicate UI sections. **Actual:** job details also shows `Recent crossing`, duplicating information and adding noise. | Lane A (`apps/web/`): remove `Recent crossing` table from job details widget; keep crossing visibility in live monitor only; verify no empty-state/layout regressions in details card. | — | Step 4 UI chat |
+| **S18** | 1. Open live monitor while crossings stream 2. Inspect section header + crossing time column | **Expected:** title follows title case (`Live Crossings`) and displayed time is actual identified event time formatted strictly as `HH:MM:SS`. **Actual:** header casing is inconsistent (`Live crossing`) and time formatting is not constrained to `HH:MM:SS` actual-time display. | Lane A/C: update live monitor copy + formatter in `apps/web/` to render `HH:MM:SS`; ensure value is sourced from actual event timestamp (from S14 payload path) rather than derived/local clock text. | — | Step 4 UI chat |
+| **S19** | 1. Queue a known long clip (~3h) 2. Observe Job Queue `Video length` and `Time remaining` | **Expected:** video length and ETA are in the right order of magnitude (3h clip should not show 20h+ remaining without evidence). **Actual:** ETA/video-length logic appears inflated/incorrect for long MP4 inputs. Also need to confirm container can read MP4 duration/properties reliably for this codec profile. | Lane A/B/C: audit ETA formula and units in `apps/web/` + API status fields (`video_duration_sec`, `processing_duration_sec`, fps/progress source). Validate media probe path in container (OpenCV/ffprobe/codec support) and fix image/runtime setup if metadata extraction is wrong for MP4 variants. | — | Step 4 UI chat |
+| **S20** | 1. Start a job and wait for `_processed.mp4` to grow 2. Verify file plays via Ubuntu native player 3. Open same artifact in live monitor/UI | **Expected:** if file is already stream-playable on disk, the UI player should render it while processing. **Actual:** native apps can play in-progress file, but browser/UI still fails to render (same user-facing symptom persists). | Follow-on under F010: Lane A/B to inspect artifact endpoint/proxy headers (Range, Content-Type, Accept-Ranges, CORS, cache), player source URL lifecycle, and browser codec/container compatibility vs native playback. | — | Step 4 UI chat |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine prescan · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `wontfix`  
@@ -97,6 +107,55 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 ---
 
+## F013 design note (theme consistency)
+
+**Observed:** action buttons in intake/prescan surfaces do not consistently return to light-theme colors after a dark→light toggle.
+
+**Hypothesis:** variant class composition or per-component theme branching is stateful/one-way (dark applied, light not fully restored), likely in local UI wrappers rather than global theme provider.
+
+**Target:** centralize button variant mapping so dark and light tokens are both explicit and reversible for every relevant state (`default`, `secondary`, `ghost`, destructive/cancel), then verify on all repro controls listed in S16.
+
+**Scope:** UI-only (Lane A), no API/engine changes.
+
+---
+
+## F014 design note (crossing UI dedupe)
+
+**Observed:** crossing data appears in both job details (`Recent crossing`) and live monitor (`Live crossing`), creating redundant surfaces.
+
+**Target:** remove the `Recent crossing` table from job details and keep live crossing visualization in monitor as the single source in UI.
+
+**Scope:** UI-only (Lane A), no API or telemetry contract changes.
+
+---
+
+## F015 design note (crossing title + time format)
+
+**Observed:** live monitor crossing section has inconsistent title casing and non-standardized time display.
+
+**Target:** use title case (`Live Crossings`) and render crossing event time as actual detected time in strict `HH:MM:SS` format.
+
+**Dependency:** S14 timestamp emission path, so formatter consumes canonical event timestamp consistently.
+
+**Scope:** UI formatting/copy in Lane A, with event-time source alignment from Lane C telemetry path.
+
+---
+
+## F016 design note (duration + ETA correctness)
+
+**Observed:** queue shows unrealistic remaining time (e.g., 3h source appearing as 20h+), suggesting unit mismatch or bad source duration inputs.
+
+**Target:** make `Video length` and `Time remaining` numerically trustworthy by:
+- using canonical duration fields from API when available,
+- ensuring ETA math uses consistent units (seconds vs frames vs fps),
+- and validating MP4 metadata extraction in container runtime for deployed codecs.
+
+**Container check:** confirm codec/probe support for MP4 properties (duration/frame count/fps). If missing or inconsistent in current image, add/setup required tooling/libs and wire fallback probing.
+
+**Scope:** cross-lane A/B/C (UI display, API fields, engine/container probe path). No contract-breaking changes without Lane D follow-up.
+
+---
+
 ## Changelog
 
 | Date | Change |
@@ -104,6 +163,11 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 | 2026-08-19 | S08 fixed — `viana prescan` 6.7s → 4.6s on `hiv000001_inframe.mp4`; 2× tight OSD ROI + t=2s probe; S07 metadata unchanged |
 | 2026-08-19 | S11–S14 backend triage: created_at, video duration, streamable partial MP4, MOVING_EVENT |
 | 2026-08-19 | Added S15 backend schema request for 15-min CSV window/date format alignment |
+| 2026-08-19 | Added S16 (F013) UI theme toggle regression for intake + prescan action buttons (dark→light color restore) |
+| 2026-08-19 | Added S17 (F014) remove duplicate `Recent crossing` table from job details (use live monitor crossing view only) |
+| 2026-08-19 | Added S18 (F015) fix live monitor crossing title case + enforce actual-time `HH:MM:SS` formatter |
+| 2026-08-19 | Added S19 (F016) queue video length/ETA inflation + container MP4 codec metadata validation |
+| 2026-08-19 | Added S20 (F010 follow-on) UI still cannot render in-progress processed MP4 though native Ubuntu player can |
 | 2026-08-19 | S06 fixed (EasyOCR triage); S07 fixed — corner ROI OCR, `proposed_metadata` on `hiv000001_inframe.mp4` (`job_abec59713960`) |
 | 2026-08-19 | S09 (F006) deferred to Step 6.7; added S10 (F007) line proposal improvement |
 | 2026-08-19 | Merged F001–F006 + F003 scrub plan into single execution path S01–S09 |

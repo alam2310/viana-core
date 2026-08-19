@@ -66,5 +66,6 @@ Implement **prescan engine behavior** and **orchestrator workers** on top of Ste
 
 | Date | Note |
 |------|------|
+| 2026-08-19 | S08: faster opening-frame pick (probe t=2s, 4s scan, one VideoCapture) + 2× tight OSD OCR with 4× fallback; CLI lazy-imports process/aggregate; `hiv000001_inframe` CLI 6.7s → 4.6s, S07 fields unchanged |
 | 2026-08-19 | Step 3 complete: prescan queue, G7–G9/G12/G13/G19, `LineSegment.assert_within_frame` fix |
 | 2026-08-19 | Split from Step 2; engine + orchestrator workers |

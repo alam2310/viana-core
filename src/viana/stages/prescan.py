@@ -15,7 +15,13 @@ from viana.config.job import PROJECT_ID_PATTERN
 from viana.io.paths import prescan_dir
 from viana.io.profiles import CalibrationProfile, list_profiles
 from viana.stages.lines import ProposedLines, propose_lines
-from viana.stages.ocr import CornerOsdReader, OcrReader, is_corner_osd_reader, parse_osd_hits
+from viana.stages.ocr import (
+    DEFAULT_OSD_ROIS,
+    CornerOsdReader,
+    OcrReader,
+    is_corner_osd_reader,
+    parse_osd_hits,
+)
 from viana.stages.time_map import ParsedOcr
 
 # 1×1 JPEG so CI can write a preview without OpenCV/Pillow.
@@ -123,28 +129,68 @@ def osd_band_score(frame: object) -> float:
         return 0.0
     bgr: Any = frame
     height, width = bgr.shape[:2]
-    y2 = max(1, int(height * 0.06))
-    x2 = max(1, int(width * 0.58))
+    roi = DEFAULT_OSD_ROIS[0]
+    y2 = max(1, int(height * roi.y_end))
+    x2 = max(1, int(width * roi.x_end))
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     return float(np.std(gray[0:y2, 0:x2]))
 
 
-def find_best_frame_offset(
+def _osd_frame_usable(
+    luminance: float,
+    osd_score: float,
+    luminance_threshold: float,
+    min_osd_score: float,
+) -> bool:
+    return luminance >= luminance_threshold and osd_score > min_osd_score
+
+
+def _video_meta_from_capture(capture: Any, source: Path) -> VideoMeta:
+    import cv2
+
+    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = float(capture.get(cv2.CAP_PROP_FPS)) or 25.0
+    frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    duration_sec = frame_count / fps if fps > 0 and frame_count > 0 else 0.0
+    if width < 1 or height < 1:
+        raise ValueError(f"Invalid frame size {width}x{height} in {source}")
+    return VideoMeta(
+        width=width,
+        height=height,
+        fps=fps,
+        duration_sec=duration_sec,
+        frame_count=max(frame_count, 0),
+    )
+
+
+def _sampled_from_frame(meta: VideoMeta, offset: float, frame: object) -> SampledVideo:
+    return SampledVideo(
+        meta=meta,
+        frame_offset_sec=offset,
+        frame=frame,
+        preview_jpeg=_encode_bgr_jpeg(frame),
+    )
+
+
+def sample_opening_frame(
     source: Path,
     *,
-    requested_offset_sec: float,
+    requested_offset_sec: float = 0.0,
     scan_sec: float,
     step_sec: float,
     luminance_threshold: float,
-) -> float:
-    """Pick a bright frame with visible top OSD in the opening scan window (G7).
+    min_osd_score: float = 20.0,
+    probe_start_sec: float = 2.0,
+) -> SampledVideo:
+    """Open the video once, pick an OSD frame, and return that sample (G7 / S08).
 
-    When ``requested_offset_sec`` is > 0 the caller's scrub position wins.
-    Otherwise scan from t=0, skip dark frames, and prefer the offset with the
-    strongest top-band OSD variance (CCTV overlays fade in after t=0).
+    CCTV overlays on ``hiv000001`` fade in around t=2s. Probe that offset first,
+    then walk the opening window sequentially (grab/skip) instead of HEVC random
+    seeks across a long dark-frame scan.
     """
     if requested_offset_sec > 0:
-        return requested_offset_sec
+        return sample_video_cv2(source, requested_offset_sec)
     try:
         import cv2
     except ImportError as exc:
@@ -155,40 +201,113 @@ def find_best_frame_offset(
     if not capture.isOpened():
         raise ValueError(f"Could not open video: {source}")
     try:
-        fps = float(capture.get(cv2.CAP_PROP_FPS)) or 25.0
-        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        duration_sec = frame_count / fps if fps > 0 and frame_count > 0 else 0.0
-        if duration_sec <= 0:
-            return 0.0
-        limit = min(scan_sec, max(0.0, duration_sec - (1.0 / fps)))
-        # Keep prescan responsive: probe a short opening window first, where
-        # CCTV OSD usually appears, instead of scanning the entire dark window.
-        probe_limit = min(limit, 8.0)
-        best_offset = 0.0
-        best_luminance = -1.0
-        best_osd_score = -1.0
-        offset = 0.0
-        while offset <= probe_limit:
-            capture.set(cv2.CAP_PROP_POS_MSEC, offset * 1000.0)
+        meta = _video_meta_from_capture(capture, source)
+        if meta.duration_sec <= 0:
             ok, frame = capture.read()
             if not ok:
-                break
+                raise ValueError(f"Could not read a frame from {source}")
+            return _sampled_from_frame(meta, 0.0, frame)
+
+        limit = min(scan_sec, max(0.0, meta.duration_sec - (1.0 / meta.fps)))
+        best_offset = 0.0
+        best_frame: object | None = None
+        best_luminance = -1.0
+        best_osd_score = -1.0
+        last_frame: object | None = None
+        last_offset = 0.0
+
+        def consider(offset: float, frame: object) -> SampledVideo | None:
+            nonlocal best_offset, best_frame, best_luminance, best_osd_score
+            nonlocal last_frame, last_offset
+            last_frame = frame
+            last_offset = offset
             luminance = _frame_mean_luminance(frame)
             osd_score = osd_band_score(frame)
-            if luminance >= luminance_threshold and osd_score > 20.0:
-                return offset
+            if _osd_frame_usable(luminance, osd_score, luminance_threshold, min_osd_score):
+                return _sampled_from_frame(meta, offset, frame)
             if luminance >= luminance_threshold and osd_score > best_osd_score:
                 best_osd_score = osd_score
                 best_offset = offset
-            if luminance > best_luminance and best_osd_score < 0:
+                best_frame = frame
+            elif best_osd_score < 0 and luminance > best_luminance:
                 best_luminance = luminance
                 best_offset = offset
-            offset += step_sec
-        if best_osd_score > 0:
-            return best_offset
-        return best_offset
+                best_frame = frame
+            return None
+
+        probe_at = min(max(0.0, probe_start_sec), limit) if probe_start_sec > 0 else 0.0
+        if probe_at > 0:
+            capture.set(cv2.CAP_PROP_POS_MSEC, probe_at * 1000.0)
+            ok, frame = capture.read()
+            if ok:
+                hit = consider(probe_at, frame)
+                if hit is not None:
+                    return hit
+            capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+        step_frames = max(1, int(round(step_sec * meta.fps)))
+        frame_index = 0
+        max_index = int(limit * meta.fps)
+        while frame_index <= max_index:
+            ok, frame = capture.read()
+            if not ok:
+                break
+            offset = frame_index / meta.fps
+            if probe_at <= 0 or abs(offset - probe_at) > (step_sec * 0.5):
+                hit = consider(offset, frame)
+                if hit is not None:
+                    return hit
+            skipped = False
+            for _ in range(step_frames - 1):
+                if not capture.grab():
+                    skipped = True
+                    break
+            if skipped:
+                break
+            frame_index += step_frames
+
+        chosen_frame = best_frame if best_frame is not None else last_frame
+        chosen_offset = best_offset if best_frame is not None else last_offset
+        if chosen_frame is None:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            ok, chosen_frame = capture.read()
+            chosen_offset = 0.0
+            if not ok:
+                raise ValueError(f"Could not read a frame from {source}")
+        return _sampled_from_frame(meta, chosen_offset, chosen_frame)
     finally:
         capture.release()
+
+
+def find_best_frame_offset(
+    source: Path,
+    *,
+    requested_offset_sec: float,
+    scan_sec: float,
+    step_sec: float,
+    luminance_threshold: float,
+    min_osd_score: float = 20.0,
+    probe_start_sec: float = 2.0,
+) -> float:
+    """Pick a bright frame with visible top OSD in the opening scan window (G7).
+
+    When ``requested_offset_sec`` is > 0 the caller's scrub position wins.
+    Otherwise scan a short opening window, skip dark frames, and prefer the
+    offset with the strongest top-band OSD variance (CCTV overlays fade in
+    after t=0).
+    """
+    if requested_offset_sec > 0:
+        return requested_offset_sec
+    sampled = sample_opening_frame(
+        source,
+        requested_offset_sec=0.0,
+        scan_sec=scan_sec,
+        step_sec=step_sec,
+        luminance_threshold=luminance_threshold,
+        min_osd_score=min_osd_score,
+        probe_start_sec=probe_start_sec,
+    )
+    return sampled.frame_offset_sec
 
 
 def sample_video_cv2(source: Path, frame_offset_sec: float) -> SampledVideo:
@@ -203,36 +322,19 @@ def sample_video_cv2(source: Path, frame_offset_sec: float) -> SampledVideo:
     if not capture.isOpened():
         raise ValueError(f"Could not open video: {source}")
     try:
-        width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = float(capture.get(cv2.CAP_PROP_FPS)) or 25.0
-        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        duration_sec = frame_count / fps if fps > 0 and frame_count > 0 else 0.0
-        if width < 1 or height < 1:
-            raise ValueError(f"Invalid frame size {width}x{height} in {source}")
+        meta = _video_meta_from_capture(capture, source)
         offset = max(0.0, frame_offset_sec)
-        if duration_sec > 0:
-            offset = min(offset, max(0.0, duration_sec - (1.0 / fps)))
+        if meta.duration_sec > 0:
+            offset = min(offset, max(0.0, meta.duration_sec - (1.0 / meta.fps)))
         capture.set(cv2.CAP_PROP_POS_MSEC, offset * 1000.0)
         ok, frame = capture.read()
         if not ok:
             capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
             ok, frame = capture.read()
+            offset = 0.0
         if not ok:
             raise ValueError(f"Could not read a frame from {source}")
-        meta = VideoMeta(
-            width=width,
-            height=height,
-            fps=fps,
-            duration_sec=duration_sec,
-            frame_count=max(frame_count, 0),
-        )
-        return SampledVideo(
-            meta=meta,
-            frame_offset_sec=offset,
-            frame=frame,
-            preview_jpeg=_encode_bgr_jpeg(frame),
-        )
+        return _sampled_from_frame(meta, offset, frame)
     finally:
         capture.release()
 
@@ -270,17 +372,20 @@ def run_prescan(
     if frame_offset_sec < 0:
         raise ValueError("frame_offset must be >= 0")
     defaults = load_engine_defaults()
-    resolved_offset = frame_offset_sec
-    if auto_skip_dark_frames and frame_offset_sec == 0.0 and sampler is None:
-        resolved_offset = find_best_frame_offset(
+    if sampler is not None:
+        sampled = sampler(source, frame_offset_sec)
+    elif auto_skip_dark_frames and frame_offset_sec == 0.0:
+        sampled = sample_opening_frame(
             source,
-            requested_offset_sec=frame_offset_sec,
+            requested_offset_sec=0.0,
             scan_sec=defaults.prescan.dark_frame_scan_sec,
             step_sec=defaults.prescan.dark_frame_step_sec,
             luminance_threshold=defaults.prescan.dark_frame_luminance_threshold,
+            min_osd_score=defaults.prescan.osd_min_score,
+            probe_start_sec=defaults.prescan.osd_probe_start_sec,
         )
-    probe = sampler or sample_video_cv2
-    sampled = probe(source, resolved_offset)
+    else:
+        sampled = sample_video_cv2(source, frame_offset_sec)
     parsed, ocr_conf = _ocr_from_sample(sampled, defaults.ocr.min_confidence, ocr_reader)
     profiles = list_profiles(output_dir)
     lines = propose_lines(sampled.meta.width, sampled.meta.height, profiles, frame=sampled.frame)

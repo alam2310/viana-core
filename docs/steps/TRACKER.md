@@ -77,7 +77,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 7 fixed / 7 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) S01–S08, S10–S15 (S09 → 6.7) |
+| **4.stab** Stabilization path | 🔄 8 fixed / 6 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) S01–S08, S10–S15 (S09 → 6.7) |
 
 ### Stabilization execution path (follow in order)
 
@@ -90,7 +90,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S05 | F003 — Re-scan OCR only + docs | A/B | fixed |
 | S06 | F005 — EasyOCR triage | C | open |
 | S07 | F001 — corner ROI OCR (**Step 5 blocker**) | C | fixed |
-| S08 | F002 — prescan latency | C | open |
+| S08 | F002 — prescan latency | C | fixed |
 | S10 | F007 — horizon/counting line proposal | C | open |
 | S11 | F008 — `created_at` + sortable submitted time in API | B/D | open |
 | S12 | F009 — `video_duration_sec` + `processing_duration_sec` in API | B/D | open |
@@ -103,7 +103,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 ## Step 5 — E2E verification
 
-**Gate status:** Unblocked (`S07` fixed). Continue S08/S10–S15 polish in parallel with Step 5.
+**Gate status:** Unblocked (`S07` fixed). Continue S10–S15 polish in parallel with Step 5.
 
 | Check | Status |
 |-------|--------|
@@ -131,6 +131,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | S08 (F002) fixed — prescan CLI 6.7s → 4.6s on `hiv000001_inframe.mp4`; S07 OCR fields unchanged |
 | 2026-08-19 | S09 deferred to 6.7; S10 (F007) line proposal added to stabilization path |
 | 2026-08-19 | Stabilization execution path S01–S09 (merged findings + scrub plan) |
 | 2026-08-19 | Stabilization workflow + backlog; Step 5 blocked until prescan fixes |

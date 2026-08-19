@@ -30,8 +30,10 @@ pipeline:
 
 prescan:
   dark_frame_luminance_threshold: 28
-  dark_frame_scan_sec: 30.0
+  dark_frame_scan_sec: 4.0
   dark_frame_step_sec: 1.0
+  osd_min_score: 20
+  osd_probe_start_sec: 2.0
 
 output:
   parent_dir: /data/viana-outputs

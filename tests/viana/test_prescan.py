@@ -8,7 +8,13 @@ from viana.config.job import LineSegment
 from viana.domain.geometry import scale_line
 from viana.io.profiles import CalibrationProfile, list_profiles, save_profile
 from viana.stages.lines import GEOMETRIC_CONFIDENCE, PROFILE_CONFIDENCE, propose_lines
-from viana.stages.ocr import parse_corner_osd_hits, parse_osd_hits
+from viana.stages.ocr import (
+    OCR_FALLBACK_SCALE,
+    OCR_ROI_SCALE,
+    parse_corner_osd_hits,
+    parse_frame_corner_osd,
+    parse_osd_hits,
+)
 from viana.stages.prescan import SampledVideo, VideoMeta, preview_jpeg_path, run_prescan
 
 
@@ -149,3 +155,96 @@ def test_find_best_frame_offset_respects_explicit_scrub() -> None:
         luminance_threshold=28.0,
     )
     assert offset == 12.5
+
+
+def test_osd_band_score_is_high_on_striped_metadata_roi() -> None:
+    """Top-left contrast (OSD) scores above the dark-frame min."""
+    np = __import__("pytest").importorskip("numpy")
+    from viana.stages.prescan import osd_band_score
+
+    frame = np.zeros((240, 320, 3), dtype=np.uint8)
+    frame[:] = 40
+    frame[0:16, 0:144] = 20
+    frame[0:16, 0:144:4] = 255
+    assert osd_band_score(frame) > 20.0
+
+
+def test_sample_opening_frame_skips_dark_then_blank_osd(tmp_path: Path) -> None:
+    """Opening scan waits for a bright frame with top-band OSD texture (G7/S08)."""
+    cv2 = __import__("pytest").importorskip("cv2")
+    np = __import__("pytest").importorskip("numpy")
+    from viana.stages.prescan import sample_opening_frame
+
+    path = tmp_path / "opening.avi"
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (320, 240))
+    if not writer.isOpened():
+        __import__("pytest").skip("OpenCV VideoWriter MJPG unavailable")
+    try:
+        for index in range(40):
+            frame = np.zeros((240, 320, 3), dtype=np.uint8)
+            if index >= 20:
+                frame[:] = 80
+                frame[0:16, 0:144] = 20
+                frame[0:16, 0:144:4] = 255
+            writer.write(frame)
+    finally:
+        writer.release()
+
+    sampled = sample_opening_frame(
+        path,
+        requested_offset_sec=0.0,
+        scan_sec=4.0,
+        step_sec=1.0,
+        luminance_threshold=28.0,
+        min_osd_score=20.0,
+        probe_start_sec=1.0,
+    )
+    assert sampled.frame is not None
+    assert sampled.frame_offset_sec == __import__("pytest").approx(2.0, abs=0.15)
+    assert sampled.meta.width == 320
+    assert sampled.meta.height == 240
+
+
+def test_parse_frame_corner_osd_skips_fallback_when_fast_path_hits() -> None:
+    """S08 fast ROI is used when time and date already parse."""
+
+    class FastOnlyReader:
+        def readtext(self, _rgb: object, **_kwargs: object) -> list[object]:
+            if _kwargs.get("allowlist"):
+                return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "L11-BARABANKI", 0.9]]
+            return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "18-10-2024 Fri 07 21 26", 0.9]]
+
+    np = __import__("pytest").importorskip("numpy")
+    frame = np.zeros((100, 200, 3), dtype=np.uint8)
+    parsed, mean = parse_frame_corner_osd(frame, FastOnlyReader(), 0.6)
+    assert parsed.time == "07:21:26"
+    assert parsed.date == "18-10-2024"
+    assert parsed.location == "L11-BARABANKI"
+    assert mean is not None
+
+
+def test_parse_frame_corner_osd_retries_wide_roi_when_fast_path_misses() -> None:
+    """Wide 4× pass fills time/date when the tight crop returns junk."""
+
+    class TwoPassReader:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def readtext(self, _rgb: object, **_kwargs: object) -> list[object]:
+            self.calls += 1
+            if self.calls <= 2:
+                return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "xxx", 0.9]]
+            if _kwargs.get("allowlist"):
+                return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "L11-BARABANKI", 0.9]]
+            return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "18-10-2024 Fri 07 21 26", 0.9]]
+
+    np = __import__("pytest").importorskip("numpy")
+    frame = np.zeros((100, 200, 3), dtype=np.uint8)
+    reader = TwoPassReader()
+    parsed, _mean = parse_frame_corner_osd(frame, reader, 0.6)
+    assert reader.calls == 4
+    assert parsed.time == "07:21:26"
+    assert parsed.date == "18-10-2024"
+    assert parsed.location == "L11-BARABANKI"
+    assert OCR_ROI_SCALE == 2.0
+    assert OCR_FALLBACK_SCALE == 4.0

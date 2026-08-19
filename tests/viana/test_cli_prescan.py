@@ -51,11 +51,11 @@ def test_cli_prescan_json_and_preview(monkeypatch: pytest.MonkeyPatch, tmp_path:
         )
 
     monkeypatch.setattr(
-        "viana.stages.prescan.find_best_frame_offset",
-        lambda *_args, **_kwargs: 0.0,
+        "viana.stages.prescan.sample_opening_frame",
+        lambda _source, **_kwargs: sampler(_source, 0.0),
     )
     monkeypatch.setattr("viana.stages.prescan.sample_video_cv2", sampler)
-    monkeypatch.setattr("viana.cli.optional_easyocr_reader", lambda: (lambda _f: []))
+    monkeypatch.setattr("viana.cli.optional_easyocr_reader", lambda: lambda _f: [])
     result = runner.invoke(
         app,
         [

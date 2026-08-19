@@ -77,6 +77,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Stabilization S08: prescan CLI 6.7s → 4.6s on `hiv000001_inframe.mp4` (OSD frame probe + faster corner OCR); S07 metadata unchanged |
 | 2026-08-19 | Stabilization S01–S02: preview registry disk fallback verified; `GET /artifacts/{id}/source.mp4` with HTTP Range for prescan-phase jobs |
 | 2026-08-19 | Step 4 complete: API-driven queue UI — intake browser, prescan review, live monitor, structured telemetry; localStorage drafts removed |
 | 2026-08-19 | Step 3 complete: prescan worker queue, dark-frame skip, `GET /artifacts/{id}/partial.mp4`, auto-aggregate, ETA/crossings on progress |

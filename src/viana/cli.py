@@ -8,19 +8,12 @@ from pathlib import Path
 import typer
 from pydantic import ValidationError
 
-from viana.config.classes import load_class_taxonomy
 from viana.config.defaults import load_engine_defaults
 from viana.config.job import PROJECT_ID_PATTERN, JobConfig, load_job_config
 from viana.io.paths import artifact_paths, project_output_dir
 from viana.io.run_result import RunResult
-from viana.stages.aggregate import aggregate_events
 from viana.stages.ocr import optional_easyocr_reader
 from viana.stages.prescan import run_prescan
-from viana.stages.process import (
-    CheckpointExistsError,
-    MissingCheckpointError,
-    run_moving_count,
-)
 
 app = typer.Typer(
     name="viana",
@@ -50,6 +43,12 @@ def _emit_run_result(result: RunResult) -> None:
 
 def _run_pipeline(job: JobConfig, *, resume: bool) -> None:
     """Execute the moving-count loop and print RunResult JSON."""
+    from viana.stages.process import (
+        CheckpointExistsError,
+        MissingCheckpointError,
+        run_moving_count,
+    )
+
     try:
         result = run_moving_count(job, resume=resume)
     except (CheckpointExistsError, MissingCheckpointError, FileNotFoundError) as exc:
@@ -148,6 +147,9 @@ def aggregate(
     if not paths["events"].is_file():
         typer.echo(f"Events CSV not found: {paths['events']}", err=True)
         raise typer.Exit(code=1)
+    from viana.config.classes import load_class_taxonomy
+    from viana.stages.aggregate import aggregate_events
+
     try:
         rows = aggregate_events(
             paths["events"],

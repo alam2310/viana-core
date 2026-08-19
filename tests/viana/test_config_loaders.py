@@ -44,6 +44,9 @@ def test_load_committed_engine_defaults() -> None:
     assert defaults.models.pedestrian == Path("models/pretrained/yolo11l.pt")
     assert defaults.output.parent_dir == Path("/data/viana-outputs")
     assert defaults.pipeline.checkpoint_interval_frames == 500
+    assert defaults.prescan.dark_frame_scan_sec == 4.0
+    assert defaults.prescan.osd_probe_start_sec == 2.0
+    assert defaults.prescan.osd_min_score == 20
 
 
 def test_apply_task_overrides() -> None:

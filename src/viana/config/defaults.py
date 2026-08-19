@@ -80,6 +80,8 @@ class PrescanDefaults(BaseModel):
     dark_frame_luminance_threshold: float = Field(ge=0.0, le=255.0)
     dark_frame_scan_sec: float = Field(ge=0.0)
     dark_frame_step_sec: float = Field(gt=0.0)
+    osd_min_score: float = Field(ge=0.0)
+    osd_probe_start_sec: float = Field(ge=0.0)
 
 
 class EngineDefaults(BaseModel):

@@ -30,26 +30,27 @@ class OsdRoi:
 
 
 # Top band: date/time/day. Bottom-left: camera location label.
+# Fast path uses a tighter metadata crop at 2× so CRAFT runs on fewer pixels
+# (S08). Wide 4× ROIs remain the accuracy fallback when time/date are missing.
+_LOCATION_ROI = OsdRoi(
+    "location",
+    0.86,
+    1.0,
+    0.0,
+    0.32,
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-",
+)
 DEFAULT_OSD_ROIS: tuple[OsdRoi, OsdRoi] = (
-    OsdRoi(
-        "metadata",
-        0.0,
-        0.06,
-        0.0,
-        0.58,
-        None,
-    ),
-    OsdRoi(
-        "location",
-        0.86,
-        1.0,
-        0.0,
-        0.32,
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-",
-    ),
+    OsdRoi("metadata", 0.0, 0.07, 0.0, 0.45, None),
+    _LOCATION_ROI,
+)
+WIDE_OSD_ROIS: tuple[OsdRoi, OsdRoi] = (
+    OsdRoi("metadata", 0.0, 0.06, 0.0, 0.58, None),
+    _LOCATION_ROI,
 )
 
-OCR_ROI_SCALE = 4.0
+OCR_ROI_SCALE = 2.0
+OCR_FALLBACK_SCALE = 4.0
 
 
 class CornerOsdReader:
@@ -69,13 +70,14 @@ class CornerOsdReader:
         return self._reader
 
     def __call__(self, frame: object) -> list[tuple[str, float]]:
-        metadata_hits, location_hits = read_corner_osd_hits(frame, self._ensure_reader())
+        metadata_hits, location_hits = read_corner_osd_hits_with_fallback(
+            frame, self._ensure_reader()
+        )
         return metadata_hits + location_hits
 
     def parse(self, frame: object, min_confidence: float) -> tuple[ParsedOcr, float | None]:
         """OCR corner ROIs and return structured metadata."""
-        metadata_hits, location_hits = read_corner_osd_hits(frame, self._ensure_reader())
-        return parse_corner_osd_hits(metadata_hits, location_hits, min_confidence)
+        return parse_frame_corner_osd(frame, self._ensure_reader(), min_confidence)
 
 
 def filter_ocr_hits(
@@ -126,6 +128,65 @@ def parse_corner_osd_hits(
         date=meta.date,
         location=location,
     ), mean_conf
+
+
+def _merge_parsed_ocr(primary: ParsedOcr, fallback: ParsedOcr) -> ParsedOcr:
+    """Fill missing OSD fields from a slower/wider second pass."""
+    return ParsedOcr(
+        time=primary.time or fallback.time,
+        date=primary.date or fallback.date,
+        location=primary.location or fallback.location,
+    )
+
+
+def parse_frame_corner_osd(
+    frame: object,
+    easyocr_reader: Any,
+    min_confidence: float,
+) -> tuple[ParsedOcr, float | None]:
+    """Fast 2× tight ROI, then wide 4× fallback if time or date is missing."""
+    metadata_hits, location_hits = read_corner_osd_hits(
+        frame,
+        easyocr_reader,
+        rois=DEFAULT_OSD_ROIS,
+        scale=OCR_ROI_SCALE,
+    )
+    parsed, conf = parse_corner_osd_hits(metadata_hits, location_hits, min_confidence)
+    if parsed.time and parsed.date:
+        return parsed, conf
+    wide_meta, wide_loc = read_corner_osd_hits(
+        frame,
+        easyocr_reader,
+        rois=WIDE_OSD_ROIS,
+        scale=OCR_FALLBACK_SCALE,
+    )
+    parsed_wide, conf_wide = parse_corner_osd_hits(wide_meta, wide_loc, min_confidence)
+    merged = _merge_parsed_ocr(parsed_wide, parsed)
+    confs = [value for value in (conf, conf_wide) if value is not None]
+    mean_conf = sum(confs) / len(confs) if confs else None
+    return merged, mean_conf
+
+
+def read_corner_osd_hits_with_fallback(
+    frame: object,
+    easyocr_reader: Any,
+) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+    """Return fast-path hits, or wide-ROI hits when time/date do not parse."""
+    metadata_hits, location_hits = read_corner_osd_hits(
+        frame,
+        easyocr_reader,
+        rois=DEFAULT_OSD_ROIS,
+        scale=OCR_ROI_SCALE,
+    )
+    parsed, _conf = parse_corner_osd_hits(metadata_hits, location_hits, 0.0)
+    if parsed.time and parsed.date:
+        return metadata_hits, location_hits
+    return read_corner_osd_hits(
+        frame,
+        easyocr_reader,
+        rois=WIDE_OSD_ROIS,
+        scale=OCR_FALLBACK_SCALE,
+    )
 
 
 def _roi_bounds(width: int, height: int, roi: OsdRoi) -> tuple[int, int, int, int]:

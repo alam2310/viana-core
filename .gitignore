@@ -4,7 +4,10 @@
 data/
 __pycache__/
 *.pyc
+*.py[cod]
 .DS_Store
+*.swp
+*.swo
 venv/
 .venv/
 .env
@@ -19,6 +22,8 @@ apps/web/node_modules/
 apps/web/.next/
 apps/web/out/
 apps/web/.env.local
+.npm/
+*.tsbuildinfo
 
 # Python packaging
 *.egg-info/

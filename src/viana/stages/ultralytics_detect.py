@@ -47,9 +47,7 @@ class UltralyticsDualDetector:
         """Run both models on ``frame.image`` (must be a BGR array)."""
         if frame.image is None:
             return [], []
-        vehicles = self._predict(
-            self._vehicle, frame.image, class_ids=sorted(VEHICLE_CLASS_IDS)
-        )
+        vehicles = self._predict(self._vehicle, frame.image, class_ids=sorted(VEHICLE_CLASS_IDS))
         people = self._predict(self._pedestrian, frame.image, class_ids=[0])
         return vehicles, people
 

@@ -1,0 +1,18 @@
+{
+  "jobs": [
+    {
+      "job_id": "job_intake_001",
+      "status": "PRESCAN_PENDING",
+      "source_video_path": "/data/projects/nh48/videos/2026-03-15_09-00.mp4",
+      "output_dir": "/data/viana-outputs/nh48",
+      "queue_position": 1
+    },
+    {
+      "job_id": "job_intake_002",
+      "status": "PRESCAN_PENDING",
+      "source_video_path": "/data/projects/nh48/videos/2026-03-15_10-00.mp4",
+      "output_dir": "/data/viana-outputs/nh48",
+      "queue_position": 2
+    }
+  ]
+}

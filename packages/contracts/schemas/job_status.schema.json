@@ -15,7 +15,18 @@
   "properties": {
     "job_id": { "type": "string" },
     "status": {
-      "enum": ["PENDING", "PROCESSING", "PAUSED", "COMPLETED", "FAILED", "CANCELLED"]
+      "enum": [
+        "PRESCAN_PENDING",
+        "PRESCAN_RUNNING",
+        "PRESCAN_FAILED",
+        "AWAITING_REVIEW",
+        "READY",
+        "PROCESSING",
+        "PAUSED",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED"
+      ]
     },
     "task_type": { "enum": ["ViAna_Moving"] },
     "source_video_path": { "type": "string" },
@@ -32,6 +43,60 @@
         "processing_fps": { "type": "number", "minimum": 0 }
       }
     },
-    "error_message": { "type": ["string", "null"] }
+    "error_message": { "type": ["string", "null"] },
+    "proposed_metadata": { "$ref": "#/$defs/JobMetadata" },
+    "proposed_lines": { "$ref": "#/$defs/ProposedLines" },
+    "proposed_preview_url": { "type": ["string", "null"] },
+    "confirmed_metadata": { "$ref": "#/$defs/JobMetadata" },
+    "confirmed_task_parameters": { "$ref": "#/$defs/ViAnaTaskParameters" }
+  },
+  "$defs": {
+    "Point": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "LineSegment": {
+      "type": "object",
+      "required": ["start", "end"],
+      "additionalProperties": false,
+      "properties": {
+        "start": { "$ref": "#/$defs/Point" },
+        "end": { "$ref": "#/$defs/Point" }
+      }
+    },
+    "JobMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "user_start_time": { "type": "string" },
+        "user_start_date": { "type": "string" },
+        "location": { "type": "string" }
+      }
+    },
+    "ProposedLines": {
+      "type": "object",
+      "required": ["horizon_line", "counting_line", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "horizon_line": { "$ref": "#/$defs/LineSegment" },
+        "counting_line": { "$ref": "#/$defs/LineSegment" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "ViAnaTaskParameters": {
+      "type": "object",
+      "required": ["horizon_line", "counting_line"],
+      "additionalProperties": false,
+      "properties": {
+        "horizon_line": { "$ref": "#/$defs/LineSegment" },
+        "counting_line": { "$ref": "#/$defs/LineSegment" },
+        "confidence_threshold": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.75 },
+        "use_heuristic_truck_split": { "type": "boolean", "default": true },
+        "render_video": { "type": "boolean", "default": true },
+        "telemetry_detail": { "type": "boolean", "default": false }
+      }
+    }
   }
 }

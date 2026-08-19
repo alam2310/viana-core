@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-19  
-**Current focus:** **Step 2** — Contracts & API foundation (see `docs/steps/TRACKER.md`)  
+**Current focus:** **Step 3** — Engine prescan & orchestrator workers (see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none. Live `:8000/health` is Phase 6.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
@@ -32,7 +32,7 @@
 | Step | Name | Status |
 |------|------|--------|
 | 1 | UX discovery & design | ✅ Complete |
-| 2 | Contracts & API foundation | ⬜ Not started |
+| 2 | Contracts & API foundation | ✅ Complete |
 | 3 | Engine prescan & orchestrator | ⬜ Not started |
 | 4 | UI implementation | ⬜ Not started |
 | 5 | E2E verification (`_15min.csv`) | ⬜ Not started |
@@ -46,10 +46,9 @@
 
 ## Next (legacy list — see Steps above)
 
-1. **Step 2** — Contracts + intake/confirm APIs + `JobStatus` lifecycle.
-2. **Step 3** — Prescan engine, worker queue, auto-aggregate, partial MP4.
-3. **Step 4** — Implement `docs/ui/REDESIGN.md`.
-4. **Step 5** — Verify 15-min grid on test clip.
+1. **Step 3** — Prescan engine, worker queue, auto-aggregate, partial MP4.
+2. **Step 4** — Implement `docs/ui/REDESIGN.md`.
+3. **Step 5** — Verify 15-min grid on test clip.
 
 ## Parked (revisit later)
 
@@ -80,6 +79,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Step 2 complete: `JobStatus` prescan lifecycle, `POST /jobs/intake`, `PATCH /jobs/{id}/prescan`, metadata validation |
 | 2026-08-19 | Six-step plan: Step 2 contracts/API, Step 3 engine/workers, UI → Step 4 |
 | 2026-08-19 | Step 1 complete: `DISCOVERY.md`, `REDESIGN.md`, flows |
 | 2026-08-19 | Post-v0.1 Steps plan + tracker under `docs/steps/` |

@@ -1,0 +1,21 @@
+{
+  "job_id": "job_awaiting_review",
+  "status": "AWAITING_REVIEW",
+  "task_type": "ViAna_Moving",
+  "source_video_path": "/data/projects/nh48/videos/2026-03-15_09-00.mp4",
+  "project_id": "nh48",
+  "output_dir": "/data/viana-outputs/nh48",
+  "checkpoint_exists": false,
+  "queue_position": 0,
+  "proposed_metadata": {
+    "user_start_time": "09:00:00",
+    "user_start_date": "15-03-2026",
+    "location": "NH48 Km42"
+  },
+  "proposed_lines": {
+    "horizon_line": { "start": [120, 400], "end": [1800, 520] },
+    "counting_line": { "start": [80, 900], "end": [1840, 780] },
+    "confidence": 0.71
+  },
+  "proposed_preview_url": "/utils/prescan/prescan_mock_001/preview.jpg"
+}

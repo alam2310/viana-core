@@ -12,12 +12,25 @@ from orchestrator.errors import engine_failed
 from orchestrator.logging_config import get_logger
 from orchestrator.models import JobStatus, JobSubmitRequest, JobSubmitResponse
 from orchestrator.workers.pool import get_pool
+from viana.config.job import JobIntakeRequest, JobIntakeResponse, JobPrescanConfirmRequest
 from viana.io.checkpoint import load_checkpoint
 from viana.io.paths import artifact_paths
 
 logger = get_logger(__name__)
 
 router = APIRouter(tags=["jobs"])
+
+
+@router.post("/jobs/intake", status_code=201, response_model=JobIntakeResponse)
+def post_jobs_intake(body: JobIntakeRequest) -> JobIntakeResponse:
+    """Register video path(s) for backend prescan (`PRESCAN_PENDING`)."""
+    return get_pool().intake(body)
+
+
+@router.patch("/jobs/{job_id}/prescan", response_model=JobStatus)
+def patch_job_prescan(job_id: str, body: JobPrescanConfirmRequest) -> JobStatus:
+    """Confirm reviewed calibration and transition job to ``READY``."""
+    return get_pool().confirm_prescan(job_id, body)
 
 
 @router.post("/jobs", status_code=201, response_model=JobSubmitResponse)

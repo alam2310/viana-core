@@ -11,6 +11,21 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 PROJECT_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 GPU_DEVICE_PATTERN = re.compile(r"^cuda:[01]$")
+USER_TIME_PATTERN = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$")
+USER_DATE_PATTERN = re.compile(r"^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$")
+
+JobStatusLiteral = Literal[
+    "PRESCAN_PENDING",
+    "PRESCAN_RUNNING",
+    "PRESCAN_FAILED",
+    "AWAITING_REVIEW",
+    "READY",
+    "PROCESSING",
+    "PAUSED",
+    "COMPLETED",
+    "FAILED",
+    "CANCELLED",
+]
 
 
 class LineSegment(BaseModel):
@@ -36,12 +51,6 @@ class LineSegment(BaseModel):
             raise ValueError("line endpoints must differ")
         return self
 
-    def assert_within_frame(self, width: int, height: int, name: str) -> None:
-        """Raise ValueError if either endpoint is outside ``[0, width) × [0, height)``."""
-        for label, (x, y) in (("start", self.start), ("end", self.end)):
-            if not (0 <= x < width and 0 <= y < height):
-                raise ValueError(f"{name}.{label} {(x, y)} is outside frame {width}x{height}")
-
 
 class JobMetadata(BaseModel):
     """Optional user-supplied metadata (OCR fallback / report headers)."""
@@ -51,6 +60,42 @@ class JobMetadata(BaseModel):
     user_start_time: str | None = None
     user_start_date: str | None = None
     location: str | None = None
+
+
+class ConfirmedJobMetadata(BaseModel):
+    """Mandatory metadata after prescan review (HH:MM:SS + DD-MM-YYYY + location)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    user_start_time: str = Field(min_length=1)
+    user_start_date: str = Field(min_length=1)
+    location: str = Field(min_length=1)
+
+    @field_validator("user_start_time")
+    @classmethod
+    def validate_time_format(cls, value: str) -> str:
+        """Require 24-hour wall-clock time ``HH:MM:SS``."""
+        if not USER_TIME_PATTERN.match(value):
+            raise ValueError("user_start_time must match HH:MM:SS")
+        return value
+
+    @field_validator("user_start_date")
+    @classmethod
+    def validate_date_format(cls, value: str) -> str:
+        """Require Indian traffic convention date ``DD-MM-YYYY``."""
+        if not USER_DATE_PATTERN.match(value):
+            raise ValueError("user_start_date must match DD-MM-YYYY")
+        return value
+
+
+class ProposedLines(BaseModel):
+    """Prescan line proposal with confidence score."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    horizon_line: LineSegment
+    counting_line: LineSegment
+    confidence: float = Field(ge=0.0, le=1.0)
 
 
 class ViAnaTaskParameters(BaseModel):
@@ -74,6 +119,7 @@ class JobSubmitRequest(BaseModel):
     task_type: Literal["ViAna_Moving"] = "ViAna_Moving"
     source_video_path: Path
     project_id: str
+    output_dir: Path | None = None
     metadata: JobMetadata = Field(default_factory=JobMetadata)
     task_parameters: ViAnaTaskParameters
     calibration_profile_id: str | None = None
@@ -94,6 +140,35 @@ class JobSubmitRequest(BaseModel):
         if self.resume and self.start_fresh:
             raise ValueError("resume and start_fresh are mutually exclusive")
         return self
+
+
+class JobIntakeRequest(BaseModel):
+    """POST /jobs/intake — register videos for backend prescan."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task_type: Literal["ViAna_Moving"] = "ViAna_Moving"
+    project_id: str
+    source_video_paths: list[Path] = Field(min_length=1)
+    output_dir: Path | None = None
+
+    @field_validator("project_id")
+    @classmethod
+    def validate_project_id(cls, value: str) -> str:
+        """Ensure project_id is a lowercase slug safe for directory names."""
+        if not PROJECT_ID_PATTERN.match(value):
+            raise ValueError("project_id must match [a-z0-9][a-z0-9_-]*")
+        return value
+
+
+class JobPrescanConfirmRequest(BaseModel):
+    """PATCH /jobs/{id}/prescan — operator confirms reviewed calibration."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    metadata: ConfirmedJobMetadata
+    task_parameters: ViAnaTaskParameters
+    calibration_profile_id: str | None = None
 
 
 class JobConfig(JobSubmitRequest):
@@ -126,7 +201,7 @@ class JobSubmitResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     job_id: str
-    status: Literal["PENDING", "PROCESSING", "PAUSED", "COMPLETED", "FAILED", "CANCELLED"]
+    status: JobStatusLiteral
     gpu_device: str
     queue_position: int
     output_dir: Path
@@ -138,6 +213,26 @@ class JobSubmitResponse(BaseModel):
         if not GPU_DEVICE_PATTERN.match(value):
             raise ValueError("gpu_device must match cuda:0 or cuda:1")
         return value
+
+
+class JobIntakeItem(BaseModel):
+    """One job created by POST /jobs/intake."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: str
+    status: Literal["PRESCAN_PENDING"] = "PRESCAN_PENDING"
+    source_video_path: str
+    output_dir: str
+    queue_position: int = Field(ge=0)
+
+
+class JobIntakeResponse(BaseModel):
+    """POST /jobs/intake response."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    jobs: list[JobIntakeItem] = Field(min_length=1)
 
 
 def load_job_config(path: Path) -> JobConfig:

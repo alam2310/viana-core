@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/prescan_request.schema.json",
+  "title": "PrescanRequest",
+  "type": "object",
+  "required": ["source_video_path", "project_id"],
+  "additionalProperties": false,
+  "properties": {
+    "source_video_path": { "type": "string", "minLength": 1 },
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "task_type": { "const": "ViAna_Moving", "default": "ViAna_Moving" },
+    "frame_offset_sec": { "type": "number", "default": 0 }
+  }
+}

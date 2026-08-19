@@ -1,31 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://viana.local/schemas/job_submit.schema.json",
-  "title": "JobSubmitRequest",
+  "$id": "https://viana.local/schemas/job_prescan_confirm.schema.json",
+  "title": "JobPrescanConfirmRequest",
   "type": "object",
-  "required": ["task_type", "source_video_path", "project_id", "task_parameters"],
+  "required": ["metadata", "task_parameters"],
   "additionalProperties": false,
   "properties": {
-    "task_type": { "const": "ViAna_Moving" },
-    "source_video_path": { "type": "string", "minLength": 1 },
-    "project_id": {
-      "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9_-]*$"
-    },
-    "output_dir": { "type": "string", "minLength": 1 },
-    "metadata": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "user_start_time": { "type": "string" },
-        "user_start_date": { "type": "string" },
-        "location": { "type": "string" }
-      }
-    },
+    "metadata": { "$ref": "#/$defs/ConfirmedMetadata" },
     "task_parameters": { "$ref": "#/$defs/ViAnaTaskParameters" },
-    "calibration_profile_id": { "type": "string" },
-    "resume": { "type": "boolean", "default": false },
-    "start_fresh": { "type": "boolean", "default": false }
+    "calibration_profile_id": { "type": "string" }
   },
   "$defs": {
     "Point": {
@@ -41,6 +24,22 @@
       "properties": {
         "start": { "$ref": "#/$defs/Point" },
         "end": { "$ref": "#/$defs/Point" }
+      }
+    },
+    "ConfirmedMetadata": {
+      "type": "object",
+      "required": ["user_start_time", "user_start_date", "location"],
+      "additionalProperties": false,
+      "properties": {
+        "user_start_time": {
+          "type": "string",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$"
+        },
+        "user_start_date": {
+          "type": "string",
+          "pattern": "^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$"
+        },
+        "location": { "type": "string", "minLength": 1 }
       }
     },
     "ViAnaTaskParameters": {

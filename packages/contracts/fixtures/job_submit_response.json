@@ -1,6 +1,6 @@
 {
   "job_id": "job_mock_001",
-  "status": "PENDING",
+  "status": "READY",
   "gpu_device": "cuda:0",
   "queue_position": 1,
   "output_dir": "/data/viana-outputs/nh48"

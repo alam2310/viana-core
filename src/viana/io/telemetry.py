@@ -8,7 +8,18 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-JobRuntimeStatus = Literal["PENDING", "PROCESSING", "PAUSED", "COMPLETED", "FAILED", "CANCELLED"]
+JobRuntimeStatus = Literal[
+    "PRESCAN_PENDING",
+    "PRESCAN_RUNNING",
+    "PRESCAN_FAILED",
+    "AWAITING_REVIEW",
+    "READY",
+    "PROCESSING",
+    "PAUSED",
+    "COMPLETED",
+    "FAILED",
+    "CANCELLED",
+]
 TelemetryType = Literal["PROGRESS", "MOVING_EVENT", "LOG"]
 
 

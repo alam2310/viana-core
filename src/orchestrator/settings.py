@@ -21,3 +21,10 @@ def project_dir(project_id: str) -> Path:
     from viana.io.paths import project_output_dir
 
     return project_output_dir(output_parent(), project_id)
+
+
+def resolve_output_dir(project_id: str, override: Path | None = None) -> Path:
+    """Return project output dir, optionally overridden per intake/submit."""
+    if override is not None:
+        return override
+    return project_dir(project_id)

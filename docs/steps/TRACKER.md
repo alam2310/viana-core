@@ -1,7 +1,7 @@
 # Step tracker (living)
 
 **Last updated:** 2026-08-19  
-**Current Step:** **2** — Contracts & API foundation  
+**Current Step:** **3** — Engine prescan & orchestrator  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
 **Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)
 
@@ -14,7 +14,7 @@
 | Step | Name | Status | Owner chat | Started | Completed |
 |------|------|--------|------------|---------|-----------|
 | **1** | UX discovery & design | ✅ Complete | UX discovery | 2026-08-19 | 2026-08-19 |
-| **2** | Contracts & API foundation | ⬜ Not started | New — Contract + API | — | — |
+| **2** | Contracts & API foundation | ✅ Complete | Contract + API | 2026-08-19 | 2026-08-19 |
 | **3** | Engine prescan & orchestrator | ⬜ Not started | New — Engine + workers | — | — |
 | **4** | UI implementation | ⬜ Not started | New — UI v2 | — | — |
 | **5** | E2E verification | ⬜ Not started | UI v2 or QA | — | — |
@@ -36,17 +36,17 @@
 
 ---
 
-## Step 2 — Contracts & API foundation
+## Step 2 — Contracts & API foundation ✅
 
 | Item | Status |
 |------|--------|
-| P1–P6 schemas + TS + fixtures | ⬜ |
-| `POST /jobs/intake` (G16) | ⬜ |
-| `PATCH /jobs/{id}/prescan` (G17) | ⬜ |
-| Proposed + confirmed fields (G1, G15) | ⬜ |
-| Metadata validation (G4) | ⬜ |
-| `output_dir` (G20) | ⬜ |
-| JobStatus state machine stubs (G14) | ⬜ |
+| P1–P6 schemas + TS + fixtures | ✅ |
+| `POST /jobs/intake` (G16) | ✅ |
+| `PATCH /jobs/{id}/prescan` (G17) | ✅ |
+| Proposed + confirmed fields (G1, G15) | ✅ |
+| Metadata validation (G4) | ✅ |
+| `output_dir` (G20) | ✅ |
+| JobStatus state machine stubs (G14) | ✅ |
 
 Detail: [`STEP_2_CONTRACTS_AND_API.md`](STEP_2_CONTRACTS_AND_API.md)
 
@@ -108,6 +108,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Step 2 complete: JobStatus lifecycle, intake + prescan confirm APIs |
 | 2026-08-19 | Six-step plan: split backend into Step 2 (contracts/API) + Step 3 (engine/workers) |
 | 2026-08-19 | Step 1 complete |
 | 2026-08-19 | Steps 1–5 tracker created |

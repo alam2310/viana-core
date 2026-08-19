@@ -21,8 +21,20 @@ from orchestrator.models import (
     JobSubmitRequest,
     JobSubmitResponse,
 )
-from orchestrator.settings import project_dir
-from viana.config.job import JobConfig
+from orchestrator.settings import resolve_output_dir
+from viana.config.job import (
+    JobConfig,
+    JobIntakeItem,
+    JobIntakeRequest,
+    JobIntakeResponse,
+    JobMetadata,
+    JobPrescanConfirmRequest,
+    ProposedLines,
+    ViAnaTaskParameters,
+)
+from viana.config.job import (
+    JobSubmitRequest as EngineSubmit,
+)
 from viana.io.checkpoint import load_checkpoint
 from viana.io.paths import artifact_paths
 
@@ -37,6 +49,15 @@ CHECKPOINT_CONFLICT = (
 
 CommandKind = Literal["run", "resume"]
 
+PRESCAN_PHASE_STATUSES: frozenset[JobStatusLiteral] = frozenset(
+    {
+        "PRESCAN_PENDING",
+        "PRESCAN_RUNNING",
+        "PRESCAN_FAILED",
+        "AWAITING_REVIEW",
+    }
+)
+
 
 @dataclass
 class JobRecord:
@@ -47,7 +68,7 @@ class JobRecord:
     source_video_path: Path
     project_id: str
     output_dir: Path
-    submit: JobSubmitRequest
+    submit: EngineSubmit | None = None
     gpu_device: str | None = None
     queue_position: int = 0
     config_path: Path | None = None
@@ -55,6 +76,12 @@ class JobRecord:
     progress: JobProgress | None = None
     error_message: str | None = None
     command: CommandKind = "run"
+    proposed_metadata: JobMetadata | None = None
+    proposed_lines: ProposedLines | None = None
+    proposed_preview_url: str | None = None
+    confirmed_metadata: JobMetadata | None = None
+    confirmed_task_parameters: ViAnaTaskParameters | None = None
+    prescan_queue_position: int = 0
 
 
 class WorkerPool:
@@ -64,6 +91,7 @@ class WorkerPool:
         self._lock = threading.RLock()
         self._jobs: dict[str, JobRecord] = {}
         self._queue: list[str] = []
+        self._prescan_queue: list[str] = []
         self._threads: list[threading.Thread] = []
 
     def occupied_gpus(self) -> set[str]:
@@ -124,6 +152,11 @@ class WorkerPool:
             queue_position=job.queue_position,
             progress=job.progress,
             error_message=job.error_message,
+            proposed_metadata=job.proposed_metadata,
+            proposed_lines=job.proposed_lines,
+            proposed_preview_url=job.proposed_preview_url,
+            confirmed_metadata=job.confirmed_metadata,
+            confirmed_task_parameters=job.confirmed_task_parameters,
         )
 
     def to_submit_response(self, job: JobRecord) -> JobSubmitResponse:
@@ -137,9 +170,93 @@ class WorkerPool:
             output_dir=str(job.output_dir),
         )
 
+    def intake(self, body: JobIntakeRequest) -> JobIntakeResponse:
+        """Register one job per video path at ``PRESCAN_PENDING`` (Step 3 runs prescan)."""
+        output_dir = resolve_output_dir(body.project_id, body.output_dir)
+        items: list[JobIntakeItem] = []
+        with self._lock:
+            for path in body.source_video_paths:
+                job_id = f"job_{uuid.uuid4().hex[:12]}"
+                job = JobRecord(
+                    job_id=job_id,
+                    status="PRESCAN_PENDING",
+                    source_video_path=path,
+                    project_id=body.project_id,
+                    output_dir=output_dir,
+                )
+                self._jobs[job_id] = job
+                self._prescan_queue.append(job_id)
+                self._refresh_prescan_queue_positions()
+                items.append(
+                    JobIntakeItem(
+                        job_id=job_id,
+                        source_video_path=str(path),
+                        output_dir=str(output_dir),
+                        queue_position=job.prescan_queue_position,
+                    )
+                )
+        logger.info("jobs_intake", count=len(items), project_id=body.project_id)
+        return JobIntakeResponse(jobs=items)
+
+    def confirm_prescan(self, job_id: str, body: JobPrescanConfirmRequest) -> JobStatus:
+        """PATCH /jobs/{id}/prescan — persist confirmed calibration and enqueue GPU work."""
+        job = self.get_job(job_id)
+        if job.status not in {"AWAITING_REVIEW", "READY"}:
+            bad_request(f"job status {job.status} cannot confirm prescan")
+        confirmed_meta = JobMetadata(
+            user_start_time=body.metadata.user_start_time,
+            user_start_date=body.metadata.user_start_date,
+            location=body.metadata.location,
+        )
+        job.confirmed_metadata = confirmed_meta
+        job.confirmed_task_parameters = body.task_parameters
+        job.submit = EngineSubmit(
+            task_type="ViAna_Moving",
+            source_video_path=job.source_video_path,
+            project_id=job.project_id,
+            output_dir=job.output_dir,
+            metadata=confirmed_meta,
+            task_parameters=body.task_parameters,
+            calibration_profile_id=body.calibration_profile_id,
+        )
+        job.status = "READY"
+        job.error_message = None
+        with self._lock:
+            if job.job_id in self._prescan_queue:
+                self._prescan_queue.remove(job.job_id)
+                self._refresh_prescan_queue_positions()
+            if job.job_id not in self._queue:
+                self._queue.append(job.job_id)
+            self._refresh_queue_positions()
+        status_response = self.to_status(job)
+        self._drain()
+        return status_response
+
+    def stub_awaiting_review(
+        self,
+        job_id: str,
+        proposed_metadata: JobMetadata | None = None,
+        proposed_lines: ProposedLines | None = None,
+        proposed_preview_url: str | None = None,
+    ) -> JobStatus:
+        """Step 2 test helper — Step 3 prescan worker replaces this transition."""
+        job = self.get_job(job_id)
+        if job.status not in {"PRESCAN_PENDING", "PRESCAN_RUNNING", "PRESCAN_FAILED"}:
+            bad_request(f"job status {job.status} cannot enter AWAITING_REVIEW")
+        job.status = "AWAITING_REVIEW"
+        job.proposed_metadata = proposed_metadata
+        job.proposed_lines = proposed_lines
+        job.proposed_preview_url = proposed_preview_url
+        job.error_message = None
+        with self._lock:
+            if job.job_id in self._prescan_queue:
+                self._prescan_queue.remove(job.job_id)
+                self._refresh_prescan_queue_positions()
+        return self.to_status(job)
+
     def submit(self, body: JobSubmitRequest) -> JobSubmitResponse:
         """Accept POST /jobs: assign ids, 409 on silent resume, enqueue or start."""
-        output_dir = project_dir(body.project_id)
+        output_dir = resolve_output_dir(body.project_id, body.output_dir)
         stem = body.source_video_path.stem
         ckpt_path = artifact_paths(output_dir, stem)["checkpoint"]
         if ckpt_path.is_file() and not body.resume and not body.start_fresh:
@@ -149,14 +266,21 @@ class WorkerPool:
 
         job_id = f"job_{uuid.uuid4().hex[:12]}"
         command: CommandKind = "resume" if body.resume else "run"
+        submit_body = body.model_copy(update={"output_dir": output_dir})
         job = JobRecord(
             job_id=job_id,
-            status="PENDING",
+            status="READY",
             source_video_path=body.source_video_path,
             project_id=body.project_id,
             output_dir=output_dir,
-            submit=body,
+            submit=submit_body,
             command=command,
+            confirmed_metadata=JobMetadata(
+                user_start_time=body.metadata.user_start_time,
+                user_start_date=body.metadata.user_start_date,
+                location=body.metadata.location,
+            ),
+            confirmed_task_parameters=body.task_parameters,
         )
         with self._lock:
             self._jobs[job_id] = job
@@ -179,12 +303,14 @@ class WorkerPool:
         job = self.get_job(job_id)
         if job.status == "PROCESSING":
             conflict("job is already processing")
+        if job.submit is None:
+            bad_request("job has no submit payload; confirm prescan first")
         ckpt_path = artifact_paths(job.output_dir, job.source_video_path.stem)["checkpoint"]
         if not ckpt_path.is_file():
             not_found(f"checkpoint not found: {ckpt_path}")
         job.submit = job.submit.model_copy(update={"resume": True, "start_fresh": False})
         job.command = "resume"
-        job.status = "PENDING"
+        job.status = "READY"
         job.error_message = None
         with self._lock:
             if job.job_id not in self._queue:
@@ -198,9 +324,11 @@ class WorkerPool:
         job = self.get_job(job_id)
         if job.status == "PROCESSING":
             conflict("job is already processing")
+        if job.submit is None:
+            bad_request("job has no submit payload; confirm prescan first")
         job.submit = job.submit.model_copy(update={"resume": False, "start_fresh": True})
         job.command = "run"
-        job.status = "PENDING"
+        job.status = "READY"
         job.error_message = None
         with self._lock:
             if job.job_id not in self._queue:
@@ -212,6 +340,14 @@ class WorkerPool:
     def cancel(self, job_id: str) -> None:
         """Cancel queued or running work."""
         job = self.get_job(job_id)
+        if job.status in PRESCAN_PHASE_STATUSES:
+            with self._lock:
+                if job.job_id in self._prescan_queue:
+                    self._prescan_queue.remove(job.job_id)
+                    self._refresh_prescan_queue_positions()
+                job.status = "CANCELLED"
+                job.queue_position = 0
+            return
         with self._lock:
             if job.job_id in self._queue:
                 self._queue.remove(job.job_id)
@@ -226,16 +362,22 @@ class WorkerPool:
         job.status = "CANCELLED"
 
     def wait_job(self, job_id: str, timeout: float = 5.0) -> JobRecord:
-        """Block until a job leaves PROCESSING/PENDING (tests)."""
+        """Block until a job leaves READY/PROCESSING (tests)."""
         import time
 
         job = self.get_job(job_id)
         end = time.time() + timeout
         while time.time() < end:
-            if job.status not in {"PENDING", "PROCESSING"}:
+            if job.status not in {"READY", "PROCESSING"}:
                 return job
             time.sleep(0.02)
         return job
+
+    def _refresh_prescan_queue_positions(self) -> None:
+        """Set 1-based prescan queue index for PRESCAN_PENDING rows."""
+        for index, job_id in enumerate(self._prescan_queue, start=1):
+            job = self._jobs[job_id]
+            job.prescan_queue_position = index
 
     def _refresh_queue_positions(self) -> None:
         """Set queue_position: 0 if running, 1-based index in the wait queue."""
@@ -247,7 +389,7 @@ class WorkerPool:
                 job.queue_position = 0
 
     def _drain(self) -> None:
-        """Start queued jobs while GPUs are free."""
+        """Start queued READY jobs while GPUs are free."""
         while True:
             with self._lock:
                 occupied = {
@@ -258,8 +400,11 @@ class WorkerPool:
                 device = self.assign_gpu(occupied)
                 if device is None or not self._queue:
                     return
-                job_id = self._queue.pop(0)
+                job_id = self._queue[0]
                 job = self._jobs[job_id]
+                if job.status != "READY":
+                    return
+                self._queue.pop(0)
                 job.gpu_device = device
                 job.status = "PROCESSING"
                 job.queue_position = 0
@@ -268,6 +413,8 @@ class WorkerPool:
 
     def _write_job_config(self, job: JobRecord) -> Path:
         """Persist JobConfig JSON for the CLI."""
+        if job.submit is None:
+            bad_request("internal: submit payload missing at spawn")
         job.output_dir.mkdir(parents=True, exist_ok=True)
         payload = job.submit.model_dump(mode="json")
         payload["job_id"] = job.job_id

@@ -25,6 +25,10 @@ See `docs/governance/AI_SDLC.md`.
 | File | Purpose |
 |------|---------|
 | `job_submit.schema.json` | UI → POST /jobs |
+| `job_intake.schema.json` | POST /jobs/intake |
+| `job_intake_response.schema.json` | POST /jobs/intake response |
+| `job_prescan_confirm.schema.json` | PATCH /jobs/{id}/prescan |
+| `prescan_request.schema.json` | POST /utils/prescan request |
 | `job_config.schema.json` | Engine CLI JSON (`viana run` / `viana resume`) |
 | `job_submit_response.schema.json` | POST /jobs response |
 | `job_status.schema.json` | GET /jobs/{id} response |
@@ -46,7 +50,9 @@ See `docs/governance/AI_SDLC.md`.
 | `prescan_response.json` | Prescan modal + canvas |
 | `calibration_profile.json` | Project calibration profile |
 | `job_submit_response.json` | POST /jobs success mock |
+| `job_intake_response.json` | POST /jobs/intake mock |
 | `job_status_paused.json` | Resume / start fresh UI |
+| `job_status_awaiting_review.json` | Prescan review queue row |
 | `checkpoint_resume.json` | Engine resume state reference |
 | `job_config.json` | Engine CLI JobConfig (not an HTTP mock) |
 | `time_map.json` | Engine time-map anchors |

@@ -78,6 +78,8 @@ paths:
                 format: binary
         "404":
           description: Preview not found
+
+  /jobs:
     get:
       summary: List jobs
       operationId: listJobs
@@ -98,10 +100,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/JobStatus"
-        "501":
-          description: Not implemented (Phase 6; blocked on Phase 5 engine)
     post:
-      summary: Submit moving-count job
+      summary: Submit moving-count job (direct READY path)
       operationId: postJob
       tags: [jobs]
       requestBody:
@@ -121,8 +121,58 @@ paths:
           description: Checkpoint exists; explicit resume required
         "422":
           description: Invalid body (including client-supplied job_id or gpu_device)
-        "501":
-          description: Not implemented (Phase 6; blocked on Phase 5 engine)
+
+  /jobs/intake:
+    post:
+      summary: Register video path(s) for prescan
+      operationId: postJobsIntake
+      tags: [jobs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobIntakeRequest"
+      responses:
+        "201":
+          description: Jobs registered at PRESCAN_PENDING
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobIntakeResponse"
+        "422":
+          description: Invalid body
+
+  /jobs/{job_id}/prescan:
+    patch:
+      summary: Confirm prescan review → READY
+      operationId: patchJobPrescan
+      tags: [jobs]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobPrescanConfirmRequest"
+      responses:
+        "200":
+          description: Job confirmed and queued for GPU
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatus"
+        "400":
+          description: Job not in AWAITING_REVIEW or READY
+        "404":
+          description: Job not found
+        "422":
+          description: Invalid metadata or calibration body
 
   /jobs/{job_id}:
     get:
@@ -320,9 +370,25 @@ components:
         project_id:
           type: string
           pattern: "^[a-z0-9][a-z0-9_-]*$"
+        task_type:
+          type: string
+          enum: [ViAna_Moving]
+          default: ViAna_Moving
         frame_offset_sec:
           type: number
           default: 0
+
+    JobIntakeRequest:
+      type: object
+      description: See packages/contracts/schemas/job_intake.schema.json
+
+    JobIntakeResponse:
+      type: object
+      description: See packages/contracts/schemas/job_intake_response.schema.json
+
+    JobPrescanConfirmRequest:
+      type: object
+      description: See packages/contracts/schemas/job_prescan_confirm.schema.json
 
     PrescanResponse:
       type: object
@@ -355,7 +421,17 @@ components:
 
     JobStatusEnum:
       type: string
-      enum: [PENDING, PROCESSING, PAUSED, COMPLETED, FAILED, CANCELLED]
+      enum:
+        - PRESCAN_PENDING
+        - PRESCAN_RUNNING
+        - PRESCAN_FAILED
+        - AWAITING_REVIEW
+        - READY
+        - PROCESSING
+        - PAUSED
+        - COMPLETED
+        - FAILED
+        - CANCELLED
 
     CalibrationProfile:
       type: object

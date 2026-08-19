@@ -10,17 +10,20 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from viana.config.job import PROJECT_ID_PATTERN, LineSegment
-from viana.config.job import JobSubmitRequest as EngineJobSubmitRequest
-
-JobStatusLiteral = Literal[
-    "PENDING",
-    "PROCESSING",
-    "PAUSED",
-    "COMPLETED",
-    "FAILED",
-    "CANCELLED",
-]
+from viana.config.job import (
+    PROJECT_ID_PATTERN,
+    JobMetadata,
+    JobStatusLiteral,
+    LineSegment,
+    ProposedLines,
+    ViAnaTaskParameters,
+)
+from viana.config.job import (
+    JobSubmitRequest as EngineJobSubmitRequest,
+)
+from viana.config.job import (
+    JobSubmitResponse as EngineJobSubmitResponse,
+)
 
 
 class JobSubmitRequest(EngineJobSubmitRequest):
@@ -29,13 +32,11 @@ class JobSubmitRequest(EngineJobSubmitRequest):
     model_config = ConfigDict(extra="forbid")
 
 
-class JobSubmitResponse(BaseModel):
+class JobSubmitResponse(EngineJobSubmitResponse):
     """POST /jobs 201 body — job_submit_response.schema.json."""
 
-    job_id: str
-    status: JobStatusLiteral
-    gpu_device: str = Field(pattern=r"^cuda:[01]$")
-    queue_position: int = Field(ge=0)
+    model_config = ConfigDict(extra="forbid")
+
     output_dir: str
 
 
@@ -61,6 +62,11 @@ class JobStatus(BaseModel):
     queue_position: int | None = Field(default=None, ge=0)
     progress: JobProgress | None = None
     error_message: str | None = None
+    proposed_metadata: JobMetadata | None = None
+    proposed_lines: ProposedLines | None = None
+    proposed_preview_url: str | None = None
+    confirmed_metadata: JobMetadata | None = None
+    confirmed_task_parameters: ViAnaTaskParameters | None = None
 
 
 class PrescanRequest(BaseModel):
@@ -70,6 +76,7 @@ class PrescanRequest(BaseModel):
 
     source_video_path: str = Field(min_length=1)
     project_id: str
+    task_type: Literal["ViAna_Moving"] = "ViAna_Moving"
     frame_offset_sec: float = 0.0
 
     @field_validator("project_id")

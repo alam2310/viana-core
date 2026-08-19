@@ -279,7 +279,7 @@ def test_queue_and_cancel_pending(client: TestClient, monkeypatch: pytest.Monkey
     assert first.status_code == 201
     assert second.status_code == 201
     assert third.status_code == 201
-    assert third.json()["status"] == "PENDING"
+    assert third.json()["status"] == "READY"
     assert third.json()["queue_position"] >= 1
     job_id = third.json()["job_id"]
     deleted = client.delete(f"/jobs/{job_id}")
@@ -387,6 +387,103 @@ def test_ws_jobs_forwards_telemetry(client: TestClient) -> None:
 def test_get_unknown_job_404(client: TestClient) -> None:
     """Missing jobs are 404, not 501."""
     assert client.get("/jobs/missing").status_code == 404
+
+
+CONFIRM_BODY = {
+    "metadata": {
+        "user_start_time": "09:00:00",
+        "user_start_date": "15-03-2026",
+        "location": "NH48 Km42",
+    },
+    "task_parameters": VALID_SUBMIT["task_parameters"],
+    "calibration_profile_id": "morning_northbound",
+}
+
+
+def test_post_jobs_intake_creates_prescan_pending(client: TestClient) -> None:
+    """POST /jobs/intake registers videos at PRESCAN_PENDING."""
+    response = client.post(
+        "/jobs/intake",
+        json={
+            "project_id": "nh48",
+            "source_video_paths": [SOURCE, "/data/projects/nh48/videos/2026-03-15_10-00.mp4"],
+        },
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert len(body["jobs"]) == 2
+    assert body["jobs"][0]["status"] == "PRESCAN_PENDING"
+    assert body["jobs"][0]["queue_position"] == 1
+    job_id = body["jobs"][0]["job_id"]
+    status = client.get(f"/jobs/{job_id}")
+    assert status.status_code == 200
+    assert status.json()["status"] == "PRESCAN_PENDING"
+
+
+def test_post_jobs_intake_output_dir_override(client: TestClient, tmp_path: Path) -> None:
+    """Intake accepts browsable output_dir override (G20)."""
+    custom = tmp_path / "custom-out"
+    response = client.post(
+        "/jobs/intake",
+        json={
+            "project_id": "nh48",
+            "source_video_paths": [SOURCE],
+            "output_dir": str(custom),
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["jobs"][0]["output_dir"] == str(custom)
+
+
+def test_patch_prescan_confirm_to_ready(client: TestClient) -> None:
+    """PATCH /jobs/{id}/prescan validates metadata and moves job to READY."""
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    job_id = intake.json()["jobs"][0]["job_id"]
+    get_pool().stub_awaiting_review(job_id)
+    response = client.patch(f"/jobs/{job_id}/prescan", json=CONFIRM_BODY)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "READY"
+    assert payload["confirmed_metadata"]["user_start_time"] == "09:00:00"
+    get_pool().wait_job(job_id)
+    final = client.get(f"/jobs/{job_id}")
+    assert final.json()["status"] == "COMPLETED"
+
+
+def test_patch_prescan_rejects_invalid_metadata(client: TestClient) -> None:
+    """Metadata must use HH:MM:SS and DD-MM-YYYY."""
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    job_id = intake.json()["jobs"][0]["job_id"]
+    get_pool().stub_awaiting_review(job_id)
+    bad_time = client.patch(
+        f"/jobs/{job_id}/prescan",
+        json={
+            **CONFIRM_BODY,
+            "metadata": {
+                "user_start_time": "9:00 AM",
+                "user_start_date": "2026-03-15",
+                "location": "NH48",
+            },
+        },
+    )
+    assert bad_time.status_code == 422
+
+
+def test_patch_prescan_rejects_wrong_status(client: TestClient) -> None:
+    """Cannot confirm prescan while still PRESCAN_PENDING."""
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    job_id = intake.json()["jobs"][0]["job_id"]
+    response = client.patch(f"/jobs/{job_id}/prescan", json=CONFIRM_BODY)
+    assert response.status_code == 400
 
 
 def test_worker_pool_max_two_gpus() -> None:

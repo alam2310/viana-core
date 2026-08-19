@@ -7,7 +7,18 @@
   "properties": {
     "job_id": { "type": "string" },
     "status": {
-      "enum": ["PENDING", "PROCESSING", "PAUSED", "COMPLETED", "FAILED", "CANCELLED"]
+      "enum": [
+        "PRESCAN_PENDING",
+        "PRESCAN_RUNNING",
+        "PRESCAN_FAILED",
+        "AWAITING_REVIEW",
+        "READY",
+        "PROCESSING",
+        "PAUSED",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED"
+      ]
     },
     "gpu_device": { "type": "string", "pattern": "^cuda:[01]$" },
     "queue_position": { "type": "integer", "minimum": 0 },

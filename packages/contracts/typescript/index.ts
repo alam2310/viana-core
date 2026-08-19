@@ -4,7 +4,11 @@
  */
 
 export type JobStatus =
-  | "PENDING"
+  | "PRESCAN_PENDING"
+  | "PRESCAN_RUNNING"
+  | "PRESCAN_FAILED"
+  | "AWAITING_REVIEW"
+  | "READY"
   | "PROCESSING"
   | "PAUSED"
   | "COMPLETED"
@@ -24,6 +28,12 @@ export interface JobMetadata {
   location?: string;
 }
 
+export interface ConfirmedJobMetadata {
+  user_start_time: string;
+  user_start_date: string;
+  location: string;
+}
+
 export interface ViAnaTaskParameters {
   horizon_line: LineSegment;
   counting_line: LineSegment;
@@ -38,11 +48,39 @@ export interface JobSubmitRequest {
   task_type: "ViAna_Moving";
   source_video_path: string;
   project_id: string;
+  output_dir?: string;
   metadata?: JobMetadata;
   task_parameters: ViAnaTaskParameters;
   calibration_profile_id?: string;
   resume?: boolean;
   start_fresh?: boolean;
+}
+
+/** POST /jobs/intake — register videos for prescan (no calibration yet). */
+export interface JobIntakeRequest {
+  task_type?: "ViAna_Moving";
+  project_id: string;
+  source_video_paths: string[];
+  output_dir?: string;
+}
+
+export interface JobIntakeItem {
+  job_id: string;
+  status: "PRESCAN_PENDING";
+  source_video_path: string;
+  output_dir: string;
+  queue_position: number;
+}
+
+export interface JobIntakeResponse {
+  jobs: JobIntakeItem[];
+}
+
+/** PATCH /jobs/{id}/prescan — confirm reviewed calibration → READY. */
+export interface JobPrescanConfirmRequest {
+  metadata: ConfirmedJobMetadata;
+  task_parameters: ViAnaTaskParameters;
+  calibration_profile_id?: string;
 }
 
 /**
@@ -83,6 +121,11 @@ export interface JobStatusResponse {
   queue_position?: number;
   progress?: JobProgress;
   error_message?: string | null;
+  proposed_metadata?: JobMetadata;
+  proposed_lines?: ProposedLines;
+  proposed_preview_url?: string | null;
+  confirmed_metadata?: JobMetadata;
+  confirmed_task_parameters?: ViAnaTaskParameters;
 }
 
 export interface Checkpoint {
@@ -150,6 +193,13 @@ export interface CalibrationProfile {
   counting_line: LineSegment;
   created_at?: string;
   source?: CalibrationProfileSource;
+}
+
+export interface PrescanRequest {
+  source_video_path: string;
+  project_id: string;
+  task_type?: "ViAna_Moving";
+  frame_offset_sec?: number;
 }
 
 export interface PrescanResponse {

@@ -12,10 +12,10 @@ The **container** runs FastAPI on port `8000` (see `docker-compose.yml`).
 
 | Field | Set by |
 |-------|--------|
-| `job_id` | **Backend** on `POST /jobs` |
+| `job_id` | **Backend** on `POST /jobs` or `POST /jobs/intake` |
 | `gpu_device` | **Backend** worker pool (`cuda:0` or `cuda:1`) |
-| `output_dir` | **Backend** from `output.parent_dir` + `project_id` |
-| Calibration lines | **UI** (user-drawn or edited from prescan proposal) |
+| `output_dir` | **Backend** default `{output.parent_dir}/{project_id}`; optional **override** on intake/submit (G20) |
+| Calibration lines | **UI** confirms via `PATCH /jobs/{id}/prescan` (or direct `POST /jobs` legacy path) |
 
 The UI must **not** send `job_id` or `gpu_device` in job submit requests.
 
@@ -77,12 +77,61 @@ Engine CLI: `python -m viana prescan --source … --project-id … [--frame-offs
 
 **Response:** `JobSubmitResponse` — see `job_submit_response.schema.json` and fixture `packages/contracts/fixtures/job_submit_response.json`.
 
+## 5b. POST /jobs/intake — JobIntakeRequest
+
+Register one or more video paths for backend prescan. Creates jobs at `PRESCAN_PENDING` (Step 3 worker runs prescan → `AWAITING_REVIEW`).
+
+```json
+{
+  "task_type": "ViAna_Moving",
+  "project_id": "nh48",
+  "source_video_paths": [
+    "/data/projects/nh48/videos/2026-03-15_09-00.mp4",
+    "/data/projects/nh48/videos/2026-03-15_10-00.mp4"
+  ],
+  "output_dir": "/data/custom-outputs/nh48"
+}
+```
+
+`output_dir` is optional (G20). Response: `job_intake_response.schema.json`, fixture `job_intake_response.json`.
+
+## 5c. PATCH /jobs/{id}/prescan — JobPrescanConfirmRequest
+
+Operator confirms reviewed OCR + lines → job transitions to `READY` and enters the GPU FIFO queue.
+
+```json
+{
+  "metadata": {
+    "user_start_time": "09:00:00",
+    "user_start_date": "15-03-2026",
+    "location": "NH48 Km42"
+  },
+  "task_parameters": {
+    "horizon_line": { "start": [120, 400], "end": [1800, 520] },
+    "counting_line": { "start": [80, 900], "end": [1840, 780] },
+    "confidence_threshold": 0.75,
+    "use_heuristic_truck_split": true,
+    "render_video": true,
+    "telemetry_detail": false
+  },
+  "calibration_profile_id": "morning_northbound"
+}
+```
+
+**Validation (G4):** all three metadata fields mandatory; `user_start_time` must match `HH:MM:SS`; `user_start_date` must match `DD-MM-YYYY`.
+
+Allowed job statuses: `AWAITING_REVIEW`, `READY` (re-review before `PROCESSING`).
+
+Response: full `JobStatus` with `confirmed_metadata` and `confirmed_task_parameters`. Schema: `job_prescan_confirm.schema.json`.
+
 ## 6. Job lifecycle endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
+| POST | `/jobs/intake` | Register path(s) → `PRESCAN_PENDING` |
+| PATCH | `/jobs/{id}/prescan` | Confirm review → `READY` |
 | GET | `/jobs` | List jobs (`?project_id=`) |
-| GET | `/jobs/{id}` | Status — see `job_status.schema.json`, fixture `job_status_paused.json` |
+| GET | `/jobs/{id}` | Status — see `job_status.schema.json`, fixtures `job_status_paused.json`, `job_status_awaiting_review.json` |
 | POST | `/jobs/{id}/resume` | Explicit resume from checkpoint |
 | POST | `/jobs/{id}/start-fresh` | Delete checkpoint, restart |
 | DELETE | `/jobs/{id}` | Cancel worker |
@@ -108,6 +157,8 @@ Stored at: `{output.parent_dir}/{project_id}/profiles/{profile_id}.json` (schema
   "data": {}
 }
 ```
+
+**JobStatus values:** `PRESCAN_PENDING`, `PRESCAN_RUNNING`, `PRESCAN_FAILED`, `AWAITING_REVIEW`, `READY`, `PROCESSING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`. Legacy `PENDING` removed.
 
 Fixtures: `packages/contracts/fixtures/telemetry_progress.json`
 

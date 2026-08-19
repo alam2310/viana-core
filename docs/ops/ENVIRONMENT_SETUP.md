@@ -130,6 +130,9 @@ curl -s http://localhost:8000/health
 
 # Unit tests
 pytest tests/viana/ -q
+
+# EasyOCR (first prescan downloads detection/recognition weights; corner ROI OCR)
+python3 -m viana prescan --source /data/raw/hiv000001_inframe.mp4 --project-id smoke --frame-offset 0
 ```
 
 Expected health response includes `"phase": 6`.
@@ -198,7 +201,8 @@ Long jobs: see [`TMUX_README.md`](TMUX_README.md).
 | Tracker install upgrades NumPy | `trackers` dependency | `pip install trackers==2.6.0 --no-deps` |
 | No GPU in container | Toolkit not configured | Repeat Phase 1.3 |
 | Huge processed MP4 | Wrong encoder | v2 uses HEVC NVENC cq 42 (see `src/viana/stages/render.py`) |
-| Empty `_15min.csv` | No wall-clock on job | Set OCR / user start via prescan (UI work in progress) |
+| Empty `_15min.csv` | No wall-clock on job | Set OCR / user start via prescan (corner ROI OCR in prescan) |
+| First prescan slow | EasyOCR model download on cold start | Models cached after first run; see Phase 4 verify below |
 | Build fails on CUDA 13 / Ubuntu 24 base | Breaking toolchain | Stay on CUDA **12.4** + Ubuntu **22.04** in `Dockerfile` |
 | OpenCV `NVCUVID` link errors | Deprecated in CUDA 12 | Dockerfile builds with NVCUVID **off**; use FFmpeg for video I/O |
 

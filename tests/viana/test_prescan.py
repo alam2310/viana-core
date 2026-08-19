@@ -8,7 +8,7 @@ from viana.config.job import LineSegment
 from viana.domain.geometry import scale_line
 from viana.io.profiles import CalibrationProfile, list_profiles, save_profile
 from viana.stages.lines import GEOMETRIC_CONFIDENCE, PROFILE_CONFIDENCE, propose_lines
-from viana.stages.ocr import parse_osd_hits
+from viana.stages.ocr import parse_corner_osd_hits, parse_osd_hits
 from viana.stages.prescan import SampledVideo, VideoMeta, preview_jpeg_path, run_prescan
 
 
@@ -66,6 +66,19 @@ def test_parse_osd_hits_respects_min_confidence() -> None:
     assert parsed.location == "NH48"
     assert mean is not None
     assert mean == 0.9
+
+
+def test_parse_corner_osd_hits_splits_metadata_and_location() -> None:
+    """Metadata and location ROIs are parsed independently."""
+    parsed, mean = parse_corner_osd_hits(
+        [("18-10-2024 Fri 07 21 26", 0.82)],
+        [("L11-BARABANKI", 0.78)],
+        min_confidence=0.6,
+    )
+    assert parsed.date == "18-10-2024"
+    assert parsed.time == "07:21:26"
+    assert parsed.location == "L11-BARABANKI"
+    assert mean is not None
 
 
 def test_run_prescan_writes_preview_and_response(tmp_path: Path) -> None:

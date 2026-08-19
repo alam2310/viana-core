@@ -3,12 +3,74 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from importlib.util import find_spec
 from typing import Any
 
-from viana.stages.time_map import ParsedOcr, parse_ocr_texts
+from viana.stages.time_map import ParsedOcr, parse_location_texts, parse_metadata_texts
 
 OcrReader = Callable[[object], Sequence[tuple[str, float]]]
+
+
+@dataclass(frozen=True)
+class OsdRoi:
+    """Fractional corner crop for on-screen metadata."""
+
+    name: str
+    y_start: float
+    y_end: float
+    x_start: float
+    x_end: float
+    allowlist: str | None = None
+
+
+# Top band: date/time/day. Bottom-left: camera location label.
+DEFAULT_OSD_ROIS: tuple[OsdRoi, OsdRoi] = (
+    OsdRoi(
+        "metadata",
+        0.0,
+        0.06,
+        0.0,
+        0.58,
+        None,
+    ),
+    OsdRoi(
+        "location",
+        0.86,
+        1.0,
+        0.0,
+        0.32,
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-",
+    ),
+)
+
+OCR_ROI_SCALE = 4.0
+
+
+class CornerOsdReader:
+    """EasyOCR reader that crops corner ROIs instead of scanning the full frame."""
+
+    corner_osd = True
+
+    def __init__(self, gpu: bool = False) -> None:
+        self._gpu = gpu
+        self._reader: Any | None = None
+
+    def _ensure_reader(self) -> Any:
+        if self._reader is None:
+            import easyocr
+
+            self._reader = easyocr.Reader(["en"], gpu=self._gpu, verbose=False)
+        return self._reader
+
+    def __call__(self, frame: object) -> list[tuple[str, float]]:
+        metadata_hits, location_hits = read_corner_osd_hits(frame, self._ensure_reader())
+        return metadata_hits + location_hits
+
+    def parse(self, frame: object, min_confidence: float) -> tuple[ParsedOcr, float | None]:
+        """OCR corner ROIs and return structured metadata."""
+        metadata_hits, location_hits = read_corner_osd_hits(frame, self._ensure_reader())
+        return parse_corner_osd_hits(metadata_hits, location_hits, min_confidence)
 
 
 def filter_ocr_hits(
@@ -33,34 +95,106 @@ def parse_osd_hits(
 ) -> tuple[ParsedOcr, float | None]:
     """Map EasyOCR-style (text, prob) hits into structured OSD fields."""
     texts, mean = filter_ocr_hits(hits, min_confidence)
-    return parse_ocr_texts(texts), mean
+    meta = parse_metadata_texts(texts)
+    location = parse_location_texts(texts)
+    return ParsedOcr(
+        time=meta.time,
+        date=meta.date,
+        location=location or meta.location,
+    ), mean
 
 
-def easyocr_reader(gpu: bool = False) -> OcrReader:
-    """Build a full-frame EasyOCR reader (Phase 4 production path)."""
-    reader_box: list[Any] = []
+def parse_corner_osd_hits(
+    metadata_hits: Sequence[tuple[str, float]],
+    location_hits: Sequence[tuple[str, float]],
+    min_confidence: float,
+) -> tuple[ParsedOcr, float | None]:
+    """Parse metadata and location ROIs separately, then merge confidence."""
+    meta_texts, meta_conf = filter_ocr_hits(metadata_hits, min_confidence)
+    loc_texts, loc_conf = filter_ocr_hits(location_hits, min_confidence)
+    meta = parse_metadata_texts(meta_texts)
+    location = parse_location_texts(loc_texts)
+    confs = [value for value in (meta_conf, loc_conf) if value is not None]
+    mean_conf = sum(confs) / len(confs) if confs else None
+    return ParsedOcr(
+        time=meta.time,
+        date=meta.date,
+        location=location,
+    ), mean_conf
 
-    def _read(frame: object) -> list[tuple[str, float]]:
-        try:
-            import easyocr
-        except ImportError as exc:
-            raise RuntimeError("easyocr is required for live OSD OCR") from exc
-        if not reader_box:
-            reader_box.append(easyocr.Reader(["en"], gpu=gpu, verbose=False))
-        reader = reader_box[0]
-        results = reader.readtext(frame)
+
+def _roi_bounds(width: int, height: int, roi: OsdRoi) -> tuple[int, int, int, int]:
+    y1 = max(0, min(height, int(height * roi.y_start)))
+    y2 = max(0, min(height, int(height * roi.y_end)))
+    x1 = max(0, min(width, int(width * roi.x_start)))
+    x2 = max(0, min(width, int(width * roi.x_end)))
+    return y1, y2, x1, x2
+
+
+def prepare_roi_for_ocr(crop_bgr: object, scale: float = OCR_ROI_SCALE) -> object:
+    """Upscale a BGR crop and return an RGB array for EasyOCR."""
+    try:
+        import cv2
+    except ImportError as exc:
+        raise RuntimeError("opencv-python is required for OSD ROI OCR") from exc
+    scaled = crop_bgr
+    if scale != 1.0:
+        scaled = cv2.resize(
+            crop_bgr,
+            None,
+            fx=scale,
+            fy=scale,
+            interpolation=cv2.INTER_CUBIC,
+        )
+    return cv2.cvtColor(scaled, cv2.COLOR_BGR2RGB)
+
+
+def read_corner_osd_hits(
+    frame: object,
+    easyocr_reader: Any,
+    *,
+    rois: Sequence[OsdRoi] = DEFAULT_OSD_ROIS,
+    scale: float = OCR_ROI_SCALE,
+) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+    """OCR the metadata and location corner ROIs on a BGR frame."""
+    height, width = frame.shape[:2]
+    metadata_hits: list[tuple[str, float]] = []
+    location_hits: list[tuple[str, float]] = []
+    for roi in rois:
+        y1, y2, x1, x2 = _roi_bounds(width, height, roi)
+        if y2 <= y1 or x2 <= x1:
+            continue
+        crop = frame[y1:y2, x1:x2]
+        rgb = prepare_roi_for_ocr(crop, scale)
+        read_kwargs: dict[str, Any] = {"paragraph": True}
+        if roi.allowlist is not None:
+            read_kwargs["allowlist"] = roi.allowlist
+        results = easyocr_reader.readtext(rgb, **read_kwargs)
         hits: list[tuple[str, float]] = []
         for item in results:
-            if len(item) < 3:
+            if len(item) < 2:
                 continue
-            hits.append((str(item[1]), float(item[2])))
-        return hits
+            confidence = float(item[2]) if len(item) >= 3 else 1.0
+            hits.append((str(item[1]), confidence))
+        if roi.name == "metadata":
+            metadata_hits.extend(hits)
+        elif roi.name == "location":
+            location_hits.extend(hits)
+    return metadata_hits, location_hits
 
-    return _read
+
+def easyocr_reader(gpu: bool = False) -> CornerOsdReader:
+    """Build a corner-ROI EasyOCR reader (Phase 4 production path)."""
+    return CornerOsdReader(gpu=gpu)
 
 
-def optional_easyocr_reader(gpu: bool = False) -> OcrReader:
+def optional_easyocr_reader(gpu: bool = False) -> OcrReader | CornerOsdReader:
     """Use EasyOCR when installed; otherwise return no hits so prescan still runs."""
     if find_spec("easyocr") is None:
         return lambda _frame: []
     return easyocr_reader(gpu=gpu)
+
+
+def is_corner_osd_reader(reader: OcrReader | CornerOsdReader | None) -> bool:
+    """True when ``reader`` reads metadata/location corner ROIs."""
+    return isinstance(reader, CornerOsdReader)

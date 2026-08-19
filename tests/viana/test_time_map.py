@@ -10,8 +10,10 @@ from viana.config.job import JobMetadata
 from viana.stages.time_map import (
     TimeAnchor,
     TimeMap,
+    extract_ocr_time,
     load_time_map,
     next_boundary_delta_ms,
+    normalize_ocr_date,
     parse_ocr_texts,
     time_map_from_metadata,
 )
@@ -23,6 +25,14 @@ def test_parse_ocr_texts() -> None:
     assert parsed.time == "09:00:12"
     assert parsed.date == "15-03-2026"
     assert parsed.location == "NH48 Km42"
+
+
+def test_normalize_ocr_date_repairs_spaces_and_year() -> None:
+    """OCR spacing and 2074→2024 year drift are normalized."""
+    assert normalize_ocr_date("18-10 2074 Fri") == "18-10-2024"
+    assert extract_ocr_time(["18-10 2074 Fri 07 21 26"]) == "07:21:26"
+    assert extract_ocr_time(["18-10 2074 Fri 02 21.26"]) == "02:21:26"
+    assert extract_ocr_time(["18-10 2074 Fri 02 2125"]) == "02:21:25"
 
 
 def test_user_fallback_when_no_ocr() -> None:

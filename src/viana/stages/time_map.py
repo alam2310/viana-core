@@ -15,6 +15,24 @@ from viana.io.csv_schema import WallTimeSource
 
 TIME_PATTERN = re.compile(r"\d{2}:\d{2}:\d{2}")
 DATE_PATTERN = re.compile(r"\d{2}[-/]\d{2}[-/]\d{2,4}")
+DATE_LOOSE_PATTERN = re.compile(r"\d{2}[-/ ]\d{2}[-/ ]\d{4}")
+TIME_SPACED_PATTERN = re.compile(r"\b(\d{2})\s+(\d{2})\s+(\d{2})\b")
+TIME_PARTIAL_PATTERN = re.compile(r"\b(\d{2})\s+(\d{2}):(\d{2})\b")
+TIME_DOT_PATTERN = re.compile(r"\b(\d{2})\s+(\d{2})[.:](\d{2})\b")
+TIME_COMPACT_PATTERN = re.compile(r"\b(\d{2})\s+(\d{4})\b")
+LOCATION_NOISE = {
+    "f",
+    "u",
+    "s",
+    "ue",
+    "fri",
+    "mon",
+    "tue",
+    "wed",
+    "thu",
+    "sat",
+    "sun",
+}
 IGNORE_WORDS = {
     "mon",
     "tue",
@@ -138,29 +156,102 @@ def parse_user_datetime(date_str: str | None, time_str: str | None) -> datetime 
     return None
 
 
-def parse_ocr_texts(texts: list[str]) -> ParsedOcr:
-    """Extract time/date/location from OCR strings (legacy TimeSyncEngine.extract_metadata)."""
-    parsed_time: str | None = None
+def normalize_ocr_date(raw: str) -> str | None:
+    """Normalize OCR date fragments to DD-MM-YYYY."""
+    match = DATE_PATTERN.search(raw) or DATE_LOOSE_PATTERN.search(raw)
+    if match is None:
+        return None
+    normalized = match.group().replace("/", "-").replace(" ", "-")
+    while "--" in normalized:
+        normalized = normalized.replace("--", "-")
+    parts = normalized.split("-")
+    if len(parts) != 3:
+        return None
+    day, month, year = parts
+    if year == "2074":
+        year = "2024"
+    return f"{day}-{month}-{year}"
+
+
+def is_valid_clock_time(value: str) -> bool:
+    """Return True when ``value`` is a plausible HH:MM:SS clock reading."""
+    parts = value.split(":")
+    if len(parts) != 3:
+        return False
+    try:
+        hours, minutes, seconds = (int(parts[0]), int(parts[1]), int(parts[2]))
+    except ValueError:
+        return False
+    return 0 <= hours <= 23 and 0 <= minutes <= 59 and 0 <= seconds <= 59
+
+
+def extract_ocr_time(texts: list[str]) -> str | None:
+    """Extract HH:MM:SS from OCR strings, including common spacing errors."""
+    joined = " ".join(texts)
+    match = TIME_PATTERN.search(joined)
+    if match and is_valid_clock_time(match.group()):
+        return match.group()
+    for pattern in (TIME_PARTIAL_PATTERN, TIME_DOT_PATTERN, TIME_SPACED_PATTERN):
+        found = pattern.search(joined)
+        if found is None:
+            continue
+        candidate = f"{found.group(1)}:{found.group(2)}:{found.group(3)}"
+        if is_valid_clock_time(candidate):
+            return candidate
+    for compact in TIME_COMPACT_PATTERN.finditer(joined):
+        digits = compact.group(2)
+        candidate = f"{compact.group(1)}:{digits[0:2]}:{digits[2:4]}"
+        if is_valid_clock_time(candidate):
+            return candidate
+    return None
+
+
+def parse_metadata_texts(texts: list[str]) -> ParsedOcr:
+    """Parse date/time from the top metadata ROI."""
+    parsed_time = extract_ocr_time(texts)
     date_str: str | None = None
+    for raw in texts:
+        candidate = normalize_ocr_date(raw)
+        if candidate is not None:
+            date_str = candidate
+            break
+    return ParsedOcr(time=parsed_time, date=date_str, location=None)
+
+
+def parse_location_texts(texts: list[str]) -> str | None:
+    """Parse camera location label from the bottom-left ROI."""
     location_parts: list[str] = []
     for raw in texts:
-        text_clean = raw.strip()
-        time_match = TIME_PATTERN.search(text_clean)
-        if time_match:
-            parsed_time = time_match.group()
-            text_clean = TIME_PATTERN.sub("", text_clean).strip()
-        date_match = DATE_PATTERN.search(text_clean)
-        if date_match:
-            date_str = date_match.group()
-            text_clean = DATE_PATTERN.sub("", text_clean).strip()
-        if text_clean and text_clean.lower() not in IGNORE_WORDS:
-            loc_cleaned = re.sub(r"^[^\w]+|[^\w]+$", "", text_clean)
-            if loc_cleaned:
-                location_parts.append(loc_cleaned)
+        text_clean = _strip_metadata_tokens(raw.strip())
+        if not text_clean:
+            continue
+        lowered = text_clean.lower()
+        if lowered in IGNORE_WORDS or lowered in LOCATION_NOISE:
+            continue
+        loc_cleaned = re.sub(r"^[^\w]+|[^\w]+$", "", text_clean)
+        if loc_cleaned and loc_cleaned.lower() not in LOCATION_NOISE:
+            location_parts.append(loc_cleaned)
+    return " ".join(location_parts) if location_parts else None
+
+
+def _strip_metadata_tokens(text: str) -> str:
+    """Remove time/date/day tokens so location can be parsed from combined OSD lines."""
+    cleaned = TIME_PATTERN.sub("", text).strip()
+    cleaned = DATE_PATTERN.sub("", cleaned).strip()
+    cleaned = DATE_LOOSE_PATTERN.sub("", cleaned).strip()
+    for word in IGNORE_WORDS:
+        cleaned = re.sub(rf"\b{word}\b", "", cleaned, flags=re.IGNORECASE).strip()
+    return cleaned
+
+
+def parse_ocr_texts(texts: list[str]) -> ParsedOcr:
+    """Extract time/date/location from OCR strings (legacy TimeSyncEngine.extract_metadata)."""
+    meta = parse_metadata_texts(texts)
+    location = parse_location_texts(texts)
     return ParsedOcr(
-        time=parsed_time,
-        date=date_str,
-        location=" ".join(location_parts) if location_parts else None,
+        time=meta.time,
+        date=meta.date,
+        location=location,
     )
 
 

@@ -14,7 +14,7 @@ from viana.config.job import PROJECT_ID_PATTERN
 from viana.io.paths import prescan_dir
 from viana.io.profiles import CalibrationProfile, list_profiles
 from viana.stages.lines import ProposedLines, propose_lines
-from viana.stages.ocr import OcrReader, parse_osd_hits
+from viana.stages.ocr import CornerOsdReader, OcrReader, is_corner_osd_reader, parse_osd_hits
 from viana.stages.time_map import ParsedOcr
 
 # 1×1 JPEG so CI can write a preview without OpenCV/Pillow.
@@ -113,6 +113,20 @@ def _frame_mean_luminance(frame: object) -> float:
     return float(np.mean(gray))
 
 
+def osd_band_score(frame: object) -> float:
+    """Return variance in the top-left metadata ROI (high when OSD text is visible)."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return 0.0
+    height, width = frame.shape[:2]
+    y2 = max(1, int(height * 0.06))
+    x2 = max(1, int(width * 0.58))
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return float(np.std(gray[0:y2, 0:x2]))
+
+
 def find_best_frame_offset(
     source: Path,
     *,
@@ -121,10 +135,11 @@ def find_best_frame_offset(
     step_sec: float,
     luminance_threshold: float,
 ) -> float:
-    """Pick the first non-dark frame in the opening scan window (G7).
+    """Pick a bright frame with visible top OSD in the opening scan window (G7).
 
     When ``requested_offset_sec`` is > 0 the caller's scrub position wins.
-    Otherwise scan from t=0 and skip frames below ``luminance_threshold``.
+    Otherwise scan from t=0, skip dark frames, and prefer the offset with the
+    strongest top-band OSD variance (CCTV overlays fade in after t=0).
     """
     if requested_offset_sec > 0:
         return requested_offset_sec
@@ -153,7 +168,8 @@ def find_best_frame_offset(
             if not ok:
                 break
             luminance = _frame_mean_luminance(frame)
-            if luminance >= luminance_threshold:
+            osd_score = osd_band_score(frame)
+            if luminance >= luminance_threshold and osd_score > 20.0:
                 return offset
             if luminance > best_luminance:
                 best_luminance = luminance
@@ -213,10 +229,12 @@ def sample_video_cv2(source: Path, frame_offset_sec: float) -> SampledVideo:
 def _ocr_from_sample(
     sampled: SampledVideo,
     min_confidence: float,
-    ocr_reader: OcrReader | None,
+    ocr_reader: OcrReader | CornerOsdReader | None,
 ) -> tuple[ParsedOcr, float | None]:
     if ocr_reader is None:
         return ParsedOcr(), None
+    if sampled.frame is not None and is_corner_osd_reader(ocr_reader):
+        return ocr_reader.parse(sampled.frame, min_confidence)
     if sampled.frame is None:
         hits: Sequence[tuple[str, float]] = ocr_reader(sampled)
     else:
@@ -231,7 +249,7 @@ def run_prescan(
     frame_offset_sec: float = 0.0,
     output_dir: Path,
     sampler: VideoSampler | None = None,
-    ocr_reader: OcrReader | None = None,
+    ocr_reader: OcrReader | CornerOsdReader | None = None,
     prescan_id: str | None = None,
     auto_skip_dark_frames: bool = True,
 ) -> PrescanResponse:

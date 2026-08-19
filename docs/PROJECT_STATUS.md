@@ -3,7 +3,7 @@
 **Last updated:** 2026-08-19  
 **Current focus:** **Step 5** — E2E verification (see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
-**API blocker:** none. Live `:8000/health` is Phase 6.  
+**API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 unblocked).  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Phase 9 parity:** signed off 2026-08-19 — `legacy/` removed  
 **Canonical plan:** `docs/PROJECT_PLAN.md` (Phases 0–9); **Steps 1–6** for remaining work

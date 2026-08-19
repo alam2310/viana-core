@@ -53,5 +53,24 @@ export function translatePaths(
   return { paths, untranslated };
 }
 
+/** Map container path back to host for fs/mkdir and browse APIs. */
+export function toHostPath(
+  containerPath: string,
+  mounts: MountMapping[],
+): string | null {
+  const normalized = normalizePath(containerPath);
+  const sorted = [...mounts].sort(
+    (a, b) => normalizePath(b.container).length - normalizePath(a.container).length,
+  );
+  for (const mount of sorted) {
+    const containerNorm = normalizePath(mount.container);
+    if (normalized === containerNorm || normalized.startsWith(`${containerNorm}/`)) {
+      const suffix = normalized.slice(containerNorm.length);
+      return normalizePath(mount.host) + suffix;
+    }
+  }
+  return null;
+}
+
 export const CONTAINER_PATH_HINT =
   "Videos must live under a mounted directory. With default docker-compose: ./data → /data (e.g. data/raw/clip.mp4).";

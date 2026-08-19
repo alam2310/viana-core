@@ -1,10 +1,10 @@
 import type { JobStatus, JobStatusResponse } from "@viana/contracts";
 
 export const STATUS_LABELS: Record<JobStatus, string> = {
-  PRESCAN_PENDING: "Waiting for prescan",
-  PRESCAN_RUNNING: "Pre-scanning video",
+  PRESCAN_PENDING: "Queued",
+  PRESCAN_RUNNING: "Pre-scanning",
   PRESCAN_FAILED: "Prescan failed",
-  AWAITING_REVIEW: "Needs review",
+  AWAITING_REVIEW: "Review",
   READY: "Ready",
   PROCESSING: "Processing",
   PAUSED: "Paused",

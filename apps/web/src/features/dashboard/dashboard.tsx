@@ -10,9 +10,8 @@ import { PrescanReviewModal } from "@/features/prescan/prescan-review-modal";
 import { ProjectBar } from "@/features/project/project-bar";
 import { shouldPollJobs } from "@/features/queue/job-status";
 import { JobQueueTable } from "@/features/queue/job-queue-table";
-import { TelemetryPanel } from "@/features/telemetry/telemetry-panel";
+import { JobDetailsPanel } from "@/features/telemetry/job-details-panel";
 import {
-  apiClient,
   cancelJob,
   getHealth,
   intakeJobs,
@@ -21,39 +20,38 @@ import {
   retryPrescan,
   startFreshJob,
   subscribeJobTelemetry,
-  type HealthResponse,
 } from "@/lib/api-client";
+import { formatJobErrorMessage } from "@/lib/job-errors";
+import { syncJobLocalMeta } from "@/lib/job-local-meta";
 import { PROJECT_ID_PATTERN } from "@/lib/geometry";
 import {
   type MountConfig,
   toContainerPath,
 } from "@/lib/container-paths";
 import type { ContainerStatus } from "@/lib/container-types";
+import { ensureProjectOutputDir } from "@/lib/output-paths";
 import {
   readOutputDir,
   readProjectId,
   readTaskType,
-  readTelemetryDetail,
   writeOutputDir,
   writeProjectId,
   writeTaskType,
-  writeTelemetryDetail,
   type TaskTypePref,
 } from "@/lib/prefs";
 
 export function Dashboard() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
   const [jobs, setJobs] = useState<JobStatusResponse[]>([]);
   const [telemetry, setTelemetry] = useState<TelemetryMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState("nh48");
   const [outputDir, setOutputDir] = useState("");
   const [taskType, setTaskType] = useState<TaskTypePref>("ViAna_Moving");
-  const [telemetryDetail, setTelemetryDetail] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [reviewJob, setReviewJob] = useState<JobStatusResponse | null>(null);
   const [monitorJob, setMonitorJob] = useState<JobStatusResponse | null>(null);
+  const [selectedJob, setSelectedJob] = useState<JobStatusResponse | null>(null);
   const [browseOutputDir, setBrowseOutputDir] = useState(false);
   const [mountConfig, setMountConfig] = useState<MountConfig | null>(null);
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
@@ -66,7 +64,14 @@ export function Dashboard() {
 
   const refreshJobs = useCallback(async (id = projectId) => {
     const list = await listJobs(id);
+    syncJobLocalMeta(list);
     setJobs(list);
+    setSelectedJob((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      return list.find((job) => job.job_id === prev.job_id) ?? prev;
+    });
     return list;
   }, [projectId]);
 
@@ -74,16 +79,13 @@ export function Dashboard() {
     setProjectId(readProjectId());
     setOutputDir(readOutputDir());
     setTaskType(readTaskType());
-    setTelemetryDetail(readTelemetryDetail());
   }, []);
 
   useEffect(() => {
     void fetch("/api/container/mounts")
       .then((response) => response.json())
       .then((data: MountConfig) => setMountConfig(data))
-      .catch(() => {
-        /* mounts route is host-only; intake stays disabled until loaded */
-      });
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -91,9 +93,8 @@ export function Dashboard() {
 
     async function probeApi() {
       try {
-        const h = await getHealth();
+        await getHealth();
         if (!cancelled) {
-          setHealth(h);
           setApiReachable(true);
           await refreshJobs(projectId);
         }
@@ -105,10 +106,7 @@ export function Dashboard() {
     }
 
     void probeApi();
-    const timer = window.setInterval(() => {
-      void probeApi();
-    }, 5000);
-
+    const timer = window.setInterval(() => void probeApi(), 5000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
@@ -173,17 +171,25 @@ export function Dashboard() {
 
   async function onIntake(paths: string[]) {
     if (!projectValid || taskType !== "ViAna_Moving") {
-      setError("Set a valid project_id and select ViAna_Moving.");
+      setError("Set a valid project ID and select an analytics type.");
       return;
     }
     setIntakeBusy(true);
     setError(null);
     try {
+      let resolvedOutput = "";
+      if (outputDir.trim() && mountConfig) {
+        resolvedOutput = await ensureProjectOutputDir(
+          outputDir.trim(),
+          projectId,
+          mountConfig.mounts,
+        );
+      }
       await intakeJobs({
         task_type: "ViAna_Moving",
         project_id: projectId,
         source_video_paths: paths,
-        ...(outputDir.trim() ? { output_dir: outputDir.trim() } : {}),
+        ...(resolvedOutput ? { output_dir: resolvedOutput } : {}),
       });
       await refreshJobs();
     } catch (err) {
@@ -240,6 +246,9 @@ export function Dashboard() {
       if (monitorJob?.job_id === jobId) {
         setMonitorJob(null);
       }
+      if (selectedJob?.job_id === jobId) {
+        setSelectedJob(null);
+      }
       await refreshJobs();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -248,39 +257,28 @@ export function Dashboard() {
     }
   }
 
+  const detailsJob = selectedJob;
+
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-[min(100%,96rem)] flex-col gap-6 p-4 sm:p-6">
       <header>
         <p className="text-xs font-medium tracking-widest text-neutral-500 uppercase">
-          ViAna Moving Count
+          Vehicle Analytics
         </p>
         <h1 className="mt-1 text-2xl font-semibold">Dashboard</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          Backend-owned job queue. API is{" "}
-          {apiClient.useMocks ? (
-            <strong>mocked from packages/contracts/fixtures</strong>
-          ) : (
-            <span>
-              live at <code>{apiClient.apiBaseUrl}</code>
-            </span>
-          )}
-          {health ? ` · health ${health.status}` : ""}
-          {apiReachable === false ? " · orchestrator unreachable" : ""}
-        </p>
       </header>
 
       {apiReachable === false || containerStatus?.running === false ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           {containerStatus?.running === false ? (
             <>
-              The ViAna orchestrator container is not running. Use the{" "}
-              <strong>Start</strong> button in the project bar to launch it, then
-              click <strong>Refresh</strong> once it is up.
+              The analytics engine is not running. Use the controls in the project
+              bar to start it.
             </>
           ) : (
             <>
-              The orchestrator API is not responding yet. Start the ViAna container
-              from the project bar, or wait a few seconds if it is still starting.
+              The analytics engine is not responding yet. Start it from the project
+              bar or wait a few seconds if it is still starting.
             </>
           )}
         </p>
@@ -288,7 +286,7 @@ export function Dashboard() {
 
       {error ? (
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {error}
+          {formatJobErrorMessage(error) ?? error}
         </p>
       ) : null}
 
@@ -325,14 +323,17 @@ export function Dashboard() {
         onIntake={onIntake}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
         <JobQueueTable
           jobs={jobs}
           busyId={busyId}
+          selectedJobId={selectedJob?.job_id ?? null}
           monitorJobId={monitorJob?.job_id ?? null}
+          onSelectJob={setSelectedJob}
           onReview={setReviewJob}
           onMonitor={(job) => {
             setMonitorJob(job);
+            setSelectedJob(job);
             setTelemetry([]);
           }}
           onRetryPrescan={(id) => void onRetryPrescan(id)}
@@ -347,15 +348,7 @@ export function Dashboard() {
             onClose={() => setMonitorJob(null)}
           />
         ) : (
-          <TelemetryPanel
-            messages={telemetry}
-            focusedJobId={null}
-            telemetryDetail={telemetryDetail}
-            onTelemetryDetail={(value) => {
-              setTelemetryDetail(value);
-              writeTelemetryDetail(value);
-            }}
-          />
+          <JobDetailsPanel job={detailsJob} messages={telemetry} />
         )}
       </div>
 
@@ -363,7 +356,6 @@ export function Dashboard() {
         <PrescanReviewModal
           job={reviewJob}
           projectId={projectId}
-          telemetryDetail={telemetryDetail}
           awaitingReviewJobs={jobs}
           onClose={() => setReviewJob(null)}
           onConfirmed={() => void refreshJobs()}

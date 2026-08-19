@@ -87,12 +87,33 @@ export interface CrossingRow {
   time: string;
   vehicle: string;
   direction: string;
+  arrow: string;
   trackId: string;
+}
+
+function directionArrow(direction: string): string {
+  const d = direction.toLowerCase();
+  if (d === "in") {
+    return "↑";
+  }
+  if (d === "out") {
+    return "↓";
+  }
+  return "·";
+}
+
+function frameToClock(frame: number, fps: number): string {
+  const totalSec = Math.max(0, Math.floor(frame / fps));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
 }
 
 export function crossingsFromTelemetry(
   messages: TelemetryMessage[],
   jobId: string,
+  fpsHint?: number,
   limit = 500,
 ): CrossingRow[] {
   const rows: CrossingRow[] = [];
@@ -103,15 +124,23 @@ export function crossingsFromTelemetry(
     const data = msg.data;
     const frame =
       typeof data.frame_index === "number" ? data.frame_index : undefined;
+    const fps =
+      typeof data.fps === "number" ? data.fps : fpsHint;
+    const direction =
+      typeof data.direction === "string"
+        ? data.direction.charAt(0).toUpperCase() + data.direction.slice(1)
+        : "—";
+    const rawDirection = typeof data.direction === "string" ? data.direction : "";
     rows.push({
-      id: `${msg.job_id}-${rows.length}`,
-      time: frame !== undefined ? `frame ${frame}` : "—",
+      id: `${msg.job_id}-${rows.length}-${frame ?? 0}`,
+      time:
+        frame !== undefined && fps && fps > 0
+          ? frameToClock(frame, fps)
+          : "—",
       vehicle:
         typeof data.class_name === "string" ? data.class_name : "Unknown",
-      direction:
-        typeof data.direction === "string"
-          ? data.direction.charAt(0).toUpperCase() + data.direction.slice(1)
-          : "—",
+      direction,
+      arrow: directionArrow(rawDirection),
       trackId: typeof data.track_id === "number" ? String(data.track_id) : "—",
     });
   }

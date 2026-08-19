@@ -68,10 +68,11 @@ export function ContainerPanel({
   if (compact) {
     return (
       <div className="text-xs">
-        <p className="font-mono">
-          {status?.container_name ?? "viana_core"} —{" "}
-          <span className={status?.running ? "text-emerald-700" : "text-amber-700"}>
-            {status?.running ? "running" : "stopped"}
+        <p className="text-sm font-medium text-neutral-700">
+          <span
+            className={status?.running ? "text-emerald-700" : "text-amber-700"}
+          >
+            {status?.running ? "Running" : "Stopped"}
           </span>
         </p>
         {hint ? (
@@ -96,7 +97,7 @@ export function ContainerPanel({
         Container
       </h2>
       <p className="mt-2 font-mono text-sm">
-        {status?.container_name ?? "viana_core"} —{" "}
+        Analytics Engine —{" "}
         <span className={status?.running ? "text-emerald-700" : "text-amber-700"}>
           {status?.running ? "running" : "stopped"}
         </span>

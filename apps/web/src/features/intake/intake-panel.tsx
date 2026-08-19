@@ -42,12 +42,10 @@ export function IntakePanel({
   return (
     <section className="rounded-lg border border-neutral-200 bg-white p-4">
       <h2 className="text-sm font-semibold tracking-wide text-neutral-500 uppercase">
-        Video intake
+        Add videos
       </h2>
       <p className="mt-1 text-xs text-neutral-500">
-        Pick videos under <code className="font-mono">./data</code> (container{" "}
-        <code className="font-mono">/data</code>). Paths are translated automatically
-        for the orchestrator.
+        Select one or more traffic videos from your data folder.
       </p>
       <div className="mt-3">
         <Button

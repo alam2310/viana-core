@@ -11,8 +11,8 @@ export interface TaskTypeOption {
 export const TASK_TYPE_OPTIONS: TaskTypeOption[] = [
   {
     id: "ViAna_Moving",
-    label: "Moving traffic count",
-    description: "Vehicle detection, tracking, and line crossing counts",
+    label: "Moving traffic — vehicle counts",
+    description: "Detect, track, and count vehicles crossing a line",
     enabled: true,
   },
   {

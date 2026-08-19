@@ -63,14 +63,12 @@ function mergeOcrMetadata(
 export function PrescanReviewModal({
   job,
   projectId,
-  telemetryDetail,
   awaitingReviewJobs,
   onClose,
   onConfirmed,
 }: {
   job: JobStatusResponse;
   projectId: string;
-  telemetryDetail: boolean;
   awaitingReviewJobs: JobStatusResponse[];
   onClose: () => void;
   onConfirmed: (jobId: string) => void;
@@ -198,7 +196,7 @@ export function PrescanReviewModal({
       confidence_threshold: 0.75,
       use_heuristic_truck_split: true,
       render_video: true,
-      telemetry_detail: telemetryDetail,
+      telemetry_detail: true,
     };
 
     try {

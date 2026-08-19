@@ -35,7 +35,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
-    await mkdir(target, { recursive: false });
+    await mkdir(target, { recursive: true });
     return NextResponse.json({ path: target });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

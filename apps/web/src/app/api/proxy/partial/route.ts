@@ -4,15 +4,15 @@ import { orchestratorUpstreamBase } from "@/lib/orchestrator-url";
 
 const API_BASE = orchestratorUpstreamBase();
 
-/** Allowed orchestrator source video paths (no open proxy). */
-const SOURCE_PATH = /^\/artifacts\/[a-zA-Z0-9_-]+\/source\.mp4$/;
+/** Allowed orchestrator partial processed video paths (no open proxy). */
+const PARTIAL_PATH = /^\/artifacts\/[a-zA-Z0-9_-]+\/partial\.mp4$/;
 
 export async function GET(request: Request): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
   const path = searchParams.get("path");
 
-  if (!path || !SOURCE_PATH.test(path)) {
-    return NextResponse.json({ detail: "invalid source path" }, { status: 400 });
+  if (!path || !PARTIAL_PATH.test(path)) {
+    return NextResponse.json({ detail: "invalid partial path" }, { status: 400 });
   }
 
   const upstream = `${API_BASE}${path}`;
@@ -29,7 +29,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     });
     if (!response.ok && response.status !== 206) {
       return NextResponse.json(
-        { detail: `source upstream ${response.status}` },
+        { detail: `partial upstream ${response.status}` },
         { status: response.status },
       );
     }

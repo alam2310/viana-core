@@ -127,6 +127,18 @@ export async function getContainerStatus(): Promise<ContainerStatus> {
   };
 }
 
+export async function stopContainer(): Promise<ContainerStatus> {
+  const { config, config_path, config_found } = loadOrchestratorConfig();
+  const { container_name } = config.container;
+  try {
+    await execFileAsync("docker", ["stop", container_name], { timeout: 30_000 });
+  } catch {
+    /* already stopped */
+  }
+  const status = await getContainerStatus();
+  return { ...status, config_path, config_found };
+}
+
 export async function startContainer(): Promise<ContainerStatus> {
   const { config, config_path, config_found } = loadOrchestratorConfig();
   const { container_name } = config.container;

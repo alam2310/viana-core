@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+import { orchestratorUpstreamBase } from "@/lib/orchestrator-url";
+
+const API_BASE = orchestratorUpstreamBase();
 
 /** Allowed orchestrator preview paths (no open proxy). */
 const PREVIEW_PATH = /^\/utils\/prescan\/[a-zA-Z0-9_-]+\/preview\.jpg$/;

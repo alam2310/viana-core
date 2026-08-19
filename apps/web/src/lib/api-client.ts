@@ -22,6 +22,7 @@ import prescanFixture from "@viana/fixtures/prescan_response.json";
 import telemetryProgressFixture from "@viana/fixtures/telemetry_progress.json";
 
 import { API_BASE_URL, USE_MOCKS } from "./env";
+import { browserApiBase, browserWsJobsUrl } from "./orchestrator-url";
 import {
   mockConfirmPrescan,
   mockGetJob,
@@ -171,7 +172,8 @@ async function requestJson<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const base = USE_MOCKS ? API_BASE_URL : browserApiBase();
+  const response = await fetch(`${base}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",
@@ -261,8 +263,13 @@ export async function prescanPreview(
   );
 }
 
-export function partialVideoUrl(jobId: string): string {
-  return resolveApiAssetUrl(`/artifacts/${encodeURIComponent(jobId)}/partial.mp4`);
+export function partialVideoUrl(jobId: string, cacheBust?: string | number): string {
+  const path = `/artifacts/${encodeURIComponent(jobId)}/partial.mp4`;
+  const params = new URLSearchParams({ path });
+  if (cacheBust !== undefined) {
+    params.set("v", String(cacheBust));
+  }
+  return `/api/proxy/partial?${params}`;
 }
 
 /** Same-origin URL for intake source MP4 (browser seek + canvas drawImage). */
@@ -415,7 +422,7 @@ export function subscribeJobTelemetry(
     return () => undefined;
   }
 
-  const wsUrl = `${API_BASE_URL.replace(/^http/, "ws")}/ws/jobs`;
+  const wsUrl = browserWsJobsUrl();
   let closed = false;
   let socket: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -447,6 +454,10 @@ export function subscribeJobTelemetry(
 }
 
 export const apiClient = {
+  get apiBaseUrl() {
+    return USE_MOCKS ? API_BASE_URL : browserApiBase();
+  },
+  useMocks: USE_MOCKS,
   getHealth,
   intakeJobs,
   confirmPrescan,
@@ -467,6 +478,4 @@ export const apiClient = {
   saveProfile,
   subscribeJobTelemetry,
   resolveApiAssetUrl,
-  useMocks: USE_MOCKS,
-  apiBaseUrl: API_BASE_URL,
 };

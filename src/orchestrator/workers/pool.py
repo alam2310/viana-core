@@ -14,7 +14,6 @@ from orchestrator.cli import run_viana, start_viana_process
 from orchestrator.errors import bad_request, conflict, not_found
 from orchestrator.hub import hub
 from orchestrator.logging_config import get_logger
-from orchestrator.preview_registry import preview_http_url, register_preview, rewrite_preview_url
 from orchestrator.models import (
     JobProgress,
     JobStatus,
@@ -22,6 +21,7 @@ from orchestrator.models import (
     JobSubmitRequest,
     JobSubmitResponse,
 )
+from orchestrator.preview_registry import preview_http_url, register_preview, rewrite_preview_url
 from orchestrator.settings import resolve_output_dir
 from viana.config.job import (
     JobConfig,

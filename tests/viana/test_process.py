@@ -46,9 +46,7 @@ def _job_no_detail(tmp_path: Path, video: Path) -> JobConfig:
     job = _job(tmp_path, video)
     return job.model_copy(
         update={
-            "task_parameters": job.task_parameters.model_copy(
-                update={"telemetry_detail": False}
-            )
+            "task_parameters": job.task_parameters.model_copy(update={"telemetry_detail": False})
         }
     )
 
@@ -123,9 +121,7 @@ def test_moving_event_emitted_without_telemetry_detail(tmp_path: Path) -> None:
         frames=(_meta(), _frames()),
         detector=_detect,
         renderer=RecordingRenderer(),
-        emit=lambda msg: telemetry.append(
-            {"type": msg.telemetry_type, "data": msg.data}
-        ),
+        emit=lambda msg: telemetry.append({"type": msg.telemetry_type, "data": msg.data}),
         ocr_reader=lambda _frame: [],
     )
     events = [item for item in telemetry if item["type"] == "MOVING_EVENT"]

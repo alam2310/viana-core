@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from math import sqrt
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from viana.config.job import LineSegment
@@ -13,7 +15,6 @@ _HORIZON_Y = (0.6, 0.0)
 _COUNTING_Y = (1.0, 0.0)
 GEOMETRIC_CONFIDENCE = 0.4
 PROFILE_CONFIDENCE = 0.85
-FRAME_CONFIDENCE = 0.65
 
 
 class ProposedLines(BaseModel):
@@ -101,7 +102,7 @@ def propose_lines(
 
 
 def _frame_guided_lines(width: int, height: int, frame: object | None) -> ProposedLines | None:
-    """Use Hough line cues when a sampled BGR frame is available."""
+    """Use deterministic edge/line cues when a sampled BGR frame is available."""
     if frame is None:
         return None
     try:
@@ -110,69 +111,104 @@ def _frame_guided_lines(width: int, height: int, frame: object | None) -> Propos
     except ImportError:
         return None
     image = frame
+    if not hasattr(image, "shape"):
+        return None
+    shape = image.shape
+    if len(shape) < 2 or int(shape[0]) != height or int(shape[1]) != width:
+        return None
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blur, 60, 160)
+    edges = cv2.Canny(blur, 60, 170)
     lines = cv2.HoughLinesP(
         edges,
         1,
         np.pi / 180.0,
-        threshold=50,
-        minLineLength=max(40, int(width * 0.12)),
-        maxLineGap=max(20, int(width * 0.03)),
+        threshold=max(30, int(width * 0.02)),
+        minLineLength=max(50, int(width * 0.14)),
+        maxLineGap=max(20, int(width * 0.04)),
     )
-    if lines is None:
-        return None
-    horizon_candidates: list[tuple[float, float, float, float, float]] = []
-    counting_candidates: list[tuple[float, float, float, float, float]] = []
-    for line in lines.reshape(-1, 4):
-        x1, y1, x2, y2 = [float(v) for v in line]
-        dx = x2 - x1
-        if abs(dx) < 1:
-            continue
-        dy = y2 - y1
-        slope = dy / dx
-        length = float(((dx**2) + (dy**2)) ** 0.5)
-        y_mid = (y1 + y2) * 0.5
-        if abs(slope) <= 0.25 and y_mid <= height * 0.78:
-            horizon_candidates.append((x1, y1, x2, y2, length))
-        if abs(slope) <= 0.35 and y_mid >= height * 0.45:
-            counting_candidates.append((x1, y1, x2, y2, length))
-    if not horizon_candidates and not counting_candidates:
-        return None
+    candidates: list[tuple[float, float, float, float, float, float]] = []
+    if lines is not None:
+        for raw in lines.reshape(-1, 4):
+            x1, y1, x2, y2 = [float(v) for v in raw]
+            dx = x2 - x1
+            if abs(dx) < 1.0:
+                continue
+            dy = y2 - y1
+            slope = dy / dx
+            if abs(slope) > 0.55:
+                continue
+            length = sqrt((dx * dx) + (dy * dy))
+            if length < max(30.0, width * 0.08):
+                continue
+            y_mid = (y1 + y2) * 0.5
+            candidates.append((x1, y1, x2, y2, slope, y_mid))
 
-    def best_line(
-        candidates: list[tuple[float, float, float, float, float]],
+    def fit_band_line(
+        y_min_ratio: float,
+        y_max_ratio: float,
+        slope_limit: float,
         fallback_y: float,
-    ) -> LineSegment:
-        if not candidates:
-            return LineSegment(
-                start=clamp_point(0, int(fallback_y), width, height),
-                end=clamp_point(width - 1, int(fallback_y), width, height),
+    ) -> tuple[LineSegment, float]:
+        y_min = height * y_min_ratio
+        y_max = height * y_max_ratio
+        points_x: list[float] = []
+        points_y: list[float] = []
+        weights: list[float] = []
+        for x1, y1, x2, y2, slope, y_mid in candidates:
+            if abs(slope) > slope_limit:
+                continue
+            if y_mid < y_min or y_mid > y_max:
+                continue
+            seg_len = sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2))
+            points_x.extend((x1, x2))
+            points_y.extend((y1, y2))
+            weights.extend((seg_len, seg_len))
+        if len(points_x) < 4:
+            return (
+                LineSegment(
+                    start=clamp_point(0, int(fallback_y), width, height),
+                    end=clamp_point(width - 1, int(fallback_y), width, height),
+                ),
+                0.0,
             )
-        best = max(candidates, key=lambda item: item[4])
-        x1, y1, x2, y2, _len = best
-        if abs(x2 - x1) < 1:
-            y = int((y1 + y2) * 0.5)
-            return LineSegment(
-                start=clamp_point(0, y, width, height),
-                end=clamp_point(width - 1, y, width, height),
-            )
-        slope = (y2 - y1) / (x2 - x1)
-        intercept = y1 - (slope * x1)
-        y_left = int(intercept)
-        y_right = int((slope * (width - 1)) + intercept)
-        return LineSegment(
-            start=clamp_point(0, y_left, width, height),
-            end=clamp_point(width - 1, y_right, width, height),
+        coeff = np.polyfit(
+            np.asarray(points_x, dtype=np.float64),
+            np.asarray(points_y, dtype=np.float64),
+            1,
+            w=np.asarray(weights, dtype=np.float64),
+        )
+        slope = float(coeff[0])
+        intercept = float(coeff[1])
+        y_left = int(round(intercept))
+        y_right = int(round((slope * (width - 1)) + intercept))
+        support = min(1.0, len(points_x) / 32.0)
+        return (
+            LineSegment(
+                start=clamp_point(0, y_left, width, height),
+                end=clamp_point(width - 1, y_right, width, height),
+            ),
+            support,
         )
 
-    horizon = best_line(horizon_candidates, fallback_y=height * 0.6)
-    counting = best_line(counting_candidates, fallback_y=height * 0.85)
+    horizon, horizon_support = fit_band_line(0.22, 0.72, 0.28, height * 0.6)
+    counting, counting_support = fit_band_line(0.45, 0.96, 0.35, height * 0.86)
+
+    if counting.start[1] <= horizon.start[1] and counting.end[1] <= horizon.end[1]:
+        offset = max(12, int(height * 0.08))
+        counting = LineSegment(
+            start=clamp_point(0, horizon.start[1] + offset, width, height),
+            end=clamp_point(width - 1, horizon.end[1] + offset, width, height),
+        )
+
+    support_mean = (horizon_support + counting_support) / 2.0
+    if support_mean <= 0.0:
+        return None
+    confidence = min(0.8, max(GEOMETRIC_CONFIDENCE + 0.05, 0.45 + (0.3 * support_mean)))
     horizon.assert_within_frame(width, height, "horizon_line")
     counting.assert_within_frame(width, height, "counting_line")
     return ProposedLines(
         horizon_line=horizon,
         counting_line=counting,
-        confidence=FRAME_CONFIDENCE,
+        confidence=confidence,
     )

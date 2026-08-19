@@ -91,7 +91,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S06 | F005 — EasyOCR triage | C | open |
 | S07 | F001 — corner ROI OCR (**Step 5 blocker**) | C | fixed |
 | S08 | F002 — prescan latency | C | fixed |
-| S10 | F007 — horizon/counting line proposal | C | open |
+| S10 | F007 — horizon/counting line proposal | C | fixed |
 | S11 | F008 — `created_at` + sortable submitted time in API | B/D | fixed |
 | S12 | F009 — `video_duration_sec` + `processing_duration_sec` in API | B/D | fixed |
 | S13 | F010 — streamable growing `_processed.mp4` during processing | B/C | fixed |
@@ -131,6 +131,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | S10 fixed — frame-guided prescan line proposal now uses deterministic edge/line cues when no profile matches; bounds-safe fallback retained; tests added for confidence uplift, determinism, and invalid-frame fallback |
 | 2026-08-19 | S15 fixed — `_15min.csv` contract/output aligned (`date` + `HH:MM` windows), parser grouped by `date+window+class`, tests updated |
 | 2026-08-19 | Step 5 QA evidence captured: intake→prescan→confirm(READY)→PROCESSING→COMPLETED→aggregate; `_15min.csv` verified with row/header samples; path-mapping negative path repro logged |
 | 2026-08-19 | S11–S12 (F008/F009) fixed — JobStatus timing fields on GET /jobs and GET /jobs/{id} |

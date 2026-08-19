@@ -69,9 +69,33 @@ def test_frame_guided_lines_used_without_profile() -> None:
     cv2.line(frame, (0, 320), (1279, 280), (255, 255, 255), 4)
     cv2.line(frame, (0, 560), (1279, 540), (255, 255, 255), 4)
     proposed = propose_lines(1280, 720, [], frame=frame)
-    assert proposed.confidence >= GEOMETRIC_CONFIDENCE
+    assert proposed.confidence > GEOMETRIC_CONFIDENCE
     proposed.horizon_line.assert_within_frame(1280, 720, "horizon_line")
     proposed.counting_line.assert_within_frame(1280, 720, "counting_line")
+    assert 280 <= proposed.horizon_line.start[1] <= 360
+    assert 500 <= proposed.counting_line.start[1] <= 620
+
+
+def test_frame_guided_lines_are_deterministic() -> None:
+    """Same frame should produce the same proposal every time."""
+    cv2 = __import__("pytest").importorskip("cv2")
+    np = __import__("numpy")
+    frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    cv2.line(frame, (0, 330), (1279, 260), (255, 255, 255), 5)
+    cv2.line(frame, (0, 600), (1279, 520), (255, 255, 255), 5)
+    first = propose_lines(1280, 720, [], frame=frame)
+    second = propose_lines(1280, 720, [], frame=frame)
+    assert first.horizon_line == second.horizon_line
+    assert first.counting_line == second.counting_line
+    assert first.confidence == second.confidence
+
+
+def test_invalid_frame_shape_falls_back_to_geometric() -> None:
+    """Mismatched frame dimensions should not crash frame-guided path."""
+    np = __import__("numpy")
+    frame = np.zeros((360, 640, 3), dtype=np.uint8)
+    proposed = propose_lines(1280, 720, [], frame=frame)
+    assert proposed.confidence == GEOMETRIC_CONFIDENCE
 
 
 def test_parse_osd_hits_respects_min_confidence() -> None:

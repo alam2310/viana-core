@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 0 | 1 | 11 | 10 / 21 active |
+| 0 | 1 | 12 | 10 / 22 active |
 
 **Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
@@ -46,6 +46,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S20** | F010 | A/B | no | S13 | UI cannot render in-progress processed MP4 even when file is playable natively | open |
 | **S21** | F017 | C | no | — | Prescan OCR misses time/location when OSD text appears in alternate screen regions | open |
 | **S22** | F018 | B/C | no | — | Intake/prescan triggers `[Errno 24] Too many open files`, followed by API 502 in UI refresh | open |
+| **S23** | F019 | C | no | — | Processing throughput regression: end-to-end run is much slower than earlier baseline | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
@@ -77,6 +78,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S20** | 1. Start a job and wait for `_processed.mp4` to grow 2. Verify file plays via Ubuntu native player 3. Open same artifact in live monitor/UI | **Expected:** if file is already stream-playable on disk, the UI player should render it while processing. **Actual:** native apps can play in-progress file, but browser/UI still fails to render (same user-facing symptom persists). | Follow-on under F010: Lane A/B to inspect artifact endpoint/proxy headers (Range, Content-Type, Accept-Ranges, CORS, cache), player source URL lifecycle, and browser codec/container compatibility vs native playback. | — | Step 4 UI chat |
 | **S21** | 1. Run prescan on a video where OSD layout differs (location at top-center, timestamp at bottom-left) 2. Inspect `proposed_metadata` | **Expected:** prescan extracts time/date/location despite changed on-screen text positions. **Actual:** current corner-ROI logic misses fields when OSD is not in assumed regions. | Lane C (`src/viana/stages/ocr.py`, `prescan.py`): extend OCR region strategy beyond fixed corners (adaptive multi-region scan / fallback full-frame text pass), preserve confidence handling, and avoid regressions on existing clips. | — | Step 4 UI chat |
 | **S22** | 1. Select/add two videos to intake job 2. Observe prescan/job processing in container 3. Repeat with one file after failure | **Expected:** intake and prescan work repeatedly without process/file descriptor exhaustion. **Actual:** `[Errno 24] Too many open files`; afterwards UI refresh hits API 502 (`fetch failed`) until container restart. | Lane B/C: investigate FD leaks in orchestrator workers and engine prescan/process paths (open files, pipes, VideoCapture/ffmpeg handles, subprocess stdio). Add runtime diagnostics (`lsof`/fd counts) and ensure cleanup on success/failure/cancel. Confirm Next.js proxy 502 is downstream symptom, not root cause. | — | Step 4 UI chat |
+| **S23** | 1. Run the same clip/config used previously for benchmark 2. Compare time-to-COMPLETED and average processing FPS vs earlier runs | **Expected:** throughput should be within an acceptable range of prior baseline. **Actual:** processing now takes significantly longer than before (user-observed regression). | Lane C: capture before/after metrics (wall-clock, avg FPS, GPU utilization), identify regressions in detect/track/render/telemetry path, and isolate whether slowdown is model/runtime/container/config-related. Add reproducible benchmark command and clip in notes. | — | Step 4 UI chat |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine prescan · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `wontfix`  
@@ -190,6 +192,19 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 ---
 
+## F019 design note (processing performance regression)
+
+**Observed:** end-to-end processing time regressed versus earlier runs on comparable inputs.
+
+**Target:** restore throughput by profiling and fixing the dominant bottleneck(s) without reducing output correctness:
+- compare baseline vs current (same clip, same config, same hardware),
+- break down time across decode, inference, tracking, rendering, telemetry, and disk I/O,
+- and lock a repeatable performance check to catch regressions.
+
+**Scope:** engine/runtime performance path (Lane C), with container/runtime config verification as needed.
+
+---
+
 ## Changelog
 
 | Date | Change |
@@ -205,6 +220,7 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 | 2026-08-19 | Added S20 (F010 follow-on) UI still cannot render in-progress processed MP4 though native Ubuntu player can |
 | 2026-08-19 | Added S21 (F017) prescan OCR misses metadata when OSD text shifts to non-corner regions |
 | 2026-08-19 | Added S22 (F018) file-descriptor exhaustion (`Errno 24`) causing downstream API 502 until container restart |
+| 2026-08-19 | Added S23 (F019) processing performance regression tracking and benchmark/profiling follow-up |
 | 2026-08-19 | S06 fixed (EasyOCR triage); S07 fixed — corner ROI OCR, `proposed_metadata` on `hiv000001_inframe.mp4` (`job_abec59713960`) |
 | 2026-08-19 | S09 (F006) deferred to Step 6.7; added S10 (F007) line proposal improvement |
 | 2026-08-19 | Merged F001–F006 + F003 scrub plan into single execution path S01–S09 |

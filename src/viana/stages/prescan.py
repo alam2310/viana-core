@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -120,7 +121,8 @@ def osd_band_score(frame: object) -> float:
         import numpy as np
     except ImportError:
         return 0.0
-    height, width = frame.shape[:2]
+    bgr: Any = frame
+    height, width = bgr.shape[:2]
     y2 = max(1, int(height * 0.06))
     x2 = max(1, int(width * 0.58))
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

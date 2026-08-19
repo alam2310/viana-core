@@ -5,11 +5,16 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from importlib.util import find_spec
-from typing import Any
+from typing import Any, TypeGuard
 
 from viana.stages.time_map import ParsedOcr, parse_location_texts, parse_metadata_texts
 
 OcrReader = Callable[[object], Sequence[tuple[str, float]]]
+
+
+def _as_bgr_array(frame: object) -> Any:
+    """OpenCV BGR ndarray; ``Any`` because numpy is optional at type-check time."""
+    return frame
 
 
 @dataclass(frozen=True)
@@ -157,14 +162,15 @@ def read_corner_osd_hits(
     scale: float = OCR_ROI_SCALE,
 ) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
     """OCR the metadata and location corner ROIs on a BGR frame."""
-    height, width = frame.shape[:2]
+    bgr = _as_bgr_array(frame)
+    height, width = bgr.shape[:2]
     metadata_hits: list[tuple[str, float]] = []
     location_hits: list[tuple[str, float]] = []
     for roi in rois:
         y1, y2, x1, x2 = _roi_bounds(width, height, roi)
         if y2 <= y1 or x2 <= x1:
             continue
-        crop = frame[y1:y2, x1:x2]
+        crop = bgr[y1:y2, x1:x2]
         rgb = prepare_roi_for_ocr(crop, scale)
         read_kwargs: dict[str, Any] = {"paragraph": True}
         if roi.allowlist is not None:
@@ -195,6 +201,6 @@ def optional_easyocr_reader(gpu: bool = False) -> OcrReader | CornerOsdReader:
     return easyocr_reader(gpu=gpu)
 
 
-def is_corner_osd_reader(reader: OcrReader | CornerOsdReader | None) -> bool:
+def is_corner_osd_reader(reader: OcrReader | CornerOsdReader | None) -> TypeGuard[CornerOsdReader]:
     """True when ``reader`` reads metadata/location corner ROIs."""
     return isinstance(reader, CornerOsdReader)

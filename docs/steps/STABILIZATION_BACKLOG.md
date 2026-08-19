@@ -35,9 +35,10 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S08** | F002 | C | no | — | Reduce prescan wall-clock (OCR works; intake still 30s+) | open |
 | **S10** | F007 | C | no | S07 | Improve horizon + counting line proposal (CV / geometry) | open |
 | **S11** | F008 | B/D | no | — | `JobStatus.created_at` + sortable submitted time in API | open |
-| **S12** | F009 | B/D | no | — | `JobStatus.video_duration_sec` from prescan (not UI estimate) | open |
+| **S12** | F009 | B/D | no | — | `JobStatus.video_duration_sec` + `processing_duration_sec` from API (not UI localStorage) | open |
 | **S13** | F010 | B/C | no | — | Growing `_processed.mp4` streamable during job (moov/fragmented MP4) | open |
 | **S14** | F011 | C | no | — | Emit `MOVING_EVENT` without `telemetry_detail` gate; include crossing timestamp | open |
+| **S15** | F012 | B/D | no | — | 15-min CSV schema: add `date` column; change `window_start`/`window_end` to HH:MM | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
@@ -58,9 +59,10 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S08** | 1. Intake `hiv000001_inframe.mp4` 2. Time until `AWAITING_REVIEW` | **Expected:** prescan in a few seconds. **Actual:** still very long (30s+). **2026-08-19 retest:** corner OCR now populates time/date/location (S07 ✅) but wall-clock unchanged — triage dark-frame scan window, first-OSD frame search, EasyOCR cold start, subprocess overhead. | `prescan.py`, `configs/engine_defaults.yaml`, `ocr.py` (frame pick loop) | — | Step 4 UI chat |
 | **S10** | 1. Intake `hiv000001_inframe.mp4` (or parity clip) 2. `AWAITING_REVIEW` 3. Open review modal | **Expected:** `proposed_lines` match road geometry (horizon near vanishing point, counting line on lane boundary) — usable without large edits. **Actual:** `propose_lines()` uses fixed normalized y-ratios or aspect-matched profile only (`lines.py` `geometric_lines`); no frame-based CV. Lines often misaligned vs operator “best” calibration (see `PARITY_NOTES.md` geometry B vs D). | `src/viana/stages/lines.py`, `prescan.py` (pass sampled frame), `tests/viana/test_prescan.py`; reference `legacy/` parity geometry only for bounds | — | — |
 | **S11** | 1. Intake job 2. `GET /jobs` | **Expected:** each job has `created_at` (ISO) for queue sort. **Actual:** UI uses localStorage fallback until API field exists. | `job_status.schema.json`, `pool.py` `JobRecord`, `to_status()` | — | Step 4 UI chat |
-| **S12** | 1. Prescan completes 2. `GET /jobs/{id}` | **Expected:** `video_duration_sec` on status for queue column. **Actual:** UI estimates from progress fps when available. | prescan worker persists meta on `JobRecord`; schema + TS types | — | Step 4 UI chat |
+| **S12** | 1. Prescan completes 2. `GET /jobs/{id}` | **Expected:** `video_duration_sec` and `processing_duration_sec` on status for queue columns. **Actual:** UI estimates video length from progress fps when available; run time uses localStorage timestamps captured while dashboard is open during `PROCESSING` — shows `—` for jobs completed before first poll or after page refresh. | prescan worker persists meta on `JobRecord`; schema + TS types; `job-local-meta.ts` | — | Step 4 UI chat |
 | **S13** | 1. `PROCESSING` job 2. Open live monitor 3. Try partial MP4 in VLC | **Expected:** `_processed.mp4` playable while growing. **Actual:** file not playable until job completes (moov atom at end). | `src/viana/stages/process.py` video writer, or HLS segment endpoint | — | Step 4 UI chat |
-| **S14** | 1. Confirm prescan with `telemetry_detail: true` 2. Monitor during `PROCESSING` | **Expected:** `MOVING_EVENT` on WS for every crossing with wall-clock or video timestamp. **Actual:** events gated on `telemetry_detail`; no timestamp in payload (frame_index only). | `process.py` emit block, `telemetry.schema.json` | — | Step 4 UI chat |
+| **S14** | 1. Confirm prescan with `telemetry_detail: true` 2. Monitor during `PROCESSING` | **Expected:** `MOVING_EVENT` on WS for every crossing with wall-clock or video timestamp. **Actual:** events gated on `telemetry_detail`; no timestamp in payload (frame_index only). **UI workaround (2026-08-19):** crossings table derives wall-clock from `user_start_time` + `user_start_date` + `frame_index`/`fps` until API emits `event_timestamp`. | `process.py` emit block, `telemetry.schema.json`, `telemetry-formatters.ts` | — | Step 4 UI chat |
+| **S15** | 1. Generate `_15min.csv` 2. Inspect header/rows | **Expected:** `date` (DD-MM-YYYY or ISO date) plus `window_start`/`window_end` as `HH:MM` to avoid client-side ISO parsing. **Actual:** CSV emits ISO datetime in `window_start`/`window_end`; UI currently parses ISO and derives HH:MM. | `events_15min.schema.json`, aggregate writer, contracts TS sync; then update UI parser to consume new format directly | — | Step 4 UI chat |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine prescan · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `wontfix`  
@@ -100,6 +102,7 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 | Date | Change |
 |------|--------|
 | 2026-08-19 | S11–S14 backend triage: created_at, video duration, streamable partial MP4, MOVING_EVENT |
+| 2026-08-19 | Added S15 backend schema request for 15-min CSV window/date format alignment |
 | 2026-08-19 | S06 fixed (EasyOCR triage); S07 fixed — corner ROI OCR, `proposed_metadata` on `hiv000001_inframe.mp4` (`job_abec59713960`) |
 | 2026-08-19 | S09 (F006) deferred to Step 6.7; added S10 (F007) line proposal improvement |
 | 2026-08-19 | Merged F001–F006 + F003 scrub plan into single execution path S01–S09 |

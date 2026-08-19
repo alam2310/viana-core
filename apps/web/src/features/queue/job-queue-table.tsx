@@ -2,51 +2,34 @@
 
 import type { JobStatusResponse } from "@viana/contracts";
 
-import { Button } from "@/components/ui/button";
+import {
+  IconCancel,
+  IconFolder,
+  IconMonitor,
+  IconPlay,
+  IconRestart,
+  IconRetry,
+  IconReview,
+  RoundIconButton,
+} from "@/components/ui/icon-button";
 import {
   isCancellable,
   isReviewable,
+  statusBadgeClass,
   statusLabel,
 } from "@/features/queue/job-status";
 import { videoStem } from "@/lib/geometry";
 import {
-  formatDurationSec,
   formatSubmittedAt,
+  formatVideoLengthHms,
   getJobLocalMeta,
-  processingDurationSec,
+  runTimeSec,
   sortJobsBySubmitted,
 } from "@/lib/job-local-meta";
-import { formatJobErrorMessage, gpuIdFromDevice } from "@/lib/job-errors";
+import { progressBarColor } from "@/lib/progress-bar";
+import { gpuIdFromDevice } from "@/lib/job-errors";
 import { formatEta } from "@/lib/validation";
 import { cn } from "@/lib/utils";
-
-function CancelJobButton({
-  jobId,
-  busy,
-  onCancel,
-}: {
-  jobId: string;
-  busy: boolean;
-  onCancel: (jobId: string) => void;
-}) {
-  return (
-    <button
-      type="button"
-      title="Cancel job"
-      aria-label="Cancel job"
-      disabled={busy}
-      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-red-600 hover:bg-red-50 disabled:opacity-40"
-      onClick={(event) => {
-        event.stopPropagation();
-        onCancel(jobId);
-      }}
-    >
-      <span className="text-base leading-none" aria-hidden>
-        ×
-      </span>
-    </button>
-  );
-}
 
 function progressPct(job: JobStatusResponse): number | null {
   if (job.status === "COMPLETED") {
@@ -58,6 +41,13 @@ function progressPct(job: JobStatusResponse): number | null {
     return null;
   }
   return Math.min(100, Math.round((current / total) * 100));
+}
+
+function timeRemaining(job: JobStatusResponse): string {
+  if (job.status !== "PROCESSING" || job.progress?.eta_sec === undefined) {
+    return "—";
+  }
+  return formatEta(job.progress.eta_sec);
 }
 
 export function JobQueueTable({
@@ -72,6 +62,7 @@ export function JobQueueTable({
   onResume,
   onStartFresh,
   onCancel,
+  onOpenOutput,
 }: {
   jobs: JobStatusResponse[];
   busyId: string | null;
@@ -84,186 +75,197 @@ export function JobQueueTable({
   onResume: (jobId: string) => void;
   onStartFresh: (jobId: string) => void;
   onCancel: (jobId: string) => void;
+  onOpenOutput: (job: JobStatusResponse) => void;
 }) {
   const sorted = sortJobsBySubmitted(jobs);
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-4">
-      <h2 className="text-sm font-semibold tracking-wide text-neutral-500 uppercase">
-        Job queue
+    <section className="rounded-lg border border-border bg-card p-4">
+      <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
+        Job Queue
       </h2>
-      <p className="mt-1 text-xs text-neutral-500">
-        Videos are processed in order after you confirm the prescan review.
+      <p className="mt-1 text-xs text-muted">
+        Confirm prescan review to process videos in order.
       </p>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full table-fixed text-left text-sm">
+        <table className="w-full table-fixed text-left text-sm leading-tight">
           <colgroup>
-            <col className="w-[14%]" />
-            <col className="w-[11%]" />
-            <col className="w-[9%]" />
-            <col className="w-[6%]" />
-            <col className="w-[8%]" />
-            <col className="w-[9%]" />
-            <col className="w-[14%]" />
-            <col className="w-[29%]" />
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "12%" }} />
           </colgroup>
           <thead>
-            <tr className="border-b border-neutral-200 text-xs text-neutral-500">
-              <th className="py-2 pr-2 font-medium">Video</th>
-              <th className="py-2 pr-2 font-medium">Submitted</th>
-              <th className="py-2 pr-2 font-medium">Status</th>
-              <th className="py-2 pr-2 font-medium whitespace-nowrap">GPU</th>
-              <th className="py-2 pr-2 font-medium whitespace-nowrap">Vid</th>
-              <th className="py-2 pr-2 font-medium whitespace-nowrap">Run</th>
-              <th className="py-2 pr-2 font-medium">Progress</th>
-              <th className="py-2 font-medium">Actions</th>
+            <tr className="border-b border-border text-xs text-muted">
+              <th className="px-2 py-1 font-medium">Video</th>
+              <th className="px-2 py-1 font-medium">Submitted</th>
+              <th className="px-2 py-1 font-medium">Status</th>
+              <th className="px-2 py-1 text-left font-medium">GPU</th>
+              <th className="px-2 py-1 font-medium whitespace-nowrap">Video Length</th>
+              <th className="px-2 py-1 font-medium whitespace-nowrap">Run Time</th>
+              <th className="px-2 py-1 font-medium">Progress</th>
+              <th className="px-2 py-1 font-medium whitespace-nowrap">Time Remaining</th>
+              <th className="px-2 py-1 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((job) => {
               const pct = progressPct(job);
               const local = getJobLocalMeta(job.job_id);
-              const errorText = formatJobErrorMessage(job.error_message);
               const paused = job.status === "PAUSED";
               return (
                 <tr
                   key={job.job_id}
                   className={cn(
-                    "cursor-pointer border-b border-neutral-100 align-top hover:bg-neutral-50",
-                    paused && "bg-amber-50",
-                    selectedJobId === job.job_id && "bg-sky-50",
-                    monitorJobId === job.job_id && "bg-emerald-50",
+                    "cursor-pointer border-b border-border align-middle hover:bg-card-hover",
+                    paused && "bg-row-paused",
+                    selectedJobId === job.job_id && "bg-row-selected",
+                    monitorJobId === job.job_id && "bg-row-monitor",
                   )}
                   onClick={() => onSelectJob(job)}
                 >
-                  <td className="py-2 pr-2">
+                  <td className="px-2 py-1">
                     <p
-                      className="truncate font-mono text-xs"
+                      className="truncate font-mono text-xs leading-tight"
                       title={job.source_video_path}
                     >
                       {videoStem(job.source_video_path)}
                     </p>
                   </td>
-                  <td className="py-2 pr-2 text-xs text-neutral-600 whitespace-nowrap">
+                  <td className="px-2 py-1 text-xs text-muted whitespace-nowrap">
                     {formatSubmittedAt(local.submittedAt)}
                   </td>
-                  <td className="py-2 pr-2">
+                  <td className="px-2 py-1">
                     <span
                       className={cn(
-                        "inline-block whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-medium",
-                        job.status === "AWAITING_REVIEW" && "bg-amber-100 text-amber-900",
-                        job.status === "PROCESSING" && "bg-emerald-100 text-emerald-900",
-                        job.status === "PRESCAN_FAILED" && "bg-red-100 text-red-900",
-                        job.status === "READY" && "bg-blue-100 text-blue-900",
+                        "inline-block whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-medium leading-none",
+                        statusBadgeClass(job.status),
                       )}
                     >
                       {statusLabel(job.status)}
                     </span>
-                    {errorText ? (
-                      <p className="mt-1 line-clamp-2 text-[10px] text-red-700">
-                        {errorText}
-                      </p>
-                    ) : null}
                   </td>
-                  <td className="py-2 pr-2 text-center font-mono text-xs text-neutral-600">
+                  <td className="px-2 py-1 text-left font-mono text-xs text-muted">
                     {gpuIdFromDevice(job.gpu_device)}
                   </td>
-                  <td className="py-2 pr-2 text-xs text-neutral-600 whitespace-nowrap">
-                    {formatDurationSec(local.videoDurationSec)}
+                  <td className="px-2 py-1 font-mono text-xs text-muted whitespace-nowrap">
+                    {formatVideoLengthHms(local.videoDurationSec)}
                   </td>
-                  <td className="py-2 pr-2 text-xs text-neutral-600 whitespace-nowrap">
-                    {formatDurationSec(processingDurationSec(local))}
+                  <td className="px-2 py-1 font-mono text-xs text-muted whitespace-nowrap">
+                    {formatVideoLengthHms(runTimeSec(job, local))}
                   </td>
-                  <td className="py-2 pr-2 text-xs text-neutral-600">
+                  <td className="px-2 py-1">
                     {pct !== null ? (
-                      <>
-                        <div className="h-1.5 w-full max-w-[6rem] overflow-hidden rounded bg-neutral-200">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-1.5 w-[4.5rem] shrink-0 overflow-hidden rounded bg-accent">
                           <div
-                            className="h-full bg-neutral-900"
+                            className={cn(
+                              "h-full transition-colors",
+                              progressBarColor(pct, job.status),
+                            )}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                        <p className="mt-0.5 whitespace-nowrap">
+                        <span className="w-10 shrink-0 text-right text-xs tabular-nums">
                           {pct}%
-                          {job.status === "PROCESSING" && job.progress?.processing_fps
-                            ? ` · ${job.progress.processing_fps.toFixed(1)} fps`
-                            : ""}
-                          {job.status === "PROCESSING" &&
-                          job.progress?.eta_sec !== undefined
-                            ? ` · ${formatEta(job.progress.eta_sec)}`
-                            : ""}
-                        </p>
-                      </>
+                        </span>
+                      </div>
                     ) : job.queue_position ? (
-                      <span className="whitespace-nowrap">#{job.queue_position}</span>
+                      <span className="text-xs whitespace-nowrap text-muted">
+                        #{job.queue_position}
+                      </span>
                     ) : (
-                      "—"
+                      <span className="text-xs text-muted">—</span>
                     )}
                   </td>
-                  <td className="py-2">
+                  <td className="px-2 py-1 text-xs text-muted whitespace-nowrap">
+                    {timeRemaining(job)}
+                  </td>
+                  <td className="px-2 py-1">
                     <div
-                      className="flex flex-wrap items-center gap-1"
+                      className="flex items-center justify-start gap-1"
                       onClick={(event) => event.stopPropagation()}
                     >
                       {isReviewable(job.status) ? (
-                        <Button
-                          type="button"
+                        <RoundIconButton
+                          label="Review prescan"
+                          variant="info"
                           size="sm"
-                          variant="outline"
                           onClick={() => onReview(job)}
                         >
-                          Review
-                        </Button>
+                          <IconReview size={16} />
+                        </RoundIconButton>
                       ) : null}
                       {job.status === "PRESCAN_FAILED" ? (
-                        <Button
-                          type="button"
+                        <RoundIconButton
+                          label="Retry pre-scan"
+                          variant="warning"
                           size="sm"
                           disabled={busyId === job.job_id}
                           onClick={() => onRetryPrescan(job.job_id)}
                         >
-                          Retry
-                        </Button>
+                          <IconRetry size={16} />
+                        </RoundIconButton>
                       ) : null}
                       {job.status === "PROCESSING" ? (
-                        <Button
-                          type="button"
+                        <RoundIconButton
+                          label="Monitor live"
+                          variant="success"
                           size="sm"
-                          variant="outline"
                           onClick={() => onMonitor(job)}
                         >
-                          Monitor
-                        </Button>
+                          <IconMonitor size={16} />
+                        </RoundIconButton>
                       ) : null}
                       {job.status === "PAUSED" ? (
-                        <Button
-                          type="button"
+                        <RoundIconButton
+                          label="Resume job"
+                          variant="success"
                           size="sm"
                           disabled={busyId === job.job_id}
                           onClick={() => onResume(job.job_id)}
                         >
-                          Resume
-                        </Button>
+                          <IconPlay size={16} />
+                        </RoundIconButton>
                       ) : null}
                       {(job.status === "PAUSED" ||
-                        (job.status === "FAILED" && job.checkpoint_exists)) && (
-                        <Button
-                          type="button"
+                        job.status === "FAILED") && (
+                        <RoundIconButton
+                          label="Resubmit — overwrite existing output"
+                          variant="accent"
                           size="sm"
-                          variant="danger"
                           disabled={busyId === job.job_id}
                           onClick={() => onStartFresh(job.job_id)}
                         >
-                          Fresh
-                        </Button>
+                          <IconRestart size={16} />
+                        </RoundIconButton>
                       )}
+                      {job.status === "COMPLETED" ? (
+                        <RoundIconButton
+                          label="Open output directory"
+                          variant="info"
+                          size="sm"
+                          onClick={() => onOpenOutput(job)}
+                        >
+                          <IconFolder size={16} />
+                        </RoundIconButton>
+                      ) : null}
                       {isCancellable(job.status) ? (
-                        <CancelJobButton
-                          jobId={job.job_id}
-                          busy={busyId === job.job_id}
-                          onCancel={onCancel}
-                        />
+                        <RoundIconButton
+                          label="Cancel job"
+                          size="sm"
+                          variant="danger"
+                          disabled={busyId === job.job_id}
+                          onClick={() => onCancel(job.job_id)}
+                        >
+                          <IconCancel size={16} />
+                        </RoundIconButton>
                       ) : null}
                     </div>
                   </td>
@@ -272,7 +274,7 @@ export function JobQueueTable({
             })}
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-6 text-center text-sm text-neutral-500">
+                <td colSpan={9} className="py-6 text-center text-sm text-muted">
                   No jobs yet — add videos above.
                 </td>
               </tr>

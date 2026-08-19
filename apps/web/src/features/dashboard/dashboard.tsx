@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { JobStatusResponse, TelemetryMessage } from "@viana/contracts";
 
+import { EngineControls } from "@/features/container/engine-controls";
 import { IntakePanel } from "@/features/intake/intake-panel";
 import { PathBrowser } from "@/features/intake/path-browser";
 import { MonitorSidebar } from "@/features/monitor/monitor-sidebar";
@@ -11,6 +12,7 @@ import { ProjectBar } from "@/features/project/project-bar";
 import { shouldPollJobs } from "@/features/queue/job-status";
 import { JobQueueTable } from "@/features/queue/job-queue-table";
 import { JobDetailsPanel } from "@/features/telemetry/job-details-panel";
+import { IconMoon, IconSun, RoundIconButton } from "@/components/ui/icon-button";
 import {
   cancelJob,
   getHealth,
@@ -27,24 +29,30 @@ import { PROJECT_ID_PATTERN } from "@/lib/geometry";
 import {
   type MountConfig,
   toContainerPath,
+  toHostPath,
 } from "@/lib/container-paths";
 import type { ContainerStatus } from "@/lib/container-types";
+import { openPathInFileManager } from "@/lib/fs-open";
 import { ensureProjectOutputDir } from "@/lib/output-paths";
 import {
+  DEFAULT_PROJECT_ID,
   readOutputDir,
   readProjectId,
   readTaskType,
+  readThemePreference,
   writeOutputDir,
   writeProjectId,
   writeTaskType,
+  writeThemePreference,
   type TaskTypePref,
+  type UiTheme,
 } from "@/lib/prefs";
 
 export function Dashboard() {
   const [jobs, setJobs] = useState<JobStatusResponse[]>([]);
   const [telemetry, setTelemetry] = useState<TelemetryMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [projectId, setProjectId] = useState("nh48");
+  const [projectId, setProjectId] = useState(DEFAULT_PROJECT_ID);
   const [outputDir, setOutputDir] = useState("");
   const [taskType, setTaskType] = useState<TaskTypePref>("ViAna_Moving");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -55,6 +63,7 @@ export function Dashboard() {
   const [browseOutputDir, setBrowseOutputDir] = useState(false);
   const [mountConfig, setMountConfig] = useState<MountConfig | null>(null);
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
+  const [theme, setTheme] = useState<UiTheme>("light");
   const [containerStatus, setContainerStatus] = useState<ContainerStatus | null>(
     null,
   );
@@ -75,10 +84,23 @@ export function Dashboard() {
     return list;
   }, [projectId]);
 
+  function applyTheme(nextTheme: UiTheme): void {
+    document.documentElement.dataset.theme = nextTheme;
+    document.documentElement.style.colorScheme = nextTheme;
+    setTheme(nextTheme);
+  }
+
   useEffect(() => {
     setProjectId(readProjectId());
     setOutputDir(readOutputDir());
     setTaskType(readTaskType());
+    const preferred = readThemePreference();
+    const resolved =
+      preferred ??
+      (window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light");
+    applyTheme(resolved);
   }, []);
 
   useEffect(() => {
@@ -168,6 +190,12 @@ export function Dashboard() {
       );
     });
   }, []);
+
+  function toggleTheme() {
+    const next: UiTheme = theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+    writeThemePreference(next);
+  }
 
   async function onIntake(paths: string[]) {
     if (!projectValid || taskType !== "ViAna_Moving") {
@@ -261,31 +289,42 @@ export function Dashboard() {
 
   return (
     <div className="mx-auto flex w-full max-w-[min(100%,96rem)] flex-col gap-6 p-4 sm:p-6">
-      <header>
-        <p className="text-xs font-medium tracking-widest text-neutral-500 uppercase">
-          Vehicle Analytics
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold">Dashboard</h1>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          Vehicle Analytics Dashboard
+        </h1>
+        <div className="flex items-center gap-2">
+          <RoundIconButton
+            label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? <IconSun /> : <IconMoon />}
+          </RoundIconButton>
+          <EngineControls
+            label="Analytics Engine Status"
+            onStatusChange={setContainerStatus}
+          />
+        </div>
       </header>
 
       {apiReachable === false || containerStatus?.running === false ? (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
           {containerStatus?.running === false ? (
             <>
-              The analytics engine is not running. Use the controls in the project
-              bar to start it.
+              The analytics engine is not running. Use the controls at the top
+              right to start it.
             </>
           ) : (
             <>
-              The analytics engine is not responding yet. Start it from the project
-              bar or wait a few seconds if it is still starting.
+              The analytics engine is not responding yet. Start it from the top
+              right or wait a few seconds if it is still starting.
             </>
           )}
         </p>
       ) : null}
 
       {error ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
           {formatJobErrorMessage(error) ?? error}
         </p>
       ) : null}
@@ -297,7 +336,7 @@ export function Dashboard() {
         projectValid={projectValid}
         onProjectId={(value) => {
           setProjectId(value);
-          if (PROJECT_ID_PATTERN.test(value)) {
+          if (value && PROJECT_ID_PATTERN.test(value)) {
             writeProjectId(value);
             if (apiReachable) {
               void refreshJobs(value);
@@ -313,7 +352,6 @@ export function Dashboard() {
           writeTaskType(value);
         }}
         onBrowseOutputDir={() => setBrowseOutputDir(true)}
-        onContainerStatus={setContainerStatus}
       />
 
       <IntakePanel
@@ -340,6 +378,16 @@ export function Dashboard() {
           onResume={(id) => void onResume(id)}
           onStartFresh={(id) => void onStartFresh(id)}
           onCancel={(id) => void onCancel(id)}
+          onOpenOutput={(job) => {
+            if (!mountConfig || !job.output_dir) {
+              return;
+            }
+            const hostPath =
+              toHostPath(job.output_dir, mountConfig.mounts) ?? job.output_dir;
+            void openPathInFileManager(hostPath).catch((err) => {
+              setError(err instanceof Error ? err.message : String(err));
+            });
+          }}
         />
         {monitorJob ? (
           <MonitorSidebar
@@ -348,7 +396,11 @@ export function Dashboard() {
             onClose={() => setMonitorJob(null)}
           />
         ) : (
-          <JobDetailsPanel job={detailsJob} messages={telemetry} />
+          <JobDetailsPanel
+            job={detailsJob}
+            messages={telemetry}
+            mountConfig={mountConfig}
+          />
         )}
       </div>
 

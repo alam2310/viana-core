@@ -8,6 +8,11 @@ import type { MountConfig } from "@/lib/container-paths";
 import { readBrowsePath, writeBrowsePath } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 
+const DARK_GHOST_BTN =
+  "dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200";
+const DARK_OUTLINE_BTN =
+  "dark:border-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200";
+
 export type PickerPurpose = "intake" | "output_dir";
 
 async function fetchBrowse(path?: string): Promise<FsBrowseResponse> {
@@ -37,12 +42,16 @@ export function PathBrowser({
   purpose,
   open,
   mountConfig,
+  initialPath,
+  viewOnly = false,
   onClose,
   onSelect,
 }: {
   purpose: PickerPurpose;
   open: boolean;
   mountConfig: MountConfig | null;
+  initialPath?: string;
+  viewOnly?: boolean;
   onClose: () => void;
   onSelect: (paths: string[]) => void;
 }) {
@@ -81,9 +90,9 @@ export function PathBrowser({
       purpose === "intake"
         ? mountConfig?.defaultBrowsePath
         : mountConfig?.mounts.find((m) => m.container === "/data")?.host;
-    const start = readBrowsePath(purpose) ?? defaultPath ?? undefined;
+    const start = initialPath ?? readBrowsePath(purpose) ?? defaultPath ?? undefined;
     void load(start);
-  }, [load, mountConfig, open, purpose]);
+  }, [initialPath, load, mountConfig, open, purpose]);
 
   if (!open) {
     return null;
@@ -145,33 +154,42 @@ export function PathBrowser({
     }
   }
 
-  const title =
-    purpose === "output_dir" ? "Select output directory" : "Select file(s) or folder";
+  const title = viewOnly
+    ? "Job output"
+    : purpose === "output_dir"
+      ? "Select output directory"
+      : "Select file(s) or folder";
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="my-8 flex w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
-        <div className="border-b border-neutral-200 px-5 py-4">
+      <div className="my-8 flex w-full max-w-2xl flex-col rounded-lg bg-card text-foreground shadow-xl">
+        <div className="border-b border-border px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">{title}</h2>
-              <p className="mt-1 font-mono text-xs text-neutral-500">
+              <p className="mt-1 font-mono text-xs text-muted">
                 {current?.path ?? "…"}
               </p>
               {purpose === "intake" ? (
-                <p className="mt-1 text-xs text-neutral-500">
+                <p className="mt-1 text-xs text-muted">
                   Double-click a video to add it. Double-click a folder to open it.
                 </p>
               ) : null}
             </div>
-            <Button type="button" size="sm" variant="ghost" onClick={onClose}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={DARK_GHOST_BTN}
+              onClick={onClose}
+            >
               Cancel
             </Button>
           </div>
         </div>
 
         {error ? (
-          <p className="px-5 pt-3 text-sm text-red-700">{error}</p>
+          <p className="px-5 pt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2 px-5 pt-3">
@@ -200,7 +218,7 @@ export function PathBrowser({
         {showNewDir && purpose === "output_dir" ? (
           <div className="mx-5 mt-3 flex gap-2">
             <input
-              className="min-w-0 flex-1 rounded border border-neutral-300 px-2 py-1 font-mono text-xs"
+              className="min-w-0 flex-1 rounded border border-input bg-card px-2 py-1 font-mono text-xs text-foreground"
               placeholder="folder-name"
               value={newDirName}
               onChange={(event) => setNewDirName(event.target.value)}
@@ -216,7 +234,7 @@ export function PathBrowser({
           </div>
         ) : null}
 
-        <ul className="mx-5 mt-3 max-h-80 flex-1 divide-y divide-neutral-100 overflow-y-auto rounded border border-neutral-200">
+        <ul className="mx-5 mt-3 max-h-80 flex-1 divide-y divide-border overflow-y-auto rounded border border-border">
           {current?.entries.map((entry) => {
             const isSelected = entry.type === "file" && selected.has(entry.path);
             return (
@@ -226,9 +244,9 @@ export function PathBrowser({
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
                     entry.type === "directory" || entry.isVideo
-                      ? "hover:bg-neutral-50"
+                      ? "hover:bg-accent"
                       : "opacity-40",
-                    isSelected && "bg-blue-50 ring-1 ring-inset ring-blue-200",
+                    isSelected && "bg-sky-100 ring-1 ring-inset ring-sky-300 dark:bg-sky-950 dark:ring-sky-700",
                   )}
                   disabled={entry.type === "file" && !entry.isVideo && purpose === "intake"}
                   onClick={() => {
@@ -238,24 +256,35 @@ export function PathBrowser({
                   }}
                   onDoubleClick={() => handleEntryActivate(entry)}
                 >
-                  <span className="text-neutral-400">
+                  <span className="text-muted">
                     {entry.type === "directory" ? "📁" : entry.isVideo ? "🎬" : "📄"}
                   </span>
                   <span className="truncate font-mono text-xs">{entry.name}</span>
                   {isSelected ? (
-                    <span className="ml-auto text-xs text-blue-700">selected</span>
+                    <span className="ml-auto text-xs text-sky-700 dark:text-sky-300">
+                      selected
+                    </span>
                   ) : null}
                 </button>
               </li>
             );
           })}
           {!current?.entries.length ? (
-            <li className="px-3 py-4 text-sm text-neutral-500">Empty directory</li>
+            <li className="px-3 py-4 text-sm text-muted">Empty directory</li>
           ) : null}
         </ul>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-neutral-200 px-5 py-4">
-          {purpose === "output_dir" ? (
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-4">
+          {viewOnly ? (
+            <Button
+              type="button"
+              variant="outline"
+              className={DARK_OUTLINE_BTN}
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          ) : purpose === "output_dir" ? (
             <Button
               type="button"
               disabled={!current?.path || busy}

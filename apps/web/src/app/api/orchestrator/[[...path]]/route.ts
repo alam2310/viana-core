@@ -36,13 +36,20 @@ async function proxy(request: Request, context: RouteContext): Promise<NextRespo
 
   try {
     const response = await fetch(upstream, init);
-    const body = await response.arrayBuffer();
     const outHeaders = new Headers();
     const respType = response.headers.get("Content-Type");
     if (respType) {
       outHeaders.set("Content-Type", respType);
     }
     outHeaders.set("Cache-Control", "no-store");
+    if (
+      request.method === "HEAD" ||
+      response.status === 204 ||
+      response.status === 304
+    ) {
+      return new NextResponse(null, { status: response.status, headers: outHeaders });
+    }
+    const body = await response.arrayBuffer();
     return new NextResponse(body, { status: response.status, headers: outHeaders });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

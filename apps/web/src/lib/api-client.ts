@@ -154,7 +154,14 @@ export function previewImageUrl(apiPath: string, cacheBust?: string | number): s
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
-  const data = text ? (JSON.parse(text) as unknown) : null;
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text) as unknown;
+    } catch {
+      data = { detail: text };
+    }
+  }
   if (!response.ok) {
     throw new ApiClientError(
       formatApiError(response.status, response.statusText, data),

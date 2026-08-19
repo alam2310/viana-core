@@ -42,7 +42,10 @@ export function syncJobLocalMeta(jobs: JobStatusResponse[]): void {
     if (!prev.submittedAt) {
       prev.submittedAt = now;
     }
-    if (job.status === "PROCESSING" && !prev.processingStartedAt) {
+    if (
+      (job.status === "PROCESSING" || job.status === "PAUSED") &&
+      !prev.processingStartedAt
+    ) {
       prev.processingStartedAt = now;
     }
     if (
@@ -80,6 +83,17 @@ export function formatSubmittedAt(iso: string | undefined): string {
   }
 }
 
+export function formatVideoLengthHms(sec: number | undefined): string {
+  if (sec === undefined || !Number.isFinite(sec) || sec < 0) {
+    return "—";
+  }
+  const total = Math.round(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
+}
+
 export function formatDurationSec(sec: number | undefined): string {
   if (sec === undefined || !Number.isFinite(sec) || sec < 0) {
     return "—";
@@ -102,6 +116,17 @@ export function processingDurationSec(meta: JobLocalMeta): number | undefined {
   const start = new Date(meta.processingStartedAt).getTime();
   const sec = (end - start) / 1000;
   return sec > 0 ? sec : undefined;
+}
+
+/**
+ * Wall-clock processing duration. UI tracks timestamps in localStorage until the
+ * API exposes `processing_started_at` / `processing_duration_sec` (S12).
+ */
+export function runTimeSec(
+  _job: JobStatusResponse,
+  meta: JobLocalMeta,
+): number | undefined {
+  return processingDurationSec(meta);
 }
 
 export function sortJobsBySubmitted(

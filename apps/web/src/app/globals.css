@@ -1,17 +1,101 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
-  --background: #f4f4f5;
-  --foreground: #171717;
+  color-scheme: light dark;
+  --ui-bg: #f4f4f5;
+  --ui-fg: #171717;
+  --ui-card: #ffffff;
+  --ui-card-hover: #fafafa;
+  --ui-border: #e5e5e5;
+  --ui-muted: #737373;
+  --ui-input: #d4d4d4;
+  --ui-accent: #f5f5f5;
+  --ui-row-selected: #e0f2fe;
+  --ui-row-monitor: #ecfdf5;
+  --ui-row-paused: #fffbeb;
+  --ui-primary: #171717;
+  --ui-primary-fg: #fafafa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ui-bg: #09090b;
+    --ui-fg: #fafafa;
+    --ui-card: #18181b;
+    --ui-card-hover: #27272a;
+    --ui-border: #3f3f46;
+    --ui-muted: #a1a1aa;
+    --ui-input: #52525b;
+    --ui-accent: #27272a;
+    --ui-row-selected: #0c4a6e;
+    --ui-row-monitor: #064e3b;
+    --ui-row-paused: #78350f;
+    --ui-primary: #fafafa;
+    --ui-primary-fg: #171717;
+  }
+}
+
+:root[data-theme="light"] {
+  --ui-bg: #f4f4f5;
+  --ui-fg: #171717;
+  --ui-card: #ffffff;
+  --ui-card-hover: #fafafa;
+  --ui-border: #e5e5e5;
+  --ui-muted: #737373;
+  --ui-input: #d4d4d4;
+  --ui-accent: #f5f5f5;
+  --ui-row-selected: #e0f2fe;
+  --ui-row-monitor: #ecfdf5;
+  --ui-row-paused: #fffbeb;
+  --ui-primary: #171717;
+  --ui-primary-fg: #fafafa;
+}
+
+:root[data-theme="dark"] {
+  --ui-bg: #09090b;
+  --ui-fg: #fafafa;
+  --ui-card: #18181b;
+  --ui-card-hover: #27272a;
+  --ui-border: #3f3f46;
+  --ui-muted: #a1a1aa;
+  --ui-input: #52525b;
+  --ui-accent: #27272a;
+  --ui-row-selected: #0c4a6e;
+  --ui-row-monitor: #064e3b;
+  --ui-row-paused: #78350f;
+  --ui-primary: #fafafa;
+  --ui-primary-fg: #171717;
+}
+
+@theme inline {
+  --color-background: var(--ui-bg);
+  --color-foreground: var(--ui-fg);
+  --color-card: var(--ui-card);
+  --color-card-hover: var(--ui-card-hover);
+  --color-border: var(--ui-border);
+  --color-muted: var(--ui-muted);
+  --color-input: var(--ui-input);
+  --color-accent: var(--ui-accent);
+  --color-row-selected: var(--ui-row-selected);
+  --color-row-monitor: var(--ui-row-monitor);
+  --color-row-paused: var(--ui-row-paused);
+  --color-primary: var(--ui-primary);
+  --color-primary-foreground: var(--ui-primary-fg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--ui-bg);
+  color: var(--ui-fg);
   font-family:
     ui-sans-serif,
     system-ui,
     -apple-system,
     Segoe UI,
     sans-serif;
+}
+
+html {
+  scrollbar-gutter: stable;
 }

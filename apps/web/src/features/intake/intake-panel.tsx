@@ -40,12 +40,12 @@ export function IntakePanel({
   }
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-4">
-      <h2 className="text-sm font-semibold tracking-wide text-neutral-500 uppercase">
+    <section className="rounded-lg border border-border bg-card p-4">
+      <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
         Add videos
       </h2>
-      <p className="mt-1 text-xs text-neutral-500">
-        Select one or more traffic videos from your data folder.
+      <p className="mt-1 text-xs text-muted">
+        Choose traffic videos from your data folder.
       </p>
       <div className="mt-3">
         <Button
@@ -58,7 +58,7 @@ export function IntakePanel({
         </Button>
       </div>
       {pathWarning ? (
-        <p className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <p className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
           {pathWarning}
         </p>
       ) : null}

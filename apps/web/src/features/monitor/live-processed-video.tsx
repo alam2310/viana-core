@@ -109,7 +109,7 @@ export function LiveProcessedVideo({
         <video
           ref={videoRef}
           key={src}
-          className="w-full rounded border border-neutral-300 bg-black"
+          className="w-full rounded border border-border bg-black"
           controls
           playsInline
           src={src}
@@ -117,9 +117,9 @@ export function LiveProcessedVideo({
           <track kind="captions" />
         </video>
       ) : (
-        <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded border border-dashed border-neutral-300 bg-neutral-50 px-4 text-center text-sm text-neutral-500">
+        <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded border border-dashed border-border bg-accent px-4 text-center text-sm text-muted">
           <p>{statusText}</p>
-          <p className="text-xs text-neutral-400">
+          <p className="text-xs text-muted">
             Live preview may stay blank until processing finishes — the growing MP4
             file is often not playable until the job completes (backend fix tracked).
           </p>

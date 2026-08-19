@@ -26,9 +26,9 @@ export function TelemetryPanel({
   const activity = jobId ? activityFromTelemetry(messages, jobId) : [];
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-4">
+    <section className="rounded-lg border border-border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold tracking-wide text-neutral-500 uppercase">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Telemetry
         </h2>
         <label className="flex items-center gap-2 text-xs">
@@ -42,7 +42,7 @@ export function TelemetryPanel({
       </div>
 
       {!jobId ? (
-        <p className="mt-3 text-sm text-neutral-500">
+        <p className="mt-3 text-sm text-muted">
           Open Monitor on a processing job to view structured telemetry.
         </p>
       ) : (
@@ -52,7 +52,7 @@ export function TelemetryPanel({
           </p>
           {telemetryDetail && crossings.length > 0 ? (
             <div>
-              <h3 className="text-xs font-medium text-neutral-500">Recent crossings</h3>
+              <h3 className="text-xs font-medium text-muted">Recent crossings</h3>
               <ul className="mt-1 max-h-24 overflow-y-auto text-xs">
                 {crossings.slice(-5).reverse().map((row) => (
                   <li key={row.id}>
@@ -64,8 +64,8 @@ export function TelemetryPanel({
           ) : null}
           {activity.length > 0 ? (
             <div>
-              <h3 className="text-xs font-medium text-neutral-500">Activity</h3>
-              <ul className="mt-1 text-xs text-neutral-600">
+              <h3 className="text-xs font-medium text-muted">Activity</h3>
+              <ul className="mt-1 text-xs text-muted">
                 {activity.slice(-3).reverse().map((row) => (
                   <li key={row.id}>{row.text}</li>
                 ))}

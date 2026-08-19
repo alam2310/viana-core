@@ -14,14 +14,14 @@ export function validateMetadataFields(fields: {
   const location = fields.location?.trim() ?? "";
 
   if (!time) {
-    issues.push("Start time is required (HH:MM:SS)");
+    issues.push("Video start time is required (HH:MM:SS)");
   } else if (!TIME_PATTERN.test(time)) {
-    issues.push("Start time must match HH:MM:SS");
+    issues.push("Video start time must match HH:MM:SS");
   }
   if (!date) {
-    issues.push("Start date is required (DD-MM-YYYY)");
+    issues.push("Video start date is required (DD-MM-YYYY)");
   } else if (!DATE_PATTERN.test(date)) {
-    issues.push("Start date must match DD-MM-YYYY");
+    issues.push("Video start date must match DD-MM-YYYY");
   }
   if (!location) {
     issues.push("Location is required");

@@ -413,7 +413,7 @@ export function CalibrationCanvas({
         ref={canvasRef}
         width={displayWidth}
         height={displayHeight}
-        className={cn("w-full cursor-crosshair rounded border border-neutral-300", className)}
+        className={cn("w-full cursor-crosshair rounded border border-border", className)}
         onMouseDown={onPointerDown}
         onMouseMove={onPointerMove}
         onMouseUp={() => setDrag(null)}

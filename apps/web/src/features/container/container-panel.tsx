@@ -68,7 +68,7 @@ export function ContainerPanel({
   if (compact) {
     return (
       <div className="text-xs">
-        <p className="text-sm font-medium text-neutral-700">
+        <p className="text-sm font-medium">
           <span
             className={status?.running ? "text-emerald-700" : "text-amber-700"}
           >
@@ -92,18 +92,18 @@ export function ContainerPanel({
   }
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-4">
-      <h2 className="text-sm font-semibold tracking-wide text-neutral-500 uppercase">
+    <section className="rounded-lg border border-border bg-card p-4">
+      <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
         Container
       </h2>
       <p className="mt-2 font-mono text-sm">
         Analytics Engine —{" "}
-        <span className={status?.running ? "text-emerald-700" : "text-amber-700"}>
+        <span className={status?.running ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
           {status?.running ? "running" : "stopped"}
         </span>
       </p>
-      {hint ? <p className="mt-2 text-sm text-amber-800">{hint}</p> : null}
-      <p className="mt-1 text-xs text-neutral-500">
+      {hint ? <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">{hint}</p> : null}
+      <p className="mt-1 text-xs text-muted">
         Config: {status?.config_found ? "found" : "using example defaults"} (
         {status?.config_path})
       </p>

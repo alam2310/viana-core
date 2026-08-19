@@ -3,6 +3,7 @@
 import type { JobStatusResponse, TelemetryMessage } from "@viana/contracts";
 
 import { Button } from "@/components/ui/button";
+import { CrossingsTable } from "@/features/telemetry/crossings-table";
 import { LiveProcessedVideo } from "@/features/monitor/live-processed-video";
 import {
   crossingsFromTelemetry,
@@ -22,20 +23,30 @@ export function MonitorSidebar({
 }) {
   const progress = progressFromTelemetry(messages, job.job_id);
   const fps = job.progress?.processing_fps ?? progress?.fps;
-  const crossings = crossingsFromTelemetry(messages, job.job_id, fps);
+  const meta = job.confirmed_metadata ?? job.proposed_metadata;
+  const crossings = crossingsFromTelemetry(messages, job.job_id, fps, {
+    startTime: meta?.user_start_time,
+    startDate: meta?.user_start_date,
+  });
   const refreshKey =
     progress?.current ?? job.progress?.current_frame ?? 0;
 
   return (
-    <aside className="flex h-full flex-col rounded-lg border border-neutral-200 bg-white">
-      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
+    <aside className="flex h-full flex-col rounded-lg border border-border bg-card">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold">Live monitor</h2>
-          <p className="font-mono text-xs text-neutral-500">
+          <p className="font-mono text-xs text-muted">
             {videoStem(job.source_video_path)}
           </p>
         </div>
-        <Button type="button" size="sm" variant="ghost" onClick={onClose}>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          onClick={onClose}
+        >
           Close
         </Button>
       </div>
@@ -51,36 +62,15 @@ export function MonitorSidebar({
               : "Waiting for progress…"}
         </p>
 
-        <details className="mt-4 rounded border border-neutral-200">
-          <summary className="cursor-pointer px-3 py-2 text-xs font-semibold tracking-wide text-neutral-600 uppercase">
+        <details className="mt-4 rounded border border-border">
+          <summary className="cursor-pointer px-3 py-1.5 text-xs font-semibold tracking-wide text-muted uppercase">
             Live crossings ({crossings.length})
           </summary>
-          <div className="border-t border-neutral-200 px-1 pb-2">
+          <div className="border-t border-border px-1 pb-1">
             {crossings.length > 0 ? (
-              <div className="max-h-48 overflow-y-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 bg-neutral-50">
-                    <tr>
-                      <th className="px-2 py-1">Time</th>
-                      <th className="px-2 py-1">Class</th>
-                      <th className="px-2 py-1 text-center">Dir</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {crossings.slice(-30).reverse().map((row) => (
-                      <tr key={row.id} className="border-t border-neutral-100">
-                        <td className="px-2 py-1 font-mono">{row.time}</td>
-                        <td className="px-2 py-1">{row.vehicle}</td>
-                        <td className="px-2 py-1 text-center text-base">
-                          {row.arrow}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <CrossingsTable rows={crossings} maxRows={30} />
             ) : (
-              <p className="px-2 py-3 text-xs text-neutral-500">
+              <p className="px-2 py-2 text-xs text-muted">
                 Crossings appear here when vehicles pass the counting line. If none
                 show, the engine may not be emitting crossing events yet (see backend
                 tracker).

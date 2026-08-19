@@ -2,76 +2,122 @@
 
 import type { JobStatusResponse, TelemetryMessage } from "@viana/contracts";
 
+import { Aggregate15MinTable } from "@/features/telemetry/aggregate-15min-table";
+import { CrossingsTable } from "@/features/telemetry/crossings-table";
 import {
   crossingsFromTelemetry,
-  formatProgressLine,
   progressFromTelemetry,
 } from "@/features/telemetry/telemetry-formatters";
+import {
+  statusBadgeClass,
+  statusLabel,
+} from "@/features/queue/job-status";
+import type { MountConfig } from "@/lib/container-paths";
+import { toHostPath } from "@/lib/container-paths";
 import { videoStem } from "@/lib/geometry";
 import {
   formatSubmittedAt,
   getJobLocalMeta,
 } from "@/lib/job-local-meta";
 import { formatJobErrorMessage } from "@/lib/job-errors";
-import { statusLabel } from "@/features/queue/job-status";
+import { openPathInFileManager } from "@/lib/fs-open";
+import { cn } from "@/lib/utils";
 
-function metadataBlock(job: JobStatusResponse) {
-  const meta = job.confirmed_metadata ?? job.proposed_metadata;
-  if (!meta?.user_start_time && !meta?.user_start_date && !meta?.location) {
-    return <p className="text-sm text-neutral-500">No metadata yet — complete prescan review.</p>;
-  }
-  return (
-    <dl className="grid gap-2 text-sm">
-      <div>
-        <dt className="text-neutral-500">Time</dt>
-        <dd className="font-mono">{meta.user_start_time ?? "—"}</dd>
-      </div>
-      <div>
-        <dt className="text-neutral-500">Date</dt>
-        <dd className="font-mono">{meta.user_start_date ?? "—"}</dd>
-      </div>
-      <div>
-        <dt className="text-neutral-500">Location</dt>
-        <dd>{meta.location ?? "—"}</dd>
-      </div>
-    </dl>
-  );
+function completedOutputFiles(
+  job: JobStatusResponse,
+  mountConfig: MountConfig,
+): { label: string; hostPath: string | null }[] {
+  const stem = videoStem(job.source_video_path);
+  const base = job.output_dir;
+  const entries = [
+    { label: "Processed Video", file: `${stem}_processed.mp4` },
+    { label: "Raw events", file: `${stem}_events.csv` },
+    { label: "15-mins report", file: `${stem}_15min.csv` },
+  ];
+  return entries.map(({ label, file }) => ({
+    label,
+    hostPath: toHostPath(`${base}/${file}`, mountConfig.mounts),
+  }));
 }
 
-function artifactList(job: JobStatusResponse) {
-  if (job.status !== "COMPLETED") {
-    return null;
-  }
-  const stem = videoStem(job.source_video_path);
-  const dir = job.output_dir;
+function OutputFilesList({
+  job,
+  mountConfig,
+}: {
+  job: JobStatusResponse;
+  mountConfig: MountConfig;
+}) {
+  const files = completedOutputFiles(job, mountConfig);
+
   return (
-    <div className="mt-3">
-      <h3 className="text-xs font-semibold tracking-wide text-neutral-500 uppercase">
-        Output files
-      </h3>
-      <ul className="mt-1 space-y-1 font-mono text-[10px] text-neutral-600">
-        <li>{dir}/{stem}_events.csv</li>
-        <li>{dir}/{stem}_15min.csv</li>
-        <li>{dir}/{stem}_processed.mp4</li>
+    <div className="space-y-1 text-sm">
+      <p className="text-xs font-semibold text-muted">Output files</p>
+      <ul className="space-y-1">
+        {files.map((file) => (
+          <li key={file.label}>
+            {file.hostPath ? (
+              <button
+                type="button"
+                className="text-left text-sky-700 underline hover:text-sky-900 dark:text-sky-400 dark:hover:text-sky-300"
+                onClick={() => {
+                  void openPathInFileManager(file.hostPath!).catch(() => undefined);
+                }}
+              >
+                {file.label}
+              </button>
+            ) : (
+              <span className="text-muted">{file.label}</span>
+            )}
+          </li>
+        ))}
       </ul>
     </div>
   );
 }
 
+function metadataBlock(job: JobStatusResponse) {
+  const meta = job.confirmed_metadata ?? job.proposed_metadata;
+  if (!meta?.user_start_time && !meta?.user_start_date && !meta?.location) {
+    return (
+      <p className="text-sm text-muted">
+        No metadata yet — complete prescan review.
+      </p>
+    );
+  }
+  return (
+    <>
+      <p>
+        <span className="text-muted">Video Start Date:</span>{" "}
+        <span className="font-mono">{meta.user_start_date ?? "—"}</span>
+      </p>
+      <p>
+        <span className="text-muted">Video Start Time:</span>{" "}
+        <span className="font-mono">{meta.user_start_time ?? "—"}</span>
+      </p>
+      <p>
+        <span className="text-muted">Location:</span> {meta.location ?? "—"}
+      </p>
+    </>
+  );
+}
+
+
 export function JobDetailsPanel({
   job,
   messages,
+  mountConfig,
 }: {
   job: JobStatusResponse | null;
   messages: TelemetryMessage[];
+  mountConfig: MountConfig | null;
 }) {
   if (!job) {
     return (
-      <section className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h2 className="text-sm font-semibold tracking-wide text-neutral-500 uppercase">
+      <section className="rounded-lg border border-border bg-card p-4">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Job details
         </h2>
-        <p className="mt-3 text-sm text-neutral-500">
+        <p className="mt-3 text-sm text-muted">
           Select a job in the queue to view metadata, progress, and output paths.
         </p>
       </section>
@@ -80,61 +126,79 @@ export function JobDetailsPanel({
 
   const local = getJobLocalMeta(job.job_id);
   const progress = progressFromTelemetry(messages, job.job_id);
+  const meta = job.confirmed_metadata ?? job.proposed_metadata;
   const crossings = crossingsFromTelemetry(
     messages,
     job.job_id,
     job.progress?.processing_fps ?? progress?.fps,
+    {
+      startTime: meta?.user_start_time,
+      startDate: meta?.user_start_date,
+    },
   );
   const errorText = formatJobErrorMessage(job.error_message);
+  const stem = videoStem(job.source_video_path);
+  const csvHostPath =
+    job.status === "COMPLETED" && mountConfig
+      ? toHostPath(`${job.output_dir}/${stem}_15min.csv`, mountConfig.mounts)
+      : null;
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-4">
-      <h2 className="text-sm font-semibold tracking-wide text-neutral-500 uppercase">
+    <section className="rounded-lg border border-border bg-card p-4">
+      <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
         Job details
       </h2>
-      <p className="mt-1 font-mono text-xs text-neutral-500">{job.job_id}</p>
+      <p className="mt-1 font-mono text-xs text-muted">{job.job_id}</p>
 
-      <div className="mt-3 space-y-3 text-sm">
-        <p>
-          <span className="text-neutral-500">Status:</span> {statusLabel(job.status)}
+      <div className="mt-3 space-y-2 text-sm leading-snug">
+        <p className="flex items-center gap-2">
+          <span className="text-muted">Status:</span>
+          <span
+            className={cn(
+              "inline-block rounded px-1.5 py-0.5 text-xs font-medium",
+              statusBadgeClass(job.status),
+            )}
+          >
+            {statusLabel(job.status)}
+          </span>
         </p>
         <p>
-          <span className="text-neutral-500">Submitted:</span>{" "}
+          <span className="text-muted">Submitted:</span>{" "}
           {formatSubmittedAt(local.submittedAt)}
         </p>
-        {errorText ? <p className="text-red-700">{errorText}</p> : null}
-
-        <div>
-          <h3 className="text-xs font-semibold tracking-wide text-neutral-500 uppercase">
-            Video metadata
-          </h3>
-          <div className="mt-2">{metadataBlock(job)}</div>
-        </div>
-
-        {progress || job.progress ? (
-          <p className="font-medium">
-            {progress
-              ? formatProgressLine(progress)
-              : `${job.progress?.current_frame ?? 0} / ${job.progress?.total_frames ?? "?"} frames`}
-          </p>
+        {errorText ? (
+          <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+            {errorText}
+          </div>
         ) : null}
 
-        {crossings.length > 0 ? (
-          <details className="rounded border border-neutral-200">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-neutral-600">
+        {metadataBlock(job)}
+
+        {job.status !== "COMPLETED" && crossings.length > 0 ? (
+          <details className="rounded border border-border">
+            <summary className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-muted">
               Recent crossings ({crossings.length})
             </summary>
-            <ul className="max-h-32 overflow-y-auto border-t border-neutral-100 px-3 py-2 text-xs">
-              {crossings.slice(-8).reverse().map((row) => (
-                <li key={row.id}>
-                  {row.time} · {row.arrow} {row.vehicle}
-                </li>
-              ))}
-            </ul>
+            <div className="border-t border-border px-1 pb-1">
+              <CrossingsTable rows={crossings} maxRows={8} />
+            </div>
           </details>
         ) : null}
 
-        {artifactList(job)}
+        {job.status === "COMPLETED" && csvHostPath ? (
+          <details className="rounded border border-border">
+            <summary className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-muted">
+              15-minute report
+            </summary>
+            <div className="border-t border-border px-1 pb-1">
+              <Aggregate15MinTable csvHostPath={csvHostPath} />
+            </div>
+          </details>
+        ) : null}
+
+        {job.status === "COMPLETED" && mountConfig ? (
+          <OutputFilesList job={job} mountConfig={mountConfig} />
+        ) : null}
       </div>
     </section>
   );

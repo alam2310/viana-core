@@ -4,6 +4,11 @@ const TELEMETRY_KEY = "viana.telemetry_detail";
 const TASK_TYPE_KEY = "viana.task_type";
 const INTAKE_BROWSE_KEY = "viana.browse_path_intake";
 const OUTPUT_BROWSE_KEY = "viana.browse_path_output";
+const THEME_KEY = "viana.theme";
+
+export const DEFAULT_PROJECT_ID = "nh44";
+
+const LEGACY_PROJECT_IDS = new Set(["test_ui", "nh48"]);
 
 export type BrowsePurpose = "intake" | "output_dir";
 
@@ -24,9 +29,13 @@ export function writeBrowsePath(purpose: BrowsePurpose, dirPath: string): void {
 
 export function readProjectId(): string {
   if (typeof window === "undefined") {
-    return "nh48";
+    return DEFAULT_PROJECT_ID;
   }
-  return window.localStorage.getItem(PROJECT_KEY) ?? "nh48";
+  const stored = window.localStorage.getItem(PROJECT_KEY);
+  if (!stored || LEGACY_PROJECT_IDS.has(stored)) {
+    return DEFAULT_PROJECT_ID;
+  }
+  return stored;
 }
 
 export function writeProjectId(projectId: string): void {
@@ -56,6 +65,7 @@ export function writeTelemetryDetail(enabled: boolean): void {
 }
 
 export type TaskTypePref = "ViAna_Moving" | "ViAnaNP" | "ViAnaJunction";
+export type UiTheme = "light" | "dark";
 
 export function readTaskType(): TaskTypePref {
   if (typeof window === "undefined") {
@@ -70,4 +80,16 @@ export function readTaskType(): TaskTypePref {
 
 export function writeTaskType(taskType: TaskTypePref): void {
   window.localStorage.setItem(TASK_TYPE_KEY, taskType);
+}
+
+export function readThemePreference(): UiTheme | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const raw = window.localStorage.getItem(THEME_KEY);
+  return raw === "light" || raw === "dark" ? raw : null;
+}
+
+export function writeThemePreference(theme: UiTheme): void {
+  window.localStorage.setItem(THEME_KEY, theme);
 }

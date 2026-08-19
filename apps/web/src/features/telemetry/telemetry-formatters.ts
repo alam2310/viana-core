@@ -2,7 +2,7 @@
 
 import type { TelemetryMessage } from "@viana/contracts";
 
-import { formatEta } from "@/lib/validation";
+import { DATE_PATTERN, TIME_PATTERN, formatEta } from "@/lib/validation";
 
 export function mapLogMessage(message: unknown): string {
   if (typeof message !== "string") {
@@ -102,6 +102,17 @@ function directionArrow(direction: string): string {
   return "·";
 }
 
+export function crossingArrowClass(direction: string): string {
+  const d = direction.toLowerCase();
+  if (d === "in") {
+    return "font-bold text-lime-600 dark:text-lime-400";
+  }
+  if (d === "out") {
+    return "font-bold text-fuchsia-600 dark:text-fuchsia-400";
+  }
+  return "font-bold text-muted";
+}
+
 function frameToClock(frame: number, fps: number): string {
   const totalSec = Math.max(0, Math.floor(frame / fps));
   const h = Math.floor(totalSec / 3600);
@@ -110,12 +121,69 @@ function frameToClock(frame: number, fps: number): string {
   return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
 }
 
+function parseStartDateTime(dateStr: string, timeStr: string): Date | null {
+  const date = dateStr.trim();
+  const time = timeStr.trim();
+  if (!DATE_PATTERN.test(date) || !TIME_PATTERN.test(time)) {
+    return null;
+  }
+  const [day, month, year] = date.split("-").map(Number);
+  const [hours, minutes, seconds] = time.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes, seconds);
+}
+
+function formatWallClockTime(date: Date): string {
+  const h = String(date.getHours()).padStart(2, "0");
+  const m = String(date.getMinutes()).padStart(2, "0");
+  const s = String(date.getSeconds()).padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
+
+function formatWallClockDate(date: Date): string {
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}-${m}-${y}`;
+}
+
+function eventTimeFromFrame(
+  frame: number,
+  fps: number,
+  startTime?: string,
+  startDate?: string,
+): string {
+  if (!fps || fps <= 0) {
+    return "—";
+  }
+  if (!startTime?.trim() || !startDate?.trim()) {
+    return frameToClock(frame, fps);
+  }
+  const base = parseStartDateTime(startDate, startTime);
+  if (!base) {
+    return frameToClock(frame, fps);
+  }
+  const event = new Date(base.getTime() + (frame / fps) * 1000);
+  const sameDay =
+    event.getDate() === base.getDate() &&
+    event.getMonth() === base.getMonth() &&
+    event.getFullYear() === base.getFullYear();
+  if (sameDay) {
+    return formatWallClockTime(event);
+  }
+  return `${formatWallClockDate(event)} ${formatWallClockTime(event)}`;
+}
+
 export function crossingsFromTelemetry(
   messages: TelemetryMessage[],
   jobId: string,
   fpsHint?: number,
-  limit = 500,
+  options?: {
+    startTime?: string;
+    startDate?: string;
+    limit?: number;
+  },
 ): CrossingRow[] {
+  const limit = options?.limit ?? 500;
   const rows: CrossingRow[] = [];
   for (const msg of messages) {
     if (msg.job_id !== jobId || msg.telemetry_type !== "MOVING_EVENT") {
@@ -124,8 +192,7 @@ export function crossingsFromTelemetry(
     const data = msg.data;
     const frame =
       typeof data.frame_index === "number" ? data.frame_index : undefined;
-    const fps =
-      typeof data.fps === "number" ? data.fps : fpsHint;
+    const fps = typeof data.fps === "number" ? data.fps : fpsHint;
     const direction =
       typeof data.direction === "string"
         ? data.direction.charAt(0).toUpperCase() + data.direction.slice(1)
@@ -134,8 +201,13 @@ export function crossingsFromTelemetry(
     rows.push({
       id: `${msg.job_id}-${rows.length}-${frame ?? 0}`,
       time:
-        frame !== undefined && fps && fps > 0
-          ? frameToClock(frame, fps)
+        frame !== undefined && fps
+          ? eventTimeFromFrame(
+              frame,
+              fps,
+              options?.startTime,
+              options?.startDate,
+            )
           : "—",
       vehicle:
         typeof data.class_name === "string" ? data.class_name : "Unknown",

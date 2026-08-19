@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ViAna",
+  title: "Vehicle Analytics",
   description: "Offline Indian traffic video analytics",
 };
 

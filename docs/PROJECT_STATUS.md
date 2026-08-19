@@ -1,11 +1,12 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-19  
-**Current focus:** Prescan UI redesign → wall-clock → `{stem}_15min.csv`  
+**Current focus:** **Step 1** — UX design (see `docs/steps/TRACKER.md`)  
+**Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none. Live `:8000/health` is Phase 6.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Phase 9 parity:** signed off 2026-08-19 — `legacy/` removed  
-**Canonical plan:** `docs/PROJECT_PLAN.md`
+**Canonical plan:** `docs/PROJECT_PLAN.md` (Phases 0–9); **Steps 1–5** for remaining work
 
 > AI agents: update this file when you complete a phase, endpoint, or milestone. Do not rely on chat memory.
 
@@ -24,13 +25,33 @@
 
 ---
 
-## Next (active)
+## Post-v0.1 Steps (active)
 
-1. **Prescan UI redesign** — OCR / proposed time / user fallback visible and editable.
-2. **Wall-clock on submit** — persist metadata so `viana aggregate` writes real `{stem}_15min.csv`.
-3. Re-run aggregate on a clip with user start time to verify 15-min grid.
+**Tracker:** [`docs/steps/TRACKER.md`](steps/TRACKER.md) · **Plan:** [`docs/steps/PLAN.md`](steps/PLAN.md)
+
+| Step | Name | Status |
+|------|------|--------|
+| 1 | UX design | ⬜ Not started |
+| 2 | Contract sync | ⏸ Skipped until needed |
+| 3 | UI implementation | ⬜ Not started |
+| 4 | E2E verification (`_15min.csv`) | ⬜ Not started |
+| 5 | Hardening backlog | ⬜ Not started |
+
+**Goals (Steps 1–4):** Prescan UX redesign → wall-clock on submit → verify `{stem}_15min.csv`.
+
+**Parked items** moved to [`docs/steps/STEP_5_HARDENING.md`](steps/STEP_5_HARDENING.md).
+
+---
+
+## Next (legacy list — see Steps above)
+
+1. **Step 1** — Prescan UI redesign spec (OCR / proposed time / user fallback).
+2. **Step 3** — Implement redesign; persist metadata on submit.
+3. **Step 4** — Re-run aggregate on a clip with user start time; verify 15-min grid.
 
 ## Parked (revisit later)
+
+See **Step 5** in [`docs/steps/STEP_5_HARDENING.md`](steps/STEP_5_HARDENING.md):
 
 | Item | Notes |
 |------|--------|
@@ -57,6 +78,8 @@
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Steps renumbered 1–5; `AGENT_PROGRESS.md` checklist for agents |
+| 2026-08-19 | Post-v0.1 Steps plan + tracker under `docs/steps/` |
 | 2026-08-19 | Phase 9 signed off; `legacy/` removed; `training/uvh/` + `docs/ops/ENVIRONMENT_SETUP.md` + `docs/archive/ITVA_RESEARCH_LOG.md`; compose `build: .` |
 | 2026-08-19 | Overlay human go (geom D / b5); HEVC cq 42; rolling majority off-line |
 | 2026-08-19 | E2E mocks off; Phase 6 workers; parity recorded on `hiv000001` |

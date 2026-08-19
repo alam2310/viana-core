@@ -15,6 +15,7 @@ Offline Indian traffic video analytics: detect, classify, track, count vehicles,
 | **API (`src/orchestrator/`)** | `docs/api_contracts.md` → `packages/contracts/schemas/` → `docs/PROJECT_PLAN.md` § Orchestrator |
 | **UI (`apps/web/`)** | `apps/web/AGENTS.md` → `docs/ui/README.md` → `packages/contracts/typescript/` |
 | **Contracts / types** | `packages/contracts/README.md` → update schema **before** code |
+| **Post-v0.1 work (Steps 1–5)** | `docs/steps/TRACKER.md` → `AGENT_PROGRESS.md` → `STEP_N_*.md` |
 
 ## 3. Repository map
 
@@ -28,7 +29,7 @@ models/             → weights (v1 production + pretrained)
 training/           → UVH retrain toolkit (optional)
 docs/archive/       → pre-v2 research log (historical)
 tests/viana/        → new engine tests
-docs/               → plans, status, UI specs, governance, ADRs
+docs/               → plans, status, UI specs, governance, Steps, ADRs
 ```
 
 ## 4. Hard rules (all agents)
@@ -36,22 +37,19 @@ docs/               → plans, status, UI specs, governance, ADRs
 1. **Never invent API fields** — check `packages/contracts/schemas/` and `docs/api_contracts.md`.
 2. **Backend owns jobs** — UI must not send `job_id` or `gpu_device` on submit.
 3. **Schemas before code** — if the contract changes, update `packages/contracts/` first; see `docs/governance/CONTRACT_SYNC.md` for parallel UI/API/engine rules.
-4. **Update `docs/PROJECT_STATUS.md`** when completing a phase or API endpoint.
+4. **Update `docs/PROJECT_STATUS.md`** when completing a phase, Step, or API endpoint — follow `docs/steps/AGENT_PROGRESS.md` for Steps 1–5.
 5. **Record decisions** in `docs/adr/` when architecture changes.
 6. **No inline 15-min aggregation in the GPU loop** — events CSV first, aggregate separately (ADR 001).
 7. **Geometry** — lines must be within frame bounds; mandatory on every run.
 
 ## 5. What is implemented today
 
-See **`docs/PROJECT_STATUS.md`** for the live matrix. **Phase 0 is closed** (`docs/PHASE_0_SIGNOFF.md`). Summary:
+See **`docs/PROJECT_STATUS.md`** for the live matrix. **Phases 0–9 are complete** (parity signed off 2026-08-19).
 
 | Component | Status |
 |-----------|--------|
-| Phase 0 monorepo scaffold | Closed |
-| Engine Phases 1–2 | Complete (see `PROJECT_STATUS.md`) |
-| Engine Phase 3+ / API workers | Not started (`viana run` still validation-only; routes 501) |
-| UI Phase 7 foundation | Complete (`apps/web`, mocks on) |
-| UI Phase 8 workflows | Complete (mocked; `USE_MOCKS=true`) |
+| Phases 0–9 (engine, API, UI, parity) | ✅ Complete |
+| **Post-v0.1 Steps 1–5** | ⬜ Active — see `docs/steps/TRACKER.md`; follow `docs/steps/AGENT_PROGRESS.md` on start/complete |
 
 ## 6. Parallel development
 
@@ -61,7 +59,8 @@ See **`docs/PROJECT_STATUS.md`** for the live matrix. **Phase 0 is closed** (`do
 
 Sync via **contracts only**. If the UI needs a new field, add it to the schema first and note it in `PROJECT_STATUS.md`.
 
-**Parallel chats:** See `docs/governance/PARALLEL_AGENTS.md` and `docs/governance/KICKOFF_PROMPTS.md`.
+**Parallel chats (Phases 0–9):** `docs/governance/PARALLEL_AGENTS.md`, `docs/governance/KICKOFF_PROMPTS.md`  
+**Post-v0.1 Steps:** `docs/steps/KICKOFF_PROMPTS.md` — start **new** chats; do not continue Phase build threads.
 
 ## 7. Verification commands
 

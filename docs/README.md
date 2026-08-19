@@ -2,7 +2,8 @@
 
 | Document | Purpose |
 |----------|---------|
-| [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | **Living status** — phases, API matrix |
+| [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | **Living status** — phases, Steps, API matrix |
+| [`steps/`](steps/) | **Post-v0.1 Steps 1–5** — tracker, plan, agent checklist, kickoffs |
 | [`ops/ENVIRONMENT_SETUP.md`](ops/ENVIRONMENT_SETUP.md) | **From-scratch** Docker/GPU setup |
 | [`PROJECT_PLAN.md`](PROJECT_PLAN.md) | v2 implementation plan |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design |

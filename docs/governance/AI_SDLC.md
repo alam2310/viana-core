@@ -20,12 +20,13 @@ How AI agents should work on this repo to minimize context drift, hallucination,
 ## 2. Session checklist (every agent)
 
 1. Read `AGENTS.md`
-2. Read `docs/PROJECT_STATUS.md` — confirm current phase
-3. Read task-specific `AGENTS.md` (`apps/web/`, etc.)
-4. Read relevant schema in `packages/contracts/schemas/`
-5. Implement
-6. Update `PROJECT_STATUS.md` if you completed a milestone
-7. Run tests listed in `AGENTS.md` §7 (`make test`, `make lint`, `make typecheck`)
+2. Read `docs/PROJECT_STATUS.md` — confirm current phase or Step
+3. If doing post-v0.1 work: read `docs/steps/TRACKER.md` and `docs/steps/AGENT_PROGRESS.md`
+4. Read task-specific `AGENTS.md` (`apps/web/`, etc.)
+5. Read relevant schema in `packages/contracts/schemas/`
+6. Implement
+7. Update `PROJECT_STATUS.md` and follow `AGENT_PROGRESS.md` if you completed a Step
+8. Run tests listed in `AGENTS.md` §7 (`make test`, `make lint`, `make typecheck`)
 
 ---
 
@@ -76,13 +77,16 @@ Full cross-track rules: **`docs/governance/CONTRACT_SYNC.md`**
 
 **Parallel development:** `PARALLEL_AGENTS.md`, kickoff prompts in `KICKOFF_PROMPTS.md`.
 
+**Post-v0.1 Steps 1–5:** `docs/steps/TRACKER.md`, `docs/steps/AGENT_PROGRESS.md`, kickoffs in `docs/steps/KICKOFF_PROMPTS.md`.
+
 ---
 
-## 6. Definition of done (per phase)
+## 6. Definition of done (per phase or Step)
 
 - Code matches schema
 - Tests pass (`pytest tests/viana/` or UI lint/build)
 - `PROJECT_STATUS.md` updated
+- **Steps 1–5:** `TRACKER.md` + checklist in `docs/steps/AGENT_PROGRESS.md` completed
 - No edits to `training/` unless extending the retrain workflow
 - ADR added if behavior diverges from plan
 
@@ -90,6 +94,7 @@ Full cross-track rules: **`docs/governance/CONTRACT_SYNC.md`**
 
 ## 7. Related docs
 
+- `docs/steps/AGENT_PROGRESS.md` — what to update when progressing Steps 1–5
 - `docs/governance/SOURCE_OF_TRUTH.md` — which file owns which fact
 - `docs/governance/CONTEXT_MAP.md` — quick lookup index
 - `docs/adr/` — decision log

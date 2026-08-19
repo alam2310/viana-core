@@ -97,6 +97,8 @@ When scaffolding `apps/web/` (stub `package.json` + `tsconfig.json` already pres
 
 Keep `NEXT_PUBLIC_USE_MOCKS=false` for live Phase 6 E2E (`http://localhost:8000`). Use `true` only for fixture-only UI work.
 
+**Post-v0.1 UI work:** Step 3 in `docs/steps/STEP_3_UI_IMPLEMENTATION.md`. On start/complete follow `docs/steps/AGENT_PROGRESS.md`.
+
 ---
 
 ## 8. Verification

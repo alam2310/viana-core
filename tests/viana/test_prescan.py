@@ -107,7 +107,7 @@ def test_frame_guided_lines_keep_parallel_direction() -> None:
 
 def test_invalid_frame_shape_falls_back_to_geometric() -> None:
     """Mismatched frame dimensions should not crash frame-guided path."""
-    np = __import__("numpy")
+    np = __import__("pytest").importorskip("numpy")
     frame = np.zeros((360, 640, 3), dtype=np.uint8)
     proposed = propose_lines(1280, 720, [], frame=frame)
     assert proposed.confidence == GEOMETRIC_CONFIDENCE

@@ -217,7 +217,7 @@ def test_cli_run_prints_run_result(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
             RunResultArtifacts(events=str(tmp_path / "clip_events.csv")),
         )
 
-    monkeypatch.setattr("viana.cli.run_moving_count", fake_run)
+    monkeypatch.setattr("viana.stages.process.run_moving_count", fake_run)
     result = CliRunner().invoke(app, ["run", "--config", str(config)])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)

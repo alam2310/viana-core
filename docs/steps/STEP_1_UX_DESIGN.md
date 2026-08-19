@@ -4,7 +4,7 @@
 |-------|-------|
 | **Status** | ✅ Complete — see [`TRACKER.md`](TRACKER.md) |
 | **Chat** | **New** — UX discovery & design (one chat for whole Step 1) |
-| **Blocks** | Step 2 (if backend gaps), Step 3 |
+| **Blocks** | Steps 2–3 (if backend gaps), Step 4 |
 | **Blocked by** | — |
 
 **On complete:** follow [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md) § On completing Step 1.
@@ -13,7 +13,7 @@
 
 ## Objective
 
-Understand the **full product UX** (big picture + per-task prescan differences), capture stakeholder input via Q&A, then finalize a redesign spec implementable in Step 3.
+Understand the **full product UX** (big picture + per-task prescan differences), capture stakeholder input via Q&A, then finalize a redesign spec implementable in Step 4.
 
 **v0.1 focus:** `ViAna_Moving` — prescan proposes **time, date, location, horizon line, counting line**; user **confirms or edits** each before submit.
 
@@ -40,7 +40,7 @@ Do **not** skip 1.1. Do **not** write `REDESIGN.md` until discovery sign-off in 
 - Per-`task_type` prescan & calibration requirements
 - `ViAna_Moving`: proposed vs user-edited OCR + lines; wall-clock impact on `_15min.csv`
 - Extensibility notes for NP / Junction
-- Backend gap list for Step 2 (if prescan API/engine must change)
+- Backend gap list for Steps 2–3 (if prescan API/engine must change)
 
 **Out of scope**
 
@@ -83,7 +83,7 @@ Use chat Q&A; record in `DISCOVERY.md` §2. Suggested themes:
 | 1.2 | Task-type prescan matrix | `DISCOVERY.md` §3 + `REDESIGN.md` |
 | 1.3 | Master redesign spec | `docs/ui/REDESIGN.md` |
 | 1.4 | Updated flows / components | `USER_FLOWS.md`, `COMPONENT_MAP.md` |
-| 1.5 | Backend gap list (if any) | `docs/steps/STEP_2_BACKEND_ALIGNMENT.md` § Work items |
+| 1.5 | Backend gap list | `STEP_2_CONTRACTS_AND_API.md` + `STEP_3_ENGINE_AND_ORCHESTRATOR.md` |
 
 ---
 
@@ -91,7 +91,7 @@ Use chat Q&A; record in `DISCOVERY.md` §2. Suggested themes:
 
 - [ ] `DISCOVERY.md` §6 signed off (user confirmed in chat)
 - [ ] `REDESIGN.md` covers all screens + `ViAna_Moving` prescan confirm/edit flow
-- [ ] Step 2 work items filed OR Step 2 marked skip in `TRACKER.md`
+- [ ] Step 2 + Step 3 work items filed in step files
 - [ ] `AGENT_PROGRESS.md` Step 1 checklist done
 
 ---
@@ -103,4 +103,4 @@ Use chat Q&A; record in `DISCOVERY.md` §2. Suggested themes:
 | 2026-08-19 | Step created (numbered Steps 1–5) |
 | 2026-08-19 | Split into discovery + design; added task-type prescan matrix |
 | 2026-08-19 | Phase 1.1: telemetry UX plan (§9), PRESCAN_FAILED status, container path backlog 5.7 |
-| 2026-08-19 | Step 1 complete — REDESIGN.md, flows, component map, Step 2 work items |
+| 2026-08-19 | Six-step plan: gaps split Step 2 (contracts/API) + Step 3 (engine/workers) |

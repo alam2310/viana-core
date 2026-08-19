@@ -1,4 +1,4 @@
-# Component Map (Step 1 redesign → Step 3 implementation)
+# Component Map (Step 1 redesign → Step 4 implementation)
 
 **Spec:** [`REDESIGN.md`](REDESIGN.md)
 
@@ -40,14 +40,14 @@
 | Dropdown | Task type |
 | Badge | Status operator labels |
 
-## API dependencies (Step 2)
+## API dependencies (Steps 2–3)
 
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /jobs/intake` | Create job(s) from path(s) |
-| `PATCH /jobs/{id}/prescan` | Confirm reviewed calibration → `READY` |
-| `POST /jobs/{id}/prescan/retry` | `PRESCAN_FAILED` → retry |
-| `GET /jobs` | Queue table sync |
-| `GET /api/fs/browse` | Host path browser (Step 3 host route) |
-| `GET /artifacts/.../partial.mp4` | Live monitor (range requests) |
-| `WS /ws/jobs` | Progress, crossings, logs |
+| Endpoint | Step | Purpose |
+|----------|------|---------|
+| `POST /jobs/intake` | 2 | Create job(s) from path(s) |
+| `PATCH /jobs/{id}/prescan` | 2 | Confirm reviewed calibration → `READY` |
+| `POST /jobs/{id}/prescan/retry` | 3 | `PRESCAN_FAILED` → retry |
+| `GET /jobs` | 2 | Queue table sync |
+| `GET /api/fs/browse` | 4 | Host path browser (Next.js route) |
+| `GET /artifacts/.../partial.mp4` | 3 | Live monitor (range requests) |
+| `WS /ws/jobs` | 3 | Progress, crossings, logs |

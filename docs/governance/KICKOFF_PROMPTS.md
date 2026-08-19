@@ -4,7 +4,7 @@ Use **one dedicated chat per track**. Paste the block below as the first message
 
 **Phases 0–9 (build):** prompts below — mostly complete; use for reference or narrow bugfix chats.
 
-**Post-v0.1 Steps 1–5:** use [`docs/steps/KICKOFF_PROMPTS.md`](../steps/KICKOFF_PROMPTS.md) and [`docs/steps/AGENT_PROGRESS.md`](../steps/AGENT_PROGRESS.md).
+**Post-v0.1 Steps 1–6:** use [`docs/steps/KICKOFF_PROMPTS.md`](../steps/KICKOFF_PROMPTS.md) and [`docs/steps/AGENT_PROGRESS.md`](../steps/AGENT_PROGRESS.md).
 
 **Before any track:** read `docs/PROJECT_STATUS.md` and `docs/steps/TRACKER.md` for live status.
 

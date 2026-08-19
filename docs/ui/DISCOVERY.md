@@ -17,7 +17,7 @@
 | **Prescan today** | Engine samples frame (configurable offset), runs OSD OCR (time/date/location), proposes horizon + counting lines (from profiles or heuristics), writes preview JPEG. API: `POST /utils/prescan`. |
 | **Current UI** | Single modal: run prescan → canvas + editable OCR fields + frame scrubber → "Save calibration" (blocks on geometry validation). "Apply to pending" + optional profile save. |
 | **User must confirm** | Step 1 goal: explicit **propose → confirm/edit** for time, date, location, horizon line, counting line before job submit. |
-| **15-min report** | Wall-clock metadata from prescan → `time_map.json` → aggregate → `{stem}_15min.csv`. Empty CSV is a known verification target (Step 4). |
+| **15-min report** | Wall-clock metadata from prescan → `time_map.json` → aggregate → `{stem}_15min.csv`. Empty CSV verification is **Step 5**. |
 | **Hardware** | Dual RTX 3060; backend assigns `gpu_device`. Batch sizes up to 50+ videos per project (spec). |
 
 ---
@@ -57,7 +57,7 @@ _Agent: ask the user questions in chat. Paste questions and answers below._
 | 25 | 2026-08-19 | Single-file flow? | Add path → prescan runs → **immediate review** → on confirm job enters execution queue with **prescan-reviewed** status. |
 | 26 | 2026-08-19 | Folder / multi-file flow? | All files queued for prescan; table shows prescan progress; status **not confirmed** until each reviewed. Same camera/location may share lines+location (not time/date). |
 | 27 | 2026-08-19 | Execution gate? | GPU worker **must not pick up** job until prescan **reviewed/confirmed**. Review workflow reusable from queue at any time pre-`PROCESSING`. |
-| 28 | 2026-08-19 | Job status model? | **Extend `JobStatus`** — prescan phases distinct from execution queue (see §7). Step 2 contract + orchestrator change. |
+| 28 | 2026-08-19 | Job status model? | **Extend `JobStatus`** — prescan phases distinct from execution queue (see §7). Steps 2–3 contract + orchestrator. |
 | 29 | 2026-08-19 | Running job monitor? | **Button on queue row** opens **sidebar** (or equivalent): live processed video view + telemetry panel below. |
 | 30 | 2026-08-19 | Running job ETA? | Show **remaining estimated time** in addition to % progress (frame-based ETA acceptable). |
 | 31 | 2026-08-19 | Empty `_15min.csv` copy? | **Operator-friendly** message (e.g. “Start time was not set — 15-minute report is unavailable”). |
@@ -68,14 +68,14 @@ _Agent: ask the user questions in chat. Paste questions and answers below._
 | 36 | 2026-08-19 | Status enum names? | **Approved draft** with `PRESCAN_RUNNING` (not `PRESCANNING`); operator label **"Pre-scanning video"** |
 | 37 | 2026-08-19 | Video extensions for folder scan? | **Standard extensions:** `.mp4`, `.avi`, `.mkv`, `.mov`, `.webm`, `.m4v` (case-insensitive) |
 | 38 | 2026-08-19 | Path browser scope? | **Full filesystem** — local disks and mounted external drives; no artificial allowlist (operator machine) |
-| 39 | 2026-08-19 | Background-match profile auto-apply? | **Deferred** post-v0.1 (Step 5 / later) |
+| 39 | 2026-08-19 | Background-match profile auto-apply? | **Deferred** post-v0.1 (Step 6 / later) |
 | 40 | 2026-08-19 | Telemetry display today? | Raw JSON in `<pre>` — **not acceptable for operators**; structured UI required (§9) |
 | 41 | 2026-08-19 | Prescan failure status? | Dedicated **`PRESCAN_FAILED`** with operator label **"Prescan failed"** (not generic `FAILED`) |
 | 42 | 2026-08-19 | Container read any host path? | **Backlog:** backend/DevOps must allow container to read videos on local disk + mounted external drives (§5 G21) |
 
 ### Open questions
 
-_All discovery blockers resolved. Remaining items deferred to REDESIGN defaults or Step 2/5 implementation (see §8)._
+_All discovery blockers resolved. Remaining items deferred to REDESIGN defaults or Steps 2–6 (see §8)._
 
 ---
 
@@ -87,7 +87,7 @@ _All discovery blockers resolved. Remaining items deferred to REDESIGN defaults 
 | **ViAnaNP** | OCR: time, date, location; **parked zone hints (draft)** | Metadata + zone hints confirmed; no line geometry | Zone overlay canvas (TBD) — no horizon/counting lines | ❌ Future |
 | **ViAnaJunction** | OCR metadata; **auto-proposed junction polygon + named gates** | Polygon + gates editable | Polygon + gate canvas | ❌ Future |
 
-**Extensibility note:** Prescan request/response may need `task_type` so engine returns task-appropriate proposals (Step 2 if confirmed).
+**Extensibility note:** Prescan request/response may need `task_type` (Step 2 schema; Step 3 engine).
 
 ---
 
@@ -122,7 +122,7 @@ _All discovery blockers resolved. Remaining items deferred to REDESIGN defaults 
 
 **Problem:** Today `PENDING` means “waiting for GPU” but prescan happens **outside** the job record (UI localStorage drafts). New UX requires **backend-owned** prescan state so the queue table is the single source of truth.
 
-### Final `JobStatus` values (Step 2 — contract change)
+### Final `JobStatus` values (Steps 2–3)
 
 | Status | Operator label | Meaning | Worker may start? |
 |--------|----------------|---------|-----------------|
@@ -173,32 +173,29 @@ intake → PRESCAN_PENDING → PRESCAN_RUNNING → AWAITING_REVIEW → READY →
 
 ---
 
-## 5. Backend / prescan gaps (for Step 2)
+## 5. Backend / prescan gaps (Steps 2–3)
 
-_If current prescan API or engine cannot support the UX, list here → copy to `docs/steps/STEP_2_BACKEND_ALIGNMENT.md` § Work items._
+_Work items split: **Step 2** = contracts + intake/confirm APIs; **Step 3** = engine + workers. See `docs/steps/STEP_2_CONTRACTS_AND_API.md` and `STEP_3_ENGINE_AND_ORCHESTRATOR.md`._
 
-| ID | Gap | Surface | Step 2? |
-|----|-----|---------|-------|
-| G1 | `PrescanResponse.ocr` and `JobMetadata` are the same shape — no persisted distinction between **proposed** vs **user-confirmed** values (UI overwrites on load) | Contract + UI state | TBD — depends on whether we need audit trail or per-field confirm UX |
-| G2 | No `task_type` on prescan request — engine always proposes Moving lines | Contract, `run_prescan()`, API route | TBD — required for NP/Junction extensibility |
-| G3 | OCR `confidence` is a single scalar — no per-field confidence for time/date/location | Engine OCR, contract | TBD — depends on low-confidence UX |
-| G4 | No server-side validation of date/time format before job submit — UX requires **HH:MM:SS** + **DD-MM-YYYY** and all three metadata fields mandatory | API / job validation | **Yes** |
-| G7 | Prescan should **auto-skip dark/blocked opening frames** — not implemented today (samples at offset 0 or user offset only) | Engine `prescan.py`, sampler | **Yes** |
-| G8 | Scrubber needs **live frame preview** while sliding — may need re-prescan per offset or lightweight frame endpoint | API + UI | **Yes** (evaluate: re-use `POST /utils/prescan` vs dedicated frame endpoint) |
-| G10 | Profile auto-apply by **background similarity** — defer post-v0.1 | Engine + UI | **Defer** |
-| G12 | **Auto-aggregate on completion** — verify orchestrator runs aggregate after COMPLETED | Orchestrator | TBD |
-| G13 | **Bulk prescan** — orchestrator queues prescan for N intake jobs | API + worker pool | **Yes** |
-| G5 | Junction/NP prescan proposals not in engine | `prescan.py` | Future |
-| G9 | **ETA + crossing count** on running row / sidebar | WS telemetry + `progress` | **Yes** |
-| G14 | **`JobStatus` enum** — add `PRESCAN_PENDING`, `PRESCAN_RUNNING`, `PRESCAN_FAILED`, `AWAITING_REVIEW`, `READY`; remove legacy `PENDING` | Contract, orchestrator | **Yes** |
-| G15 | **Persist prescan proposal + confirmed calibration** on job record | `JobStatusResponse` | **Yes** |
-| G16 | **Intake API** — create job(s) from path(s) before prescan completes | `routes/jobs.py` | **Yes** |
-| G17 | **Confirm endpoint** — submit reviewed metadata + lines → execution queue | API | **Yes** |
-| G18 | **Host filesystem browser** — Next.js route; browse full host FS (local + mounted volumes) | Host API (Step 3) | **Yes** |
-| G19 | **Partial `_processed.mp4` serving** for live monitor sidebar | Static file route / range requests | **Yes** |
-| G20 | **`output_dir` override** per project alongside `project_id` | Contract + job config | **Yes** |
-| G21 | **Container access to arbitrary host paths** (local disk + mounted external HDD) — today only pre-mounted volumes work | Docker compose, orchestrator path validation, optional dynamic bind | **Yes** — Step 5 **5.7** DevOps backlog |
-| G22 | **Telemetry presentation** — contract has structured `data` but no display labels; UI maps known shapes (§9); optional `display_message` on LOG later | UI Step 3; optional contract | UI maps in Step 3; engine LOG copy polish optional |
+| ID | Gap | Step |
+|----|-----|------|
+| G1 | `proposed_*` vs confirmed on job record | **2** |
+| G2 | `task_type` on prescan request | **2** (schema), **3** (engine) |
+| G4 | Server metadata validation | **2** |
+| G7 | Auto-skip dark frames | **3** |
+| G8 | Live frame preview on scrub | **3** |
+| G9 | ETA + crossing count | **3** |
+| G12 | Auto-aggregate on COMPLETED | **3** |
+| G13 | Bulk prescan worker queue | **3** |
+| G14 | `JobStatus` enum extension | **2** |
+| G15 | Persist proposal + confirmed on job | **2** |
+| G16 | `POST /jobs/intake` | **2** |
+| G17 | `PATCH /jobs/{id}/prescan` | **2** |
+| G18 | Host filesystem browser | **4** (UI) |
+| G19 | Partial `_processed.mp4` serving | **3** |
+| G20 | `output_dir` override | **2** |
+| G21 | Container arbitrary host paths | **6.7** |
+| G22 | Telemetry presentation | **4** (UI) |
 
 ---
 
@@ -206,7 +203,7 @@ _If current prescan API or engine cannot support the UX, list here → copy to `
 
 **Today:** `TelemetryPanel` renders `JSON.stringify(messages)` — operator-unfriendly.
 
-**Target (Step 3 UI — live monitor sidebar + optional dashboard strip):**
+**Target (Step 4 UI — live monitor sidebar + optional dashboard strip):**
 
 | `telemetry_type` | Operator-facing UI | Data mapped from `data` |
 |------------------|-------------------|------------------------|
@@ -252,7 +249,7 @@ _If current prescan API or engine cannot support the UX, list here → copy to `
 - **Focused job:** dashboard polls/WS for active job only (per Q#19).
 - **Performance:** virtualized list for crossing feed; cap retained messages client-side (e.g. last 500 events, last 50 log lines).
 
-**Step ownership:** UI formatting in **Step 3** (`features/telemetry/`). No contract change required for v0.1 if UI maps known `data` shapes. Optional Step 2: add `display_message` on LOG telemetry for engine-authored copy.
+**Step ownership:** UI formatting in **Step 4** (`features/telemetry/`).
 
 ---
 
@@ -264,8 +261,8 @@ _If current prescan API or engine cannot support the UX, list here → copy to `
 | Cancel | Available in all statuses before `COMPLETED` |
 | Concurrent prescan | Orchestrator limits parallel prescan (e.g. 2–4); table shows queue position |
 | Container path access | UI validates path exists on host; warn if not in container mount set |
-| G12 auto-aggregate | Step 2 verifies; if missing, orchestrator hooks aggregate on `COMPLETED` |
-| G1 proposed vs confirmed | Persist both on job record (`proposed_*` + confirmed fields) — Step 2 |
+| G12 auto-aggregate | Step 3 implements; orchestrator hooks aggregate on `COMPLETED` |
+| G1 proposed vs confirmed | Step 2 — persist both on job record |
 | Empty 15-min copy | _"Start time was not set — 15-minute report is unavailable."_ |
 | ETA formula | `(total_frames - current_frame) / processing_fps` when fps > 0 |
 

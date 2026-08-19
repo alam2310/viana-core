@@ -16,7 +16,7 @@ Quick index for AI agents. **Start at `AGENTS.md`**, not here.
 | Build Next.js UI | `apps/web/AGENTS.md`, `docs/ui/README.md` |
 | Add API field | `packages/contracts/schemas/` first — `docs/governance/CONTRACT_SYNC.md` |
 | Run parallel agent chats | `docs/governance/KICKOFF_PROMPTS.md` (Phases) · `docs/steps/KICKOFF_PROMPTS.md` (Steps) |
-| Post-v0.1 work (Steps 1–5) | `docs/steps/TRACKER.md`, `docs/steps/AGENT_PROGRESS.md` |
+| Post-v0.1 work (Steps 1–6) | `docs/steps/TRACKER.md`, `docs/steps/AGENT_PROGRESS.md` |
 | Mock API in UI | `packages/contracts/fixtures/` |
 | Parity / legacy counts | `tests/viana/fixtures/PARITY_NOTES.md` |
 | Understand vehicle classes | `configs/classes.yaml`, `training/uvh/taxonomy/TAXONOMY.md` |

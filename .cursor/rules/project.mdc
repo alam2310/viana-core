@@ -9,7 +9,7 @@ alwaysApply: true
 2. **Source of truth conflicts:** follow `docs/governance/SOURCE_OF_TRUTH.md`.
 3. **Never invent APIs or CSV columns** — use `packages/contracts/schemas/`.
 4. **Update `docs/PROJECT_STATUS.md`** when completing a phase, Step, or endpoint.
-5. **Post-v0.1 Steps 1–5:** follow `docs/steps/AGENT_PROGRESS.md` when starting or finishing a Step.
+5. **Post-v0.1 Steps 1–6:** follow `docs/steps/AGENT_PROGRESS.md` when starting or finishing a Step.
 6. **Schema before code** — see `docs/governance/AI_SDLC.md` and `docs/governance/CONTRACT_SYNC.md` for parallel tracks.
 7. **Task routing:**
    - Engine → `src/viana/AGENTS.md`

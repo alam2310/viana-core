@@ -2,7 +2,7 @@
 
 **Status:** ✅ Approved — discovery signed off 2026-08-19  
 **Source:** [`DISCOVERY.md`](DISCOVERY.md)  
-**Implements in:** Step 3 (`apps/web/`) after Step 2 backend alignment
+**Implements in:** Step 4 (`apps/web/`) after Steps 2–3
 
 ---
 
@@ -59,7 +59,7 @@ If host path is not visible inside the GPU container, show non-blocking warning:
 
 > *This path may not be readable by the processing container. Mount the drive or add a bind-mount. (See ops docs.)*
 
-Step 5 **5.7** addresses arbitrary host path access.
+Step 6 **6.7** addresses arbitrary host path access.
 
 ### Single-file flow
 
@@ -209,12 +209,13 @@ Prescan API should accept `task_type` when NP/Junction ship (Step 2 G2).
 
 | Work | Step |
 |------|------|
-| Contract, orchestrator, prescan worker, intake/confirm APIs | **2** |
-| UI: table, browser, modal, sidebar, telemetry formatters | **3** |
-| Container arbitrary paths | **5.7** |
-| E2E 15-min verification | **4** |
+| Contracts, intake/confirm APIs, `JobStatus`, job storage shape | **2** |
+| Prescan engine, worker queue, auto-aggregate, partial MP4 | **3** |
+| UI: table, browser, modal, sidebar, telemetry formatters | **4** |
+| E2E 15-min verification | **5** |
+| Container arbitrary paths | **6.7** |
 
-See [`STEP_2_BACKEND_ALIGNMENT.md`](../steps/STEP_2_BACKEND_ALIGNMENT.md) for work items.
+See [`STEP_2_CONTRACTS_AND_API.md`](../steps/STEP_2_CONTRACTS_AND_API.md) and [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](../steps/STEP_3_ENGINE_AND_ORCHESTRATOR.md).
 
 ---
 

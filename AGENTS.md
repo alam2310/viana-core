@@ -15,7 +15,7 @@ Offline Indian traffic video analytics: detect, classify, track, count vehicles,
 | **API (`src/orchestrator/`)** | `docs/api_contracts.md` → `packages/contracts/schemas/` → `docs/PROJECT_PLAN.md` § Orchestrator |
 | **UI (`apps/web/`)** | `apps/web/AGENTS.md` → `docs/ui/README.md` → `packages/contracts/typescript/` |
 | **Contracts / types** | `packages/contracts/README.md` → update schema **before** code |
-| **Post-v0.1 work (Steps 1–5)** | `docs/steps/TRACKER.md` → `AGENT_PROGRESS.md` → `STEP_N_*.md` |
+| **Post-v0.1 work (Steps 1–6)** | `docs/steps/TRACKER.md` → `AGENT_PROGRESS.md` → `STEP_N_*.md` |
 
 ## 3. Repository map
 
@@ -37,7 +37,7 @@ docs/               → plans, status, UI specs, governance, Steps, ADRs
 1. **Never invent API fields** — check `packages/contracts/schemas/` and `docs/api_contracts.md`.
 2. **Backend owns jobs** — UI must not send `job_id` or `gpu_device` on submit.
 3. **Schemas before code** — if the contract changes, update `packages/contracts/` first; see `docs/governance/CONTRACT_SYNC.md` for parallel UI/API/engine rules.
-4. **Update `docs/PROJECT_STATUS.md`** when completing a phase, Step, or API endpoint — follow `docs/steps/AGENT_PROGRESS.md` for Steps 1–5.
+4. **Update `docs/PROJECT_STATUS.md`** when completing a phase, Step, or API endpoint — follow `docs/steps/AGENT_PROGRESS.md` for Steps 1–6.
 5. **Record decisions** in `docs/adr/` when architecture changes.
 6. **No inline 15-min aggregation in the GPU loop** — events CSV first, aggregate separately (ADR 001).
 7. **Geometry** — lines must be within frame bounds; mandatory on every run.
@@ -49,7 +49,7 @@ See **`docs/PROJECT_STATUS.md`** for the live matrix. **Phases 0–9 are complet
 | Component | Status |
 |-----------|--------|
 | Phases 0–9 (engine, API, UI, parity) | ✅ Complete |
-| **Post-v0.1 Steps 1–5** | ⬜ Active — see `docs/steps/TRACKER.md`; follow `docs/steps/AGENT_PROGRESS.md` on start/complete |
+| **Post-v0.1 Steps 1–6** | Step 2 current — see `docs/steps/TRACKER.md` |
 
 ## 6. Parallel development
 

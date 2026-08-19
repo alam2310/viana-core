@@ -77,7 +77,7 @@ Full cross-track rules: **`docs/governance/CONTRACT_SYNC.md`**
 
 **Parallel development:** `PARALLEL_AGENTS.md`, kickoff prompts in `KICKOFF_PROMPTS.md`.
 
-**Post-v0.1 Steps 1–5:** `docs/steps/TRACKER.md`, `docs/steps/AGENT_PROGRESS.md`, kickoffs in `docs/steps/KICKOFF_PROMPTS.md`.
+**Post-v0.1 Steps 1–6:** `docs/steps/TRACKER.md`, `docs/steps/AGENT_PROGRESS.md`, kickoffs in `docs/steps/KICKOFF_PROMPTS.md`.
 
 ---
 
@@ -86,7 +86,7 @@ Full cross-track rules: **`docs/governance/CONTRACT_SYNC.md`**
 - Code matches schema
 - Tests pass (`pytest tests/viana/` or UI lint/build)
 - `PROJECT_STATUS.md` updated
-- **Steps 1–5:** `TRACKER.md` + checklist in `docs/steps/AGENT_PROGRESS.md` completed
+- **Steps 1–6:** `TRACKER.md` + checklist in `docs/steps/AGENT_PROGRESS.md` completed
 - No edits to `training/` unless extending the retrain workflow
 - ADR added if behavior diverges from plan
 
@@ -94,7 +94,7 @@ Full cross-track rules: **`docs/governance/CONTRACT_SYNC.md`**
 
 ## 7. Related docs
 
-- `docs/steps/AGENT_PROGRESS.md` — what to update when progressing Steps 1–5
+- `docs/steps/AGENT_PROGRESS.md` — what to update when progressing Steps 1–6
 - `docs/governance/SOURCE_OF_TRUTH.md` — which file owns which fact
 - `docs/governance/CONTEXT_MAP.md` — quick lookup index
 - `docs/adr/` — decision log

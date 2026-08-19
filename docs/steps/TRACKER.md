@@ -1,7 +1,7 @@
 # Step tracker (living)
 
 **Last updated:** 2026-08-19  
-**Current Step:** **2** — Backend alignment  
+**Current Step:** **2** — Contracts & API foundation  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
 **Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)
 
@@ -13,74 +13,94 @@
 
 | Step | Name | Status | Owner chat | Started | Completed |
 |------|------|--------|------------|---------|-----------|
-| **1** | UX discovery & design | ✅ Complete | UX discovery chat | 2026-08-19 | 2026-08-19 |
-| **2** | Backend alignment | ⬜ Not started | New — Backend | — | — |
-| **3** | UI implementation | ⬜ Not started | New — UI v2 | — | — |
-| **4** | E2E verification | ⬜ Not started | UI v2 or QA | — | — |
-| **5** | Hardening backlog | ⬜ Not started | Per item | — | — |
+| **1** | UX discovery & design | ✅ Complete | UX discovery | 2026-08-19 | 2026-08-19 |
+| **2** | Contracts & API foundation | ⬜ Not started | New — Contract + API | — | — |
+| **3** | Engine prescan & orchestrator | ⬜ Not started | New — Engine + workers | — | — |
+| **4** | UI implementation | ⬜ Not started | New — UI v2 | — | — |
+| **5** | E2E verification | ⬜ Not started | UI v2 or QA | — | — |
+| **6** | Hardening backlog | ⬜ Not started | Per item | — | — |
 
 **Status legend:** ⬜ Not started · 🔄 In progress · ✅ Complete · ⏸ Skipped · ❌ Cancelled
 
 ---
 
-## Step 1 — UX discovery & design
+## Step 1 — UX discovery & design ✅
 
-| Phase / deliverable | Status | Path |
-|-------------------|--------|------|
-| 1.1 Discovery Q&A + sign-off | ✅ | `docs/ui/DISCOVERY.md` |
-| 1.2 Task-type prescan matrix | ✅ | `DISCOVERY.md` §3 |
+| Deliverable | Status | Path |
+|-------------|--------|------|
+| 1.1 Discovery Q&A | ✅ | `docs/ui/DISCOVERY.md` |
+| 1.2 Task-type matrix | ✅ | `DISCOVERY.md` §3 |
 | 1.3 Redesign spec | ✅ | `docs/ui/REDESIGN.md` |
 | 1.4 Flows / component map | ✅ | `USER_FLOWS.md`, `COMPONENT_MAP.md` |
-| 1.5 Backend gap list | ✅ | `STEP_2_BACKEND_ALIGNMENT.md` § Work items |
+| 1.5 Backend gap list | ✅ | `STEP_2_*` + `STEP_3_*` work items |
 
 ---
 
-## Step 2 — Backend alignment
+## Step 2 — Contracts & API foundation
 
-| Gate | Status |
+| Item | Status |
 |------|--------|
-| Required? | **Yes** — Step 1 filed work items |
-| Contract / schema | — |
-| Prescan engine | — |
-| Prescan API route | — |
-| Tests updated | — |
+| P1–P6 schemas + TS + fixtures | ⬜ |
+| `POST /jobs/intake` (G16) | ⬜ |
+| `PATCH /jobs/{id}/prescan` (G17) | ⬜ |
+| Proposed + confirmed fields (G1, G15) | ⬜ |
+| Metadata validation (G4) | ⬜ |
+| `output_dir` (G20) | ⬜ |
+| JobStatus state machine stubs (G14) | ⬜ |
+
+Detail: [`STEP_2_CONTRACTS_AND_API.md`](STEP_2_CONTRACTS_AND_API.md)
 
 ---
 
-## Step 3 — UI implementation
+## Step 3 — Engine prescan & orchestrator
+
+| Item | Status |
+|------|--------|
+| Prescan worker queue (G13) | ⬜ |
+| Dark-frame skip (G7) | ⬜ |
+| Frame preview (G8) | ⬜ |
+| GPU gate — `READY` only | ⬜ |
+| Auto-aggregate (G12) | ⬜ |
+| Partial MP4 serving (G19) | ⬜ |
+| ETA + crossings (G9) | ⬜ |
+
+Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
+
+---
+
+## Step 4 — UI implementation
 
 | Sub-step | Status | Surface |
 |----------|--------|---------|
-| 3.1 Prescan modal (propose → confirm/edit) | ⬜ | `apps/web/src/features/prescan/` |
-| 3.2 Dashboard metadata on submit | ⬜ | `apps/web/src/features/dashboard/` |
-| 3.3 Completed job artifacts + aggregate | ⬜ | dashboard / job cards |
-| 3.4 Polish (toasts, empty states) | ⬜ | `apps/web/` |
-| 3.5 `COMPONENT_MAP.md` synced | ⬜ | `docs/ui/` |
+| 4.1 Intake browser + queue table | ⬜ | `apps/web/` |
+| 4.2 Prescan review modal | ⬜ | `features/prescan/` |
+| 4.3 Live monitor + telemetry | ⬜ | `features/telemetry/` |
+| 4.4 Completed artifacts | ⬜ | dashboard |
+| 4.5 Polish + docs | ⬜ | `apps/web/`, `docs/ui/` |
 
 ---
 
-## Step 4 — E2E verification
+## Step 5 — E2E verification
 
 | Check | Status |
 |-------|--------|
-| Test clip with known `user_start_time` | ⬜ |
-| `{stem}_15min.csv` non-empty, correct windows | ⬜ |
-| `time_map.json` present on completed job | ⬜ |
-| Evidence in `verification/4_15min_results.md` | ⬜ |
+| Intake → confirm → READY → COMPLETED | ⬜ |
+| `_15min.csv` verified | ⬜ |
+| Evidence `verification/5_15min_results.md` | ⬜ |
 
 ---
 
-## Step 5 — Hardening
+## Step 6 — Hardening
 
-| Item | Work | Status | Chat |
-|------|------|--------|------|
-| 5.1 | Docker image bake | ⬜ | API / DevOps |
-| 5.2 | Pause / resume UX | ⬜ | UI (+ API) |
-| 5.3 | Faster DELETE → CANCELLED | ⬜ | API |
-| 5.4 | Playwright UI pass | ⬜ | UI / QA |
-| 5.5 | Extra camera clip | ⬜ | Engine / QA |
-| 5.6 | GPU tests in CI | ⬜ | DevOps |
-| 5.7 | Container read arbitrary host paths (local + external HDD) | ⬜ | DevOps / API |
+| Item | Work | Status |
+|------|------|--------|
+| 6.1 | Docker image bake | ⬜ |
+| 6.2 | Pause / resume UX | ⬜ |
+| 6.3 | Faster cancel | ⬜ |
+| 6.4 | Playwright | ⬜ |
+| 6.5 | Extra camera clip | ⬜ |
+| 6.6 | GPU CI | ⬜ |
+| 6.7 | Container host path access | ⬜ |
 
 ---
 
@@ -88,7 +108,6 @@
 
 | Date | Change |
 |------|--------|
-| 2026-08-19 | Step 1 complete: DISCOVERY + REDESIGN + Step 2 work items |
-| 2026-08-19 | Step 1 = discovery + design; Step 2 = backend alignment incl. prescan |
-| 2026-08-19 | Steps 1–5 numbered; `AGENT_PROGRESS.md` added |
-| 2026-08-19 | Tracker created; Phases 0–9 complete |
+| 2026-08-19 | Six-step plan: split backend into Step 2 (contracts/API) + Step 3 (engine/workers) |
+| 2026-08-19 | Step 1 complete |
+| 2026-08-19 | Steps 1–5 tracker created |

@@ -1,12 +1,12 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-19  
-**Current focus:** **Step 2** — Backend alignment (see `docs/steps/TRACKER.md`)  
+**Current focus:** **Step 2** — Contracts & API foundation (see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none. Live `:8000/health` is Phase 6.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Phase 9 parity:** signed off 2026-08-19 — `legacy/` removed  
-**Canonical plan:** `docs/PROJECT_PLAN.md` (Phases 0–9); **Steps 1–5** for remaining work
+**Canonical plan:** `docs/PROJECT_PLAN.md` (Phases 0–9); **Steps 1–6** for remaining work
 
 > AI agents: update this file when you complete a phase, endpoint, or milestone. Do not rely on chat memory.
 
@@ -32,26 +32,28 @@
 | Step | Name | Status |
 |------|------|--------|
 | 1 | UX discovery & design | ✅ Complete |
-| 2 | Backend alignment (contract + prescan) | ⬜ Not started |
-| 3 | UI implementation | ⬜ Not started |
-| 4 | E2E verification (`_15min.csv`) | ⬜ Not started |
-| 5 | Hardening backlog | ⬜ Not started |
+| 2 | Contracts & API foundation | ⬜ Not started |
+| 3 | Engine prescan & orchestrator | ⬜ Not started |
+| 4 | UI implementation | ⬜ Not started |
+| 5 | E2E verification (`_15min.csv`) | ⬜ Not started |
+| 6 | Hardening backlog | ⬜ Not started |
 
-**Goals (Steps 1–4):** Prescan UX redesign → wall-clock on submit → verify `{stem}_15min.csv`.
+**Goals (Steps 1–5):** Backend prescan lifecycle → UI redesign → verify `{stem}_15min.csv`.
 
-**Parked items** moved to [`docs/steps/STEP_5_HARDENING.md`](steps/STEP_5_HARDENING.md).
+**Parked items** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md).
 
 ---
 
 ## Next (legacy list — see Steps above)
 
-1. **Step 2** — Backend alignment: job status lifecycle, intake/confirm APIs, prescan worker queue.
-2. **Step 3** — Implement redesign per `docs/ui/REDESIGN.md`.
-3. **Step 4** — Verify 15-min grid on test clip.
+1. **Step 2** — Contracts + intake/confirm APIs + `JobStatus` lifecycle.
+2. **Step 3** — Prescan engine, worker queue, auto-aggregate, partial MP4.
+3. **Step 4** — Implement `docs/ui/REDESIGN.md`.
+4. **Step 5** — Verify 15-min grid on test clip.
 
 ## Parked (revisit later)
 
-See **Step 5** in [`docs/steps/STEP_5_HARDENING.md`](steps/STEP_5_HARDENING.md):
+See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Item | Notes |
 |------|--------|
@@ -78,8 +80,8 @@ See **Step 5** in [`docs/steps/STEP_5_HARDENING.md`](steps/STEP_5_HARDENING.md):
 
 | Date | Change |
 |------|--------|
-| 2026-08-19 | Step 1 complete: `DISCOVERY.md`, `REDESIGN.md`, flows, Step 2 work items |
-| 2026-08-19 | Step 1 = discovery + design; Step 2 = backend alignment incl. prescan |
+| 2026-08-19 | Six-step plan: Step 2 contracts/API, Step 3 engine/workers, UI → Step 4 |
+| 2026-08-19 | Step 1 complete: `DISCOVERY.md`, `REDESIGN.md`, flows |
 | 2026-08-19 | Post-v0.1 Steps plan + tracker under `docs/steps/` |
 | 2026-08-19 | Phase 9 signed off; `legacy/` removed; `training/uvh/` + `docs/ops/ENVIRONMENT_SETUP.md` + `docs/archive/ITVA_RESEARCH_LOG.md`; compose `build: .` |
 | 2026-08-19 | Overlay human go (geom D / b5); HEVC cq 42; rolling majority off-line |

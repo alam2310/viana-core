@@ -64,7 +64,7 @@ def test_matching_profile_overrides_geometry(tmp_path: Path) -> None:
 def test_frame_guided_lines_used_without_profile() -> None:
     """When no profile exists, frame cues can raise proposal confidence."""
     cv2 = __import__("pytest").importorskip("cv2")
-    np = __import__("numpy")
+    np = __import__("pytest").importorskip("numpy")
     frame = np.zeros((720, 1280, 3), dtype=np.uint8)
     cv2.line(frame, (0, 320), (1279, 280), (255, 255, 255), 4)
     cv2.line(frame, (0, 560), (1279, 540), (255, 255, 255), 4)

@@ -1,6 +1,26 @@
 const PROJECT_KEY = "viana.project_id";
+const OUTPUT_DIR_KEY = "viana.output_dir";
 const TELEMETRY_KEY = "viana.telemetry_detail";
-const PENDING_KEY = "viana.pending_paths";
+const TASK_TYPE_KEY = "viana.task_type";
+const INTAKE_BROWSE_KEY = "viana.browse_path_intake";
+const OUTPUT_BROWSE_KEY = "viana.browse_path_output";
+
+export type BrowsePurpose = "intake" | "output_dir";
+
+function browseKey(purpose: BrowsePurpose): string {
+  return purpose === "intake" ? INTAKE_BROWSE_KEY : OUTPUT_BROWSE_KEY;
+}
+
+export function readBrowsePath(purpose: BrowsePurpose): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return window.localStorage.getItem(browseKey(purpose));
+}
+
+export function writeBrowsePath(purpose: BrowsePurpose, dirPath: string): void {
+  window.localStorage.setItem(browseKey(purpose), dirPath);
+}
 
 export function readProjectId(): string {
   if (typeof window === "undefined") {
@@ -11,6 +31,17 @@ export function readProjectId(): string {
 
 export function writeProjectId(projectId: string): void {
   window.localStorage.setItem(PROJECT_KEY, projectId);
+}
+
+export function readOutputDir(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  return window.localStorage.getItem(OUTPUT_DIR_KEY) ?? "";
+}
+
+export function writeOutputDir(outputDir: string): void {
+  window.localStorage.setItem(OUTPUT_DIR_KEY, outputDir);
 }
 
 export function readTelemetryDetail(): boolean {
@@ -24,21 +55,19 @@ export function writeTelemetryDetail(enabled: boolean): void {
   window.localStorage.setItem(TELEMETRY_KEY, enabled ? "true" : "false");
 }
 
-export function readPendingPaths(): string[] {
+export type TaskTypePref = "ViAna_Moving" | "ViAnaNP" | "ViAnaJunction";
+
+export function readTaskType(): TaskTypePref {
   if (typeof window === "undefined") {
-    return [];
+    return "ViAna_Moving";
   }
-  try {
-    const raw = window.localStorage.getItem(PENDING_KEY);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is string => typeof item === "string")
-      : [];
-  } catch {
-    return [];
+  const raw = window.localStorage.getItem(TASK_TYPE_KEY);
+  if (raw === "ViAnaNP" || raw === "ViAnaJunction" || raw === "ViAna_Moving") {
+    return raw;
   }
+  return "ViAna_Moving";
 }
 
-export function writePendingPaths(paths: string[]): void {
-  window.localStorage.setItem(PENDING_KEY, JSON.stringify(paths));
+export function writeTaskType(taskType: TaskTypePref): void {
+  window.localStorage.setItem(TASK_TYPE_KEY, taskType);
 }

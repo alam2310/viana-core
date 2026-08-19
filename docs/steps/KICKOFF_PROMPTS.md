@@ -94,7 +94,48 @@ Env: NEXT_PUBLIC_USE_MOCKS=false, NEXT_PUBLIC_API_URL=http://localhost:8000
 
 Build: 4.1 intake+queue → 4.2 prescan review → 4.3 live monitor → 4.4 artifacts → 4.5 polish.
 
-When done: AGENT_PROGRESS.md § Step 4.
+Stabilization: follow execution path S01–S09 in docs/steps/STABILIZATION_BACKLOG.md (lane A: S03–S05). Do not start Step 5 until S07 (F001) cleared.
+
+When stabilization blockers clear: AGENT_PROGRESS.md § Step 4.
+```
+
+---
+
+## Step 4 — Stabilization (UI lane A)
+
+```
+You are the ViAna UI agent — Step 4 stabilization (lane A only).
+
+Read: docs/steps/STABILIZATION.md, STABILIZATION_BACKLOG.md § Execution path, STEP_4_UI_IMPLEMENTATION.md
+
+Lane A stabilization (in order, after S02 is fixed):
+- S03: /api/proxy/source
+- S04: prescan scrub via video seek (remove slider → prescan/preview)
+- S05: Re-scan OCR only + COMPONENT_MAP sync
+
+For new issues: append Seq row per STABILIZATION.md. Do not edit src/viana/ or src/orchestrator/. Do not start Step 5.
+```
+
+---
+
+## Step 3 — Stabilization patch (lanes B/C)
+
+```
+You are the ViAna ENGINE/ORCHESTRATOR agent — Step 3 stabilization patch.
+
+Read: STABILIZATION.md, STABILIZATION_BACKLOG.md — assigned Seq rows only (respect Depends).
+
+Lane B: S01–S02, S09. Lane C: S06–S08. Fix orchestrator/prescan. Update backlog Status + Fix commit. No apps/web/.
+Add tests. Log in STEP_3 § Log.
+```
+
+---
+
+## Coordinator — triage (planning chat)
+
+```
+Review docs/steps/STABILIZATION_BACKLOG.md § Execution path (S01–SNN).
+Assign next open Seq to lane A/B/C chat (respect Depends). Confirm S07 fixed/deferred → unblock Step 5 in TRACKER.md.
 ```
 
 ---

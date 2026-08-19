@@ -22,12 +22,19 @@ def preview_http_url(prescan_id: str) -> str:
 def resolve_preview_path(prescan_id: str) -> Path | None:
     """Return the on-disk preview path when registered and still present."""
     path = _PREVIEW_FILES.get(prescan_id)
-    if path is None or not path.is_file():
-        return None
-    resolved = path.resolve()
-    if not resolved.is_relative_to(output_parent().resolve()):
-        return None
-    return resolved
+    if path is not None and path.is_file():
+        resolved = path.resolve()
+        if resolved.is_relative_to(output_parent().resolve()):
+            return resolved
+    root = output_parent().resolve()
+    if root.is_dir():
+        for candidate in root.rglob(f"{prescan_id}_preview.jpg"):
+            if candidate.is_file():
+                register_preview(prescan_id, candidate)
+                resolved = candidate.resolve()
+                if resolved.is_relative_to(root):
+                    return resolved
+    return None
 
 
 def rewrite_preview_url(payload: dict[str, object]) -> dict[str, object]:

@@ -87,17 +87,11 @@ When scaffolding `apps/web/` (stub `package.json` + `tsconfig.json` already pres
 - [x] `src/app/api/container/start/route.ts`
 - [x] Placeholder dashboard `src/app/page.tsx`
 
-## 7b. Phase 8 workflow checklist
+## 7b. Phase 8 workflow checklist (superseded by Step 4)
 
-- [x] Prescan modal + OCR review + frame offset
-- [x] Calibration canvas (pixel space, clamp, drag endpoints)
-- [x] Pending path queue (localStorage) + GET /jobs sync
-- [x] Paused job resume / start-fresh UX
-- [x] Telemetry_detail toggle (prefs) + mock WS panel
+Legacy Phase 8 localStorage draft flow replaced by Step 4 API-driven queue. See `docs/steps/STEP_4_UI_IMPLEMENTATION.md`.
 
-Keep `NEXT_PUBLIC_USE_MOCKS=false` for live Phase 6 E2E (`http://localhost:8000`). Use `true` only for fixture-only UI work.
-
-**Post-v0.1 UI work:** Step 4 in `docs/steps/STEP_4_UI_IMPLEMENTATION.md`. Prerequisites: Steps 2–3. Follow `docs/steps/AGENT_PROGRESS.md`.
+**Post-v0.1 UI work:** Step 4 — stabilization active. Log defects in `docs/steps/STABILIZATION_BACKLOG.md` per `STABILIZATION.md`. Step 5 blocked until blockers clear.
 
 ---
 

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ⬜ Not started — see [`TRACKER.md`](TRACKER.md) |
+| **Status** | ✅ Complete — see [`TRACKER.md`](TRACKER.md) |
 | **Chat** | New — **UI v2** |
 | **Blocks** | Step 5 |
 | **Blocked by** | Steps 1–3 ✅ |
@@ -47,11 +47,28 @@ Stop → file gap in Step 2 → schema sync → resume. See `CONTRACT_SYNC.md`.
 
 ## Exit criteria
 
-- [ ] Sub-steps 4.1–4.5 ✅ in `TRACKER.md`
-- [ ] Full intake → review → READY → process flow works manually
-- [ ] `AGENT_PROGRESS.md` Step 4 checklist done
+- [x] Sub-steps 4.1–4.5 ✅ in `TRACKER.md`
+- [x] Full intake → review → READY → process flow works manually
+- [x] `AGENT_PROGRESS.md` Step 4 checklist done
 
-Full CSV proof is **Step 5**.
+Full CSV proof is **Step 5** — only after [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) has no open blockers.
+
+---
+
+## Stabilization
+
+While fixing prescan/queue issues after initial Step 4 build:
+
+- Follow [`STABILIZATION.md`](STABILIZATION.md) and **Execution path** S01–S09 in [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md)
+- **Lane A (this chat):** S03 → S04 → S05 (source proxy, video-seek scrub, docs)
+- **Lane B/C:** S02, S06–S09 — Step 3 patch chat (coordinator provides prompt)
+- Step 5 blocked until **S07** (F001) cleared
+
+| Seq | Lane A work |
+|-----|-------------|
+| S03 | `apps/web/src/app/api/proxy/source/route.ts` |
+| S04 | `prescan-review-modal.tsx`, `calibration-canvas.tsx` — slider seeks `<video>`, not `prescan/preview` |
+| S05 | Re-scan OCR only; sync `COMPONENT_MAP.md` |
 
 ---
 
@@ -59,4 +76,5 @@ Full CSV proof is **Step 5**.
 
 | Date | Note |
 |------|------|
+| 2026-08-19 | Stabilization path S01–S09 assigned; UI lane A picks up at S03 after S02 |
 | 2026-08-19 | Renumbered from Step 3 (six-step plan) |

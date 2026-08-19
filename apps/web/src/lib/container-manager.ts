@@ -104,12 +104,12 @@ async function dockerInspectRunning(containerName: string): Promise<{
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("No such object")) {
-      return { running: false, error: "container not found" };
+      return { running: false, error: "container_not_found" };
     }
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      return { running: false, error: "docker CLI not found on host" };
+      return { running: false, error: "docker_not_installed" };
     }
-    return { running: false, error: message };
+    return { running: false, error: "docker_inspect_failed" };
   }
 }
 

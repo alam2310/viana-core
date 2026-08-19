@@ -14,8 +14,10 @@ Work **after** Phases 0–9 is tracked as **Steps 1–6** (not Phases).
 | [`STEP_4_UI_IMPLEMENTATION.md`](STEP_4_UI_IMPLEMENTATION.md) | UI build |
 | [`STEP_5_E2E_VERIFICATION.md`](STEP_5_E2E_VERIFICATION.md) | 15-min CSV E2E |
 | [`STEP_6_HARDENING.md`](STEP_6_HARDENING.md) | Post-ship backlog |
+| [`STABILIZATION.md`](STABILIZATION.md) | Step 4→5 gate rules; agents log defects here |
+| [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) | Living defect list + **execution path S01–S09** |
 
-**Agent rule:** New chat per Step (2–4). Follow [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md).
+**Agent rule:** New chat per Step (2–4). During Step 4 acceptance, log defects in [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) per [`STABILIZATION.md`](STABILIZATION.md).
 
 ---
 

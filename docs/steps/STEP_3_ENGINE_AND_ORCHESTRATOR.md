@@ -44,7 +44,9 @@ Implement **prescan engine behavior** and **orchestrator workers** on top of Ste
 
 **Do not edit:** `apps/web/` (Step 4).
 
-**Contract changes:** only if Step 3 discovers a gap — file back to Step 2 process first.
+**Contract changes:** only if Step 3 discovers a gap — file in `STABILIZATION_BACKLOG.md` lane D; Step 2 patch.
+
+**Stabilization:** append prescan/orchestrator defects to [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) per [`STABILIZATION.md`](STABILIZATION.md).
 
 ---
 

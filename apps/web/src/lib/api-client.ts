@@ -7,6 +7,9 @@
 
 import type {
   CalibrationProfile,
+  JobIntakeRequest,
+  JobIntakeResponse,
+  JobPrescanConfirmRequest,
   JobStatusResponse,
   JobSubmitRequest,
   JobSubmitResponse,
@@ -20,10 +23,13 @@ import telemetryProgressFixture from "@viana/fixtures/telemetry_progress.json";
 
 import { API_BASE_URL, USE_MOCKS } from "./env";
 import {
+  mockConfirmPrescan,
   mockGetJob,
+  mockIntakeJobs,
   mockListJobs,
   mockRecordSubmit,
   mockResumeJob,
+  mockRetryPrescan,
   mockStartFreshJob,
 } from "./mock-jobs";
 
@@ -107,15 +113,42 @@ export type JobSubmitClientBody = JobSubmitRequest & {
 };
 
 /** Prefix orchestrator-relative paths (preview_url) with NEXT_PUBLIC_API_URL. */
-export function resolveApiAssetUrl(path: string): string {
+export function resolveApiAssetUrl(path: string, cacheBust?: string | number): string {
   if (!path) {
     return path;
   }
+  let url: string;
   if (/^https?:\/\//i.test(path)) {
-    return path;
+    url = path;
+  } else {
+    const base = API_BASE_URL.replace(/\/$/, "");
+    url = path.startsWith("/") ? `${base}${path}` : `${base}/${path}`;
   }
-  const base = API_BASE_URL.replace(/\/$/, "");
-  return path.startsWith("/") ? `${base}${path}` : `${base}/${path}`;
+  if (cacheBust !== undefined) {
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}v=${encodeURIComponent(String(cacheBust))}`;
+  }
+  return url;
+}
+
+/** Same-origin URL for prescan preview JPEGs (avoids cross-origin canvas/img issues). */
+export function previewImageUrl(apiPath: string, cacheBust?: string | number): string {
+  if (!apiPath) {
+    return apiPath;
+  }
+  let path = apiPath;
+  if (/^https?:\/\//i.test(apiPath)) {
+    try {
+      path = new URL(apiPath).pathname;
+    } catch {
+      return apiPath;
+    }
+  }
+  const params = new URLSearchParams({ path });
+  if (cacheBust !== undefined) {
+    params.set("v", String(cacheBust));
+  }
+  return `/api/proxy/preview?${params}`;
 }
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -159,6 +192,77 @@ export async function getHealth(): Promise<HealthResponse> {
     return { status: "ok", phase: 6 };
   }
   return requestJson<HealthResponse>("/health");
+}
+
+export async function intakeJobs(
+  body: JobIntakeRequest,
+): Promise<JobIntakeResponse> {
+  if (USE_MOCKS) {
+    return mockIntakeJobs(body);
+  }
+  return requestJson<JobIntakeResponse>("/jobs/intake", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function confirmPrescan(
+  jobId: string,
+  body: JobPrescanConfirmRequest,
+): Promise<JobStatusResponse> {
+  const payload: JobPrescanConfirmRequest = {
+    metadata: body.metadata,
+    task_parameters: {
+      ...body.task_parameters,
+      horizon_line: intLine(body.task_parameters.horizon_line),
+      counting_line: intLine(body.task_parameters.counting_line),
+    },
+    ...(body.calibration_profile_id
+      ? { calibration_profile_id: body.calibration_profile_id }
+      : {}),
+  };
+  if (USE_MOCKS) {
+    const job = mockConfirmPrescan(jobId, payload);
+    if (!job) {
+      throw new ApiClientError("Job not found", 404);
+    }
+    return job;
+  }
+  return requestJson<JobStatusResponse>(
+    `/jobs/${encodeURIComponent(jobId)}/prescan`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+}
+
+export async function retryPrescan(jobId: string): Promise<JobStatusResponse> {
+  if (USE_MOCKS) {
+    const job = mockRetryPrescan(jobId);
+    if (!job) {
+      throw new ApiClientError("Job not found", 404);
+    }
+    return job;
+  }
+  return requestJson<JobStatusResponse>(
+    `/jobs/${encodeURIComponent(jobId)}/prescan/retry`,
+    { method: "POST" },
+  );
+}
+
+export async function prescanPreview(
+  jobId: string,
+  frameOffsetSec = 0,
+): Promise<PrescanResponse> {
+  if (USE_MOCKS) {
+    return asContract<PrescanResponse>(prescanFixture);
+  }
+  const query = `?frame_offset_sec=${encodeURIComponent(String(frameOffsetSec))}`;
+  return requestJson<PrescanResponse>(
+    `/jobs/${encodeURIComponent(jobId)}/prescan/preview${query}`,
+  );
+}
+
+export function partialVideoUrl(jobId: string): string {
+  return resolveApiAssetUrl(`/artifacts/${encodeURIComponent(jobId)}/partial.mp4`);
 }
 
 export async function prescan(
@@ -337,6 +441,12 @@ export function subscribeJobTelemetry(
 
 export const apiClient = {
   getHealth,
+  intakeJobs,
+  confirmPrescan,
+  retryPrescan,
+  prescanPreview,
+  previewImageUrl,
+  partialVideoUrl,
   prescan,
   submitJob,
   listJobs,

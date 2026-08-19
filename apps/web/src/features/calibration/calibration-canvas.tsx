@@ -3,38 +3,75 @@
 import { useEffect, useRef, useState } from "react";
 import type { LineSegment, Point } from "@viana/contracts";
 
-import { clampLine } from "@/lib/geometry";
+import { clampLine, clampPoint } from "@/lib/geometry";
 import { cn } from "@/lib/utils";
 
 type Handle = "horizon-start" | "horizon-end" | "counting-start" | "counting-end";
 
-const HANDLE_R = 18;
+type DragState =
+  | { kind: "handle"; handle: Handle }
+  | {
+      kind: "translate";
+      line: "horizon" | "counting";
+      origin: Point;
+      snapshot: LineSegment;
+    };
+
+const HANDLE_RADIUS = 14;
 
 function dist(a: Point, b: Point): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
 
+function toDisplay(point: Point, scale: number): Point {
+  return [point[0] * scale, point[1] * scale];
+}
+
+function distToSegment(p: Point, a: Point, b: Point): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  if (dx === 0 && dy === 0) {
+    return dist(p, a);
+  }
+  const t = Math.max(
+    0,
+    Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy)),
+  );
+  return dist(p, [a[0] + t * dx, a[1] + t * dy]);
+}
+
 function hitHandle(
-  p: Point,
+  displayPoint: Point,
   horizon: LineSegment,
   counting: LineSegment,
+  scale: number,
 ): Handle | null {
   const candidates: Array<[Handle, Point]> = [
-    ["horizon-start", horizon.start],
-    ["horizon-end", horizon.end],
-    ["counting-start", counting.start],
-    ["counting-end", counting.end],
+    ["horizon-start", toDisplay(horizon.start, scale)],
+    ["horizon-end", toDisplay(horizon.end, scale)],
+    ["counting-start", toDisplay(counting.start, scale)],
+    ["counting-end", toDisplay(counting.end, scale)],
   ];
   let best: Handle | null = null;
-  let bestD = HANDLE_R;
+  let bestD = HANDLE_RADIUS;
   for (const [id, pt] of candidates) {
-    const d = dist(p, pt);
+    const d = dist(displayPoint, pt);
     if (d <= bestD) {
       bestD = d;
       best = id;
     }
   }
   return best;
+}
+
+function hitLineBody(
+  displayPoint: Point,
+  line: LineSegment,
+  scale: number,
+): boolean {
+  const start = toDisplay(line.start, scale);
+  const end = toDisplay(line.end, scale);
+  return distToSegment(displayPoint, start, end) <= HANDLE_RADIUS;
 }
 
 function setHandle(
@@ -55,6 +92,17 @@ function setHandle(
   return { horizon, counting: { ...counting, end: point } };
 }
 
+function translateLine(line: LineSegment, delta: Point): LineSegment {
+  return {
+    start: [line.start[0] + delta[0], line.start[1] + delta[1]],
+    end: [line.end[0] + delta[0], line.end[1] + delta[1]],
+  };
+}
+
+export function formatLineCoords(line: LineSegment): string {
+  return `(${line.start[0]}, ${line.start[1]}) → (${line.end[0]}, ${line.end[1]})`;
+}
+
 export function CalibrationCanvas({
   width,
   height,
@@ -73,7 +121,7 @@ export function CalibrationCanvas({
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [drag, setDrag] = useState<Handle | null>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
   const [preview, setPreview] = useState<HTMLImageElement | null>(null);
   const displayWidth = 720;
   const scale = displayWidth / width;
@@ -84,11 +132,45 @@ export function CalibrationCanvas({
       setPreview(null);
       return;
     }
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => setPreview(image);
-    image.onerror = () => setPreview(null);
-    image.src = previewUrl;
+    let cancelled = false;
+    let objectUrl: string | undefined;
+
+    void (async () => {
+      try {
+        const response = await fetch(previewUrl, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`preview ${response.status}`);
+        }
+        const blob = await response.blob();
+        if (cancelled) {
+          return;
+        }
+        objectUrl = URL.createObjectURL(blob);
+        const image = new Image();
+        image.onload = () => {
+          if (!cancelled) {
+            setPreview(image);
+          }
+        };
+        image.onerror = () => {
+          if (!cancelled) {
+            setPreview(null);
+          }
+        };
+        image.src = objectUrl;
+      } catch {
+        if (!cancelled) {
+          setPreview(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
   }, [previewUrl]);
 
   useEffect(() => {
@@ -131,10 +213,16 @@ export function CalibrationCanvas({
       ctx.stroke();
       for (const pt of [line.start, line.end]) {
         ctx.beginPath();
-        ctx.arc(pt[0] * scale, pt[1] * scale, 7, 0, Math.PI * 2);
+        ctx.arc(pt[0] * scale, pt[1] * scale, 8, 0, Math.PI * 2);
         ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
       }
       ctx.font = "12px sans-serif";
+      ctx.fillStyle = color;
       ctx.fillText(label, line.start[0] * scale + 10, line.start[1] * scale - 8);
     };
 
@@ -142,15 +230,79 @@ export function CalibrationCanvas({
     drawLine(counting, "#16a34a", "Counting");
   }, [counting, displayHeight, horizon, preview, scale]);
 
-  function eventPoint(event: React.MouseEvent<HTMLCanvasElement>): Point {
+  function eventDisplayPoint(event: React.MouseEvent<HTMLCanvasElement>): Point {
     const canvas = canvasRef.current;
     if (!canvas) {
       return [0, 0];
     }
     const rect = canvas.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * width;
-    const y = ((event.clientY - rect.top) / rect.height) * height;
+    const x = ((event.clientX - rect.left) / rect.width) * displayWidth;
+    const y = ((event.clientY - rect.top) / rect.height) * displayHeight;
     return [x, y];
+  }
+
+  function eventVideoPoint(event: React.MouseEvent<HTMLCanvasElement>): Point {
+    const display = eventDisplayPoint(event);
+    return [display[0] / scale, display[1] / scale];
+  }
+
+  function applyChange(next: { horizon: LineSegment; counting: LineSegment }) {
+    onChange({
+      horizon: clampLine(next.horizon, width, height),
+      counting: clampLine(next.counting, width, height),
+    });
+  }
+
+  function onPointerDown(event: React.MouseEvent<HTMLCanvasElement>) {
+    const display = eventDisplayPoint(event);
+    const handle = hitHandle(display, horizon, counting, scale);
+    if (handle) {
+      setDrag({ kind: "handle", handle });
+      return;
+    }
+    if (hitLineBody(display, horizon, scale)) {
+      setDrag({
+        kind: "translate",
+        line: "horizon",
+        origin: eventVideoPoint(event),
+        snapshot: horizon,
+      });
+      return;
+    }
+    if (hitLineBody(display, counting, scale)) {
+      setDrag({
+        kind: "translate",
+        line: "counting",
+        origin: eventVideoPoint(event),
+        snapshot: counting,
+      });
+    }
+  }
+
+  function onPointerMove(event: React.MouseEvent<HTMLCanvasElement>) {
+    if (!drag) {
+      return;
+    }
+    const videoPoint = eventVideoPoint(event);
+    if (drag.kind === "handle") {
+      const next = setHandle(drag.handle, videoPoint, horizon, counting);
+      applyChange(next);
+      return;
+    }
+    const delta: Point = [
+      videoPoint[0] - drag.origin[0],
+      videoPoint[1] - drag.origin[1],
+    ];
+    const moved = translateLine(drag.snapshot, delta);
+    const clamped: LineSegment = {
+      start: clampPoint(moved.start, width, height),
+      end: clampPoint(moved.end, width, height),
+    };
+    if (drag.line === "horizon") {
+      applyChange({ horizon: clamped, counting });
+    } else {
+      applyChange({ horizon, counting: clamped });
+    }
   }
 
   return (
@@ -159,21 +311,8 @@ export function CalibrationCanvas({
       width={displayWidth}
       height={displayHeight}
       className={cn("w-full cursor-crosshair rounded border border-neutral-300", className)}
-      onMouseDown={(event) => {
-        const p = eventPoint(event);
-        setDrag(hitHandle(p, horizon, counting));
-      }}
-      onMouseMove={(event) => {
-        if (!drag) {
-          return;
-        }
-        const p = eventPoint(event);
-        const next = setHandle(drag, p, horizon, counting);
-        onChange({
-          horizon: clampLine(next.horizon, width, height),
-          counting: clampLine(next.counting, width, height),
-        });
-      }}
+      onMouseDown={onPointerDown}
+      onMouseMove={onPointerMove}
       onMouseUp={() => setDrag(null)}
       onMouseLeave={() => setDrag(null)}
     />

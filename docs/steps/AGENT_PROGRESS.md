@@ -68,6 +68,18 @@
 
 ---
 
+## Stabilization (Step 4 → Step 5 gate)
+
+If Step 4 UI is built but prescan/queue is not ready for E2E:
+
+1. Follow **Execution path** [`STABILIZATION_BACKLOG.md` § S01–S09](STABILIZATION_BACKLOG.md#execution-path) in order (respect **Depends**).
+2. Log new issues: add **Seq** + **ID** rows per [`STABILIZATION.md`](STABILIZATION.md).
+3. Do **not** start Step 5 until **S07** (F001 blocker) is `fixed` or `deferred`.
+4. Lane A: S03–S05. Lane B: S01–S02, S09. Lane C: S06–S08.
+5. Planning chat assigns the next open Seq to a patch chat.
+
+---
+
 ## On completing Step 4 — UI implementation
 
 Update tracker after **each** sub-step 4.1–4.5.
@@ -75,7 +87,7 @@ Update tracker after **each** sub-step 4.1–4.5.
 | # | Action | File(s) |
 |---|--------|---------|
 | 1 | Sub-steps 4.1–4.5 ✅ | `TRACKER.md` § Step 4 |
-| 2 | Mark Step 4 ✅ | `TRACKER.md` |
+| 2 | Mark Step 4 ✅ only if stabilization blockers clear (see `STABILIZATION_BACKLOG.md`) | `TRACKER.md` |
 | 3 | Set **Current Step** → **5** | `TRACKER.md` |
 | 4 | Changelog | `PROJECT_STATUS.md` |
 | 5 | Sync component map | `docs/ui/COMPONENT_MAP.md` |
@@ -111,6 +123,7 @@ Per item **6.1–6.7** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferre
 | `src/orchestrator/routes/`, models | 2–3 |
 | `src/viana/stages/prescan.py` | 3 |
 | `apps/web/*` | 4 |
+| `docs/steps/STABILIZATION_BACKLOG.md` | 4 stabilization (append defects) |
 | `verification/5_15min_results.md` | 5 |
 | `docs/ui/REDESIGN.md` | 1 (write), 4 (read) |
 
@@ -122,6 +135,8 @@ Per item **6.1–6.7** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferre
 Complete Step 2: JobStatus lifecycle and intake API
 Complete Step 3: prescan worker queue and auto-aggregate
 Step 4.2: prescan review modal with confirm summary
+Stabilization S04: prescan scrub via video seek (F003)
+Stabilization S07: corner ROI OCR (F001 blocker)
 Complete Step 5: verify 15min CSV on hiv000001_inframe
 Step 6.1: bake trackers into Docker image
 ```

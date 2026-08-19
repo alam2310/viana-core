@@ -1,10 +1,10 @@
-.PHONY: help install test test-legacy engine-cli api-dev ui-dev lint typecheck format boundaries
+.PHONY: help install test test-training engine-cli api-dev ui-dev lint typecheck format boundaries
 
 help:
 	@echo "ViAna monorepo targets:"
 	@echo "  make install      - pip install -e '.[dev]' (inside container)"
-	@echo "  make test         - run new engine tests (tests/viana/)"
-	@echo "  make test-legacy  - run legacy taxonomy tests"
+	@echo "  make test         - run engine tests (tests/viana/)"
+	@echo "  make test-training - run UVH taxonomy tests (training/uvh/tests/)"
 	@echo "  make lint         - ruff + bandit"
 	@echo "  make typecheck    - mypy on viana + orchestrator"
 	@echo "  make format       - ruff format"
@@ -19,8 +19,8 @@ install:
 test:
 	pytest tests/
 
-test-legacy:
-	pytest legacy/tests/
+test-training:
+	pytest training/uvh/tests/
 
 lint:
 	ruff check src tests

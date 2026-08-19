@@ -1,30 +1,29 @@
 # Deployment & Local Development
 
+**First-time setup:** [`ops/ENVIRONMENT_SETUP.md`](ops/ENVIRONMENT_SETUP.md) (host GPU, Docker build, verification).
+
 ## Docker (CV engine + API)
 
 ```bash
-# From repo root
-docker compose build    # required after Dockerfile changes
+docker compose build
 docker compose up -d
 docker compose exec dev bash
 
-# Inside container (if image predates pyproject install, or for live mount updates)
+# Inside container (live mount or fresh image)
 pip install -e ".[dev]"
-make api-dev            # FastAPI on :8000
+pip install -q "numpy>=1.26.0,<2"
+pip install -q "trackers==2.6.0" --no-deps
+make api-dev            # FastAPI on :8000 (compose already runs uvicorn)
 python -m viana --help
 ```
 
 ### Local repo hygiene
 
-Gitignored artifact folders at the **repo root** (`debug_pretrain/`, `runs/`) are duplicates of `legacy/artifacts/`. Safe to delete:
+Gitignored artifact folders at the **repo root** (`debug_pretrain/`, `runs/`) are safe to delete:
 
 ```bash
-rm -rf debug_pretrain/ runs/    # use sudo if Docker created files as nobody
-# or:
 ./scripts/cleanup-local-artifacts.sh
 ```
-
-See `legacy/artifacts/README.md` and `docs/PHASE_0_SIGNOFF.md`.
 
 Environment variables (`docker-compose.yml`):
 
@@ -34,7 +33,7 @@ Environment variables (`docker-compose.yml`):
 | `VIANA_OUTPUT_PARENT` | `/data/viana-outputs` | Artifact output root |
 | `VIANA_DATA_ROOT` | `./data` (host) | Mount host data → `/data` |
 
-## UI (host, Phase 7+)
+## UI (host)
 
 ```bash
 cd apps/web
@@ -47,10 +46,10 @@ Container config for UI docker manager: `docker/orchestrator_config.yaml.example
 ## Tests
 
 ```bash
-pytest tests/viana/       # active engine
-pytest legacy/tests/      # legacy taxonomy only
+pytest tests/viana/
+pytest training/uvh/tests/
 ```
 
-## Legacy training / Docker setup (historical)
+## UVH retraining (optional)
 
-See [`../legacy/docs/ITVA_Environment_Setup_Guide.md`](../legacy/docs/ITVA_Environment_Setup_Guide.md).
+See [`../training/README.md`](../training/README.md).

@@ -6,7 +6,6 @@ alwaysApply: false
 
 # ViAna Engine Rules
 
-- Do not modify `legacy/inference/inference_engine.py` except for path fixes; it is the parity reference.
 - New code lives under `src/viana/`.
 - CLI-first: every stage must be invocable via `python -m viana`.
 - Use `JobSubmitRequest` / Pydantic models from `src/viana/config/job.py`.
@@ -15,4 +14,4 @@ alwaysApply: false
 - `horizon_line` and `counting_line` are mandatory; validate frame bounds.
 - Heuristic truck split behind `use_heuristic_truck_split` flag.
 - Class hierarchy from `configs/classes.yaml` only.
-- Parity procedure: see `legacy/PARITY.md`.
+- Parity record: `tests/viana/fixtures/PARITY_NOTES.md`.

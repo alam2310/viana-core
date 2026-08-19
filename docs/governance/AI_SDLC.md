@@ -13,7 +13,7 @@ How AI agents should work on this repo to minimize context drift, hallucination,
 | **Status honesty** | If an endpoint is not ✅ in `PROJECT_STATUS.md`, do not implement UI as if it exists without mocks |
 | **Single writer per layer** | Engine logic in `src/viana/` only; no CV code in `apps/web/` |
 | **ADRs for pivots** | New architecture decision → `docs/adr/NNN-title.md` |
-| **Parity before delete** | Do not remove `legacy/` until Phase 9 gate in `PROJECT_STATUS.md` |
+| **Parity record** | Phase 9 signed off — see `tests/viana/fixtures/PARITY_NOTES.md` |
 
 ---
 
@@ -35,7 +35,7 @@ How AI agents should work on this repo to minimize context drift, hallucination,
 
 - Invent API endpoints not in `docs/api_contracts.md`
 - Invent CSV columns not in `events_*.schema.json`
-- Assume `inference_engine.py` lives under `src/` (it is `legacy/inference/`)
+- Assume parity reference is `tests/viana/fixtures/PARITY_NOTES.md` (legacy tree removed)
 - Send `job_id` / `gpu_device` from UI submit payloads
 - Put 15-minute binning inside the GPU frame loop
 
@@ -83,7 +83,7 @@ Full cross-track rules: **`docs/governance/CONTRACT_SYNC.md`**
 - Code matches schema
 - Tests pass (`pytest tests/viana/` or UI lint/build)
 - `PROJECT_STATUS.md` updated
-- No edits to `legacy/` except documented path fixes
+- No edits to `training/` unless extending the retrain workflow
 - ADR added if behavior diverges from plan
 
 ---

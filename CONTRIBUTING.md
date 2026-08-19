@@ -41,6 +41,6 @@ When changing module boundaries or data flows, update the relevant file in `docs
 
 ## Do not
 
-- Extend `legacy/` (parity reference only)
+- Do not extend `training/` scripts unless retraining workflow requires it
 - Invent API fields outside `packages/contracts/schemas/`
 - Put 15-minute aggregation inside the GPU frame loop

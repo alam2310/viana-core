@@ -1,5 +1,5 @@
 ---
-description: Global ViAna monorepo rules — read AGENTS.md first
+description: ViAna monorepo project rules (all agents)
 alwaysApply: true
 ---
 
@@ -10,10 +10,10 @@ alwaysApply: true
 3. **Never invent APIs or CSV columns** — use `packages/contracts/schemas/`.
 4. **Update `docs/PROJECT_STATUS.md`** when completing a phase or endpoint.
 5. **Schema before code** — see `docs/governance/AI_SDLC.md` and `docs/governance/CONTRACT_SYNC.md` for parallel tracks.
-6. **Do not modify `legacy/`** except path fixes; parity reference only.
-7. **Task routing:**
+6. **Task routing:**
    - Engine → `src/viana/AGENTS.md`
    - API → `src/orchestrator/AGENTS.md`
    - UI → `apps/web/AGENTS.md`
+   - UVH retrain → `training/README.md`
 
 Current plan: `docs/PROJECT_PLAN.md`. Status: `docs/PROJECT_STATUS.md`. Architecture: `docs/ARCHITECTURE.md`. Docs index: `docs/README.md`.

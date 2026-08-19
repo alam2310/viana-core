@@ -14,7 +14,7 @@ docs/ui/                  ← UI specifications (read-only unless fixing docs)
 packages/contracts/       ← types & fixtures (coordinate via schema PRs)
 ```
 
-**Do not edit:** `src/viana/`, `src/orchestrator/`, `legacy/`
+**Do not edit:** `src/viana/`, `src/orchestrator/`
 
 ---
 

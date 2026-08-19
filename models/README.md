@@ -14,4 +14,4 @@ Production inference uses paths from `configs/engine_defaults.yaml`.
 - **pretrained/** — third-party YOLO weights; not fine-tuned on ITVA data.
 - **public/** — historical UVH-26 experiment weights kept for training parity and audit. Do not point `engine_defaults.yaml` here unless explicitly migrating models.
 
-Large `.pt` files may be tracked via Git LFS. If weights are missing locally, obtain them from the project maintainer or retrain using `legacy/training/` (historical).
+Large `.pt` files may be tracked via Git LFS. If weights are missing locally, obtain them from the project maintainer or retrain using `training/` (see `training/README.md`).

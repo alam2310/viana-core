@@ -17,10 +17,10 @@ Read in order:
 3. src/viana/AGENTS.md
 4. docs/PROJECT_PLAN.md (Phases 1–5)
 5. docs/governance/CONTRACT_SYNC.md
-6. legacy/PARITY.md + legacy/inference/inference_engine.py (parity reference only)
+6. tests/viana/fixtures/PARITY_NOTES.md + docs/archive/ITVA_RESEARCH_LOG.md (historical)
 
 Your owned paths: src/viana/, tests/viana/, configs/ (with care)
-Do NOT edit: apps/web/, src/orchestrator/, legacy/ (except path fixes)
+Do NOT edit: apps/web/, src/orchestrator/
 
 Hard rules:
 - CLI-first: python -m viana prescan|run|resume|aggregate
@@ -57,7 +57,7 @@ Read in order:
 6. packages/contracts/typescript/ + packages/contracts/fixtures/
 
 Your owned paths: apps/web/, docs/ui/ (spec fixes only)
-Do NOT edit: src/viana/, src/orchestrator/, legacy/
+Do NOT edit: src/viana/, src/orchestrator/
 
 Hard rules:
 - NEXT_PUBLIC_USE_MOCKS=true until PROJECT_STATUS marks endpoints ✅
@@ -101,7 +101,7 @@ Read in order:
 7. docs/governance/PARALLEL_AGENTS.md (when to implement vs design)
 
 Your owned paths: src/orchestrator/
-Do NOT edit: src/viana/ (except coordinating contract changes), apps/web/, legacy/
+Do NOT edit: src/viana/ (except coordinating contract changes), apps/web/
 
 Hard rules:
 - Spawn engine via subprocess: python -m viana — no CV in route handlers

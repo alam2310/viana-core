@@ -15,22 +15,21 @@ When two documents disagree, **this table wins**.
 | **OpenAPI spec** | `openapi.yaml` | Must match `api_contracts.md` |
 | **Threat model** | `THREAT_MODEL.md` | Security scope |
 | **Class names & aggregation flags** | `configs/classes.yaml` | Inference time |
-| **UVH training label map** | `legacy/configs/vehicle_taxonomy.json` | Training / legacy only |
+| **UVH training label map** | `training/uvh/taxonomy/vehicle_taxonomy.json` | Retrain only |
 | **Engine default thresholds** | `configs/engine_defaults.yaml` | Overridable per job |
 | **System topology** | `docs/ARCHITECTURE.md` | |
 | **UI flows & canvas** | `docs/ui/*.md` | |
 | **UI mock data** | `packages/contracts/fixtures/*.json` | Until API ✅ |
-| **Parity procedure** | `legacy/PARITY.md` | |
-| **Legacy behavior reference** | `legacy/inference/inference_engine.py` | Do not extend |
-| **Historical research** | `legacy/blueprint.md` | **Not** current status |
+| **Parity record** | `tests/viana/fixtures/PARITY_NOTES.md` | Phase 9 signed off |
+| **Environment setup** | `docs/ops/ENVIRONMENT_SETUP.md` | From-scratch Docker/GPU |
+| **Historical research** | `docs/archive/ITVA_RESEARCH_LOG.md` | **Not** current status |
 | **Architecture decisions** | `docs/adr/*.md` | |
 | **Production model weights** | `models/v1/itva_medium_1088p.pt` | |
 | **Pedestrian weights** | `models/pretrained/yolo11l.pt` | |
 | **Model directory guide** | `models/README.md` | UVH `public/` vs production `v1/` |
+| **UVH retrain workflow** | `training/README.md` | Optional |
 
 ## Stale documents (read for context only)
 
-- `README.md` § Golden Master — Docker setup still valid; directory tree see `AGENTS.md`
-- `folderstructure.txt` — moved to `legacy/artifacts/`
-- `legacy/docs/ITVA_Environment_Setup_Guide.md` — historical Docker + training setup
-- `legacy/docs/VEHICLE_CLASSIFICATION.md` — UVH taxonomy background
+- `README.md` § Installation — see `docs/ops/ENVIRONMENT_SETUP.md` for full stack
+- `docs/DEPLOYMENT.md` — quick commands; setup detail in `docs/ops/`

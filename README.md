@@ -67,14 +67,16 @@ ViAna/
 ├── packages/contracts/  # Shared schemas & types
 ├── configs/             # classes.yaml, engine_defaults.yaml
 ├── models/              # v1 + pretrained weights
-├── docs/                # Plans, specs, governance, UI guides
-├── legacy/              # Discardable — old code & historical docs
-└── tests/viana/         # Engine tests
+├── training/            # UVH retrain toolkit (optional)
+├── docs/                # Plans, specs, governance, UI guides, ops setup
+├── tests/viana/         # Engine tests
 ```
 
-## Legacy / parity
+## Parity & research
 
-Pre-v2 code lives under **`legacy/`**. Parity procedure: [`legacy/PARITY.md`](legacy/PARITY.md).
+Parity record: [`tests/viana/fixtures/PARITY_NOTES.md`](tests/viana/fixtures/PARITY_NOTES.md).  
+Environment setup: [`docs/ops/ENVIRONMENT_SETUP.md`](docs/ops/ENVIRONMENT_SETUP.md).  
+Historical research: [`docs/archive/ITVA_RESEARCH_LOG.md`](docs/archive/ITVA_RESEARCH_LOG.md).
 
 ## Security
 

@@ -17,4 +17,4 @@ done
 find tests -name 'test_classifier*.pyc' -delete 2>/dev/null || \
   sudo find tests -name 'test_classifier*.pyc' -delete 2>/dev/null || true
 
-echo "Done. Canonical copies (if needed) live under legacy/artifacts/."
+echo "Done."

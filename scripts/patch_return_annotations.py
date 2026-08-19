@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PREFIXES = ("legacy/", "tests/")
+PREFIXES = ("training/", "tests/")
 
 
 def patch_file(path: Path) -> bool:

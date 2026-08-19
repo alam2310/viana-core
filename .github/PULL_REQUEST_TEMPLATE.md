@@ -16,4 +16,4 @@ Fixes #
 
 - [ ] Contracts updated first (`packages/contracts/schemas/`) if API/data shape changed
 - [ ] No `job_id` / `gpu_device` sent from UI submit payloads
-- [ ] `legacy/` not extended (parity reference only)
+- [ ] No unrelated changes outside the PR scope

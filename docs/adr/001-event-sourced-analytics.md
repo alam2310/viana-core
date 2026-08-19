@@ -11,7 +11,7 @@ Accepted
 
 ## Context
 
-Legacy inline 15-minute aggregation coupled OCR fixes to full video re-runs. See `legacy/inference/inference_engine.py` for parity reference.
+Legacy inline 15-minute aggregation coupled OCR fixes to full video re-runs (never fully shipped in legacy). v2 uses `viana aggregate` (ADR 001).
 
 ## Decision
 

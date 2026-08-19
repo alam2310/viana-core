@@ -10,8 +10,8 @@
 
 ## Reference (read-only)
 
-- `legacy/inference/inference_engine.py` — parity behavior
-- `legacy/PARITY.md` — comparison procedure
+- `tests/viana/fixtures/PARITY_NOTES.md` — parity counts (Phase 9 signed off)
+- `docs/archive/ITVA_RESEARCH_LOG.md` — historical CV research
 
 ## Rules
 
@@ -26,7 +26,6 @@ python -m viana prescan|run|resume|aggregate
 ## Do not
 
 - Import FastAPI or HTTP handlers here
-- Modify `legacy/` except path fixes
 - Inline 15-min aggregation in the frame loop
 
 ## Update on completion

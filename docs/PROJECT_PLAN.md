@@ -4,7 +4,7 @@
 **Architecture:** `docs/ARCHITECTURE.md`  
 **API contracts:** `docs/api_contracts.md` + `packages/contracts/schemas/`
 
-Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
+Consolidated v2 plan. Historical research: `docs/archive/ITVA_RESEARCH_LOG.md`.
 
 ---
 
@@ -23,7 +23,7 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 
 | Topic | Decision |
 |-------|----------|
-| Legacy | `legacy/` discardable; parity: `legacy/inference/inference_engine.py` |
+| Legacy | Removed 2026-08-19; parity in `tests/viana/fixtures/PARITY_NOTES.md` |
 | GPU | Max 2 jobs; one GPU each; both models on assigned GPU |
 | Output | `{parent_dir}/{project_id}/{stem}_*` |
 | 15min CSV | Clock windows; zero-fill; `aggregate: true` classes only |
@@ -64,8 +64,10 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 ### Phase 8 — UI workflows ✅ (2026-08-18, mocked)
 - Prescan, canvas, queue, paused UX
 
-### Phase 9 — Parity & hardening
-- Golden clip; delete `legacy/` after sign-off
+### Phase 9 — Parity ✅ (signed off 2026-08-19)
+
+- Geometry D overlay human go; `legacy/` removed. Criteria: `tests/viana/fixtures/PARITY_NOTES.md`.
+- Hardening items parked in `docs/PROJECT_STATUS.md`.
 
 ---
 
@@ -81,4 +83,4 @@ Consolidated v2 plan. Historical research: `legacy/blueprint.md`.
 
 ## 5. References
 
-- `docs/adr/`, `legacy/PARITY.md`, `docs/ui/`, `packages/contracts/`
+- `docs/adr/`, `tests/viana/fixtures/PARITY_NOTES.md`, `docs/ui/`, `packages/contracts/`

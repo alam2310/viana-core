@@ -3,6 +3,7 @@
 | Document | Purpose |
 |----------|---------|
 | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | **Living status** — phases, API matrix |
+| [`ops/ENVIRONMENT_SETUP.md`](ops/ENVIRONMENT_SETUP.md) | **From-scratch** Docker/GPU setup |
 | [`PROJECT_PLAN.md`](PROJECT_PLAN.md) | v2 implementation plan |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design |
 | [`api_contracts.md`](api_contracts.md) | API human reference |
@@ -16,5 +17,7 @@
 | [`design/`](design/) | Design intent (invariants, preconditions) |
 | [`ui/`](ui/) | UI development guides (incl. [`ui/OVERLAY_COLORS.md`](ui/OVERLAY_COLORS.md)) |
 | [`adr/`](adr/) | Architecture decisions |
+| [`archive/`](archive/) | Pre-v2 ITVA research log (historical) |
+| [`../training/README.md`](../training/README.md) | UVH retrain workflow (optional) |
 
-**Historical (legacy era):** [`../legacy/blueprint.md`](../legacy/blueprint.md), [`../legacy/docs/`](../legacy/docs/)
+**Historical:** [`archive/ITVA_RESEARCH_LOG.md`](archive/ITVA_RESEARCH_LOG.md)

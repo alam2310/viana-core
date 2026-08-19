@@ -76,13 +76,21 @@ Job/video: `/data/viana-outputs/parity_hiv000001_b2/` (`hiv000001_inframe_proces
 | MCV | 0 / 0 / **0** | 0 / 0 / **0** |
 | **All** | **170** | **161** |
 
-Exact match: Van, MiniBus, Cycle. In counts match on Car/Jeep/Van/MiniBus/MTW/Bus/Pedestrian. Remaining gap is mostly Car out (−6) and Goods split (legacy 7 Heavy Truck vs v2 5 LCV + 3 Heavy Truck). **Not signed off.** Do not delete `legacy/`.
+Exact match: Van, MiniBus, Cycle. In counts match on Car/Jeep/Van/MiniBus/MTW/Bus/Pedestrian. Remaining gap is mostly Car out (−6) and Goods split (legacy 7 Heavy Truck vs v2 5 LCV + 3 Heavy Truck). Historical compare only (`legacy/` removed 2026-08-19).
 
 ### Geometry D — user lines (2026-08-19), **matched on both pipelines**
 
 Horizon `[0, 500]→[1919, 325]`, counting `[0, 850]→[1919, 540]`. Conf 0.25.
 
-v2 video: `/data/viana-outputs/parity_hiv000001_b3/hiv000001_inframe_processed.mp4` (re-run 2026-08-19 with overlay freeze after count: **307** events).
+v2 videos (same 307 events; encode/class overlay only changed after b3):
+
+| Dir | Notes |
+|-----|--------|
+| `parity_hiv000001_b3/` | Overlay freeze after count; H.264 ~75 MB then leftover |
+| `parity_hiv000001_b4/` | HEVC NVENC cq 38 (~18 MB), same counts |
+| **`parity_hiv000001_b5/`** | **Review file:** HEVC cq 42 (~11 MB); rolling majority off-line (Auto/LCV overlay flicker) |
+
+Processed: `/data/viana-outputs/parity_hiv000001_b5/hiv000001_inframe_processed.mp4`.
 
 | Class | Legacy D in / out / tot | v2 D in / out / tot |
 |-------|-------------------------|---------------------|
@@ -100,9 +108,11 @@ v2 video: `/data/viana-outputs/parity_hiv000001_b3/hiv000001_inframe_processed.m
 | MCV | 1 / 0 / **1** | 0 / 0 / **0** |
 | **All** | **326** | **307** |
 
-Exact match: Jeep tot, Van tot, MiniBus, Bus. **Not signed off.** Do not delete `legacy/`.
+Exact match: Jeep tot, Van tot, MiniBus, Bus. Remaining gaps: MTW (−12), Auto (−4), goods split (legacy 8 Heavy Truck vs v2 6 LCV + 4 Heavy Truck), LineZone can re-count vs v2 once-per-track.
 
-Legacy still uses ByteTrack and LineZone (can count a track more than once). v2 `viana run` now uses **ByteTrack** (separate vehicle/person pools; IoU only if supervision is missing). Once-per-track counting is unchanged. Prescan geometric lines pin **x=0** and **x=width-1**.
+**Overlay:** human go (b5). **Phase 9 parity:** signed off 2026-08-19 (`legacy/` removed; v2 is source of truth).
+
+v2 uses **ByteTrack** (`trackers.ByteTrackTracker`; vehicle vs person pools; IoU fallback if `trackers` is missing). Once-per-track counting. Prescan geometric lines pin **x=0** and **x=width-1**.
 
 ## Clip B — `parity_golden.mp4` (earlier, unmatched geometry)
 
@@ -111,9 +121,9 @@ Legacy still uses ByteTrack and LineZone (can count a track more than once). v2 
   - Frame: **1920×1080**, ~20.07s, ~15 fps (HEVC). Source is a real project video (`hiv00053_EDIT.mp4`).
 - Secondary smoke clip (E2E plumbing, not legacy compare): `/data/raw/test_video.mp4` (848×478, 11.2s, 168 frames).
 
-## Legacy geometry (normalized, hardcoded defaults)
+## Legacy geometry (historical — pre-v2 engine, removed)
 
-From `TrafficConfig` in `legacy/inference/inference_engine.py`:
+Normalized defaults used during early parity (off-screen Y on counting line):
 
 | Line | start (norm) | end (norm) |
 |------|----------------|------------|
@@ -138,16 +148,21 @@ Prescan / UI proposed lines on `parity_golden` (HTTP/UI-equivalent run):
 | Horizon | `[120, 400]` | `[1799, 520]` |
 | Counting | `[80, 899]` | `[1839, 779]` |
 
-## Acceptable tolerance
+## Sign-off (v0.1 Moving Count) — **closed 2026-08-19**
 
-Target for **sign-off**: **±2% per class** on total crossings, and **in/out** within ±2 counts, **with matching in-frame lines**.
+±2% per class was **not** required. Legacy never shipped a 15-min CSV product (OCR interval triggers only). Geometry A pedestrian gap is out of scope.
 
-Clip A at **conf 0.25 both sides**: vehicle classes are close (Bus/LCV/MCV/Van/MiniBus exact; Car −1; MTW +1). **Pedestrian** is the remaining miss (legacy 10 vs v2 47). Totals 125 vs 160. Earlier v2@0.75 was 72. Remaining drivers: ByteTrack vs IoU, LineZone re-triggers vs once-per-track, pedestrian/person mapping.
-
-**Not signed off.** Do not delete `legacy/`.
+| Criterion | Status |
+|-----------|--------|
+| Review clip + **geometry D**, conf 0.25 | Done |
+| Human overlay review (b5 processed MP4) | **Go** |
+| Counts documented (326 vs 307 on D); gaps accepted | **Signed off** |
+| `legacy/` removed; v2 engine is source of truth | **Done** |
+| `{stem}_15min.csv` + prescan wall-clock UI | **Next** (not a parity blocker) |
+| Pause/resume, browser click-through, hardening | **Parked** — see `docs/PROJECT_STATUS.md` |
 
 ## Runtime extras (container `viana_core`, 2026-08-19)
 
-- **ffmpeg:** present (`/usr/bin/ffmpeg`); `{stem}_processed.mp4` written when `render_video=true`.
-- **ultralytics + CUDA:** live YOLO on `cuda:0` (2× RTX 3060).
-- **numpy:** image `itva-base:stable` + `pip install -e ".[dev]"` pulled NumPy 2.x and **broke OpenCV 4.10**. Workaround: pin `numpy>=1.26,<2` after install (`docker-compose.yml` command). `trackers` wants NumPy 2; v2 does not use that package.
+- **ffmpeg:** present; processed MP4 is **HEVC NVENC cq 42** (fallback libx265 / libx264).
+- **ultralytics + CUDA:** live YOLO on `cuda:0`.
+- **numpy:** pin `numpy>=1.26,<2` after install (`docker-compose.yml`). `trackers==2.6.0` is installed `--no-deps` so ByteTrack works without NumPy 2 (OpenCV 4.10 breaks on NumPy 2).

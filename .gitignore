@@ -33,8 +33,6 @@ build/
 # Prescan temp previews (under output dirs)
 **/prescan/*.jpg
 
-# Legacy artifact outputs (large / reproducible)
-legacy/artifacts/runs/
-legacy/artifacts/debug_pretrain/
+# Training / audit artifact outputs (gitignored data/ tree)
 debug_pretrain/
 runs/

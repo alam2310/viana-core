@@ -11,7 +11,7 @@ Offline Indian traffic video analytics: detect, classify, track, count vehicles,
 | Your task | Read in order |
 |-----------|----------------|
 | **Any task** | This file → `docs/PROJECT_STATUS.md` → `docs/governance/SOURCE_OF_TRUTH.md` |
-| **Engine (`src/viana/`)** | `.cursor/rules/viana.mdc` → `docs/PROJECT_PLAN.md` § Engine → `legacy/PARITY.md` |
+| **Engine (`src/viana/`)** | `.cursor/rules/viana.mdc` → `docs/PROJECT_PLAN.md` § Engine → `tests/viana/fixtures/PARITY_NOTES.md` |
 | **API (`src/orchestrator/`)** | `docs/api_contracts.md` → `packages/contracts/schemas/` → `docs/PROJECT_PLAN.md` § Orchestrator |
 | **UI (`apps/web/`)** | `apps/web/AGENTS.md` → `docs/ui/README.md` → `packages/contracts/typescript/` |
 | **Contracts / types** | `packages/contracts/README.md` → update schema **before** code |
@@ -25,7 +25,8 @@ apps/web/           → Next.js 15 UI (ACTIVE — implement here)
 packages/contracts/ → JSON schemas + TS types (SOURCE OF TRUTH for API/data)
 configs/            → classes.yaml, engine_defaults.yaml
 models/             → weights (v1 production + pretrained)
-legacy/             → OLD code — parity only, do not extend
+training/           → UVH retrain toolkit (optional)
+docs/archive/       → pre-v2 research log (historical)
 tests/viana/        → new engine tests
 docs/               → plans, status, UI specs, governance, ADRs
 ```
@@ -33,13 +34,12 @@ docs/               → plans, status, UI specs, governance, ADRs
 ## 4. Hard rules (all agents)
 
 1. **Never invent API fields** — check `packages/contracts/schemas/` and `docs/api_contracts.md`.
-2. **Never modify `legacy/`** except path fixes; parity reference is `legacy/inference/inference_engine.py`.
-3. **Backend owns jobs** — UI must not send `job_id` or `gpu_device` on submit.
-4. **Schemas before code** — if the contract changes, update `packages/contracts/` first; see `docs/governance/CONTRACT_SYNC.md` for parallel UI/API/engine rules.
-5. **Update `docs/PROJECT_STATUS.md`** when completing a phase or API endpoint.
-6. **Record decisions** in `docs/adr/` when architecture changes.
-7. **No inline 15-min aggregation in the GPU loop** — events CSV first, aggregate separately (ADR 001).
-8. **Geometry** — lines must be within frame bounds; mandatory on every run.
+2. **Backend owns jobs** — UI must not send `job_id` or `gpu_device` on submit.
+3. **Schemas before code** — if the contract changes, update `packages/contracts/` first; see `docs/governance/CONTRACT_SYNC.md` for parallel UI/API/engine rules.
+4. **Update `docs/PROJECT_STATUS.md`** when completing a phase or API endpoint.
+5. **Record decisions** in `docs/adr/` when architecture changes.
+6. **No inline 15-min aggregation in the GPU loop** — events CSV first, aggregate separately (ADR 001).
+7. **Geometry** — lines must be within frame bounds; mandatory on every run.
 
 ## 5. What is implemented today
 
@@ -104,5 +104,5 @@ npx tsc --noEmit -p apps/web
 
 ## 8. Historical docs
 
-- `legacy/blueprint.md` — Phase 0–2 research log (pre-v2); do not treat as current status.
-- `legacy/` — discard after v2 parity sign-off.
+- `docs/archive/ITVA_RESEARCH_LOG.md` — pre-v2 research and environment pivots.
+- `docs/ops/ENVIRONMENT_SETUP.md` — from-scratch Docker/GPU setup.

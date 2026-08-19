@@ -1,11 +1,8 @@
 services:
   dev:
-    # Use the image you just built
-    image: itva-base:stable
-    
-    # or build it on the fly:
-    # build: .
-    
+    build: .
+    image: viana-dev:latest
+
     container_name: viana_core
 
     ports:

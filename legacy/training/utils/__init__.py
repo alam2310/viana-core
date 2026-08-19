@@ -1,2 +1,0 @@
-"""Legacy training utility package."""
-

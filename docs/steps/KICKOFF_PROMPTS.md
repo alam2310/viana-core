@@ -1,44 +1,98 @@
 # Step kickoff prompts (post-v0.1)
 
-Copy-paste as the **first message** in a **new chat**.
+Copy-paste as the **first message** in a **new chat** (unless noted).
 
 **Before starting:** read [`TRACKER.md`](TRACKER.md) and [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md).
 
-**Do not continue Phase 1–9 build chats.**
+---
+
+## When to start NEW vs continue
+
+| Step | Chat |
+|------|------|
+| **1** | **One new chat** for discovery + design. Resume later → **new chat** + read `docs/ui/DISCOVERY.md` |
+| **2** | **Always new** — Backend (never Phase 1–9 build chats) |
+| **3** | **Always new** — UI v2 |
+| **4** | New QA chat, or continue Step 3 |
+| **5** | New per backlog item |
+| Planning / this thread | **Not** for implementation |
 
 ---
 
-## Step 1 — UX design
+## Step 1 — UX discovery & design (start here)
 
 ```
-You are the ViAna UX / UI DESIGN agent (design-only — no apps/web/ code).
+You are the ViAna UX DISCOVERY & DESIGN agent.
 
-Read in order:
-1. docs/steps/TRACKER.md
-2. docs/steps/AGENT_PROGRESS.md (§ On starting any Step)
-3. docs/steps/STEP_1_UX_DESIGN.md
-4. docs/specs/ui_specifications.md
-5. docs/ui/USER_FLOWS.md, COMPONENT_MAP.md, CALIBRATION_CANVAS.md
-6. packages/contracts/typescript/index.ts (constraints — do not invent fields)
+Your job has TWO phases in THIS chat:
+  Phase 1.1 — Discovery: understand the big picture; ask me questions; record answers.
+  Phase 1.2 — Design: write the redesign spec after discovery sign-off.
 
-Deliverables: docs/ui/REDESIGN.md; update USER_FLOWS / COMPONENT_MAP if needed.
-Contract proposals → docs/steps/STEP_2_CONTRACT_SYNC.md § Proposals
+Read first:
+1. docs/steps/TRACKER.md + AGENT_PROGRESS.md
+2. docs/steps/STEP_1_UX_DESIGN.md
+3. docs/project_context.md (ViAna_Moving, ViAnaNP, ViAnaJunction)
+4. docs/specs/ui_specifications.md §3 (per-task prescan/calibration)
+5. docs/ui/DISCOVERY.md — maintain this file as we talk
+6. packages/contracts/typescript/index.ts — PrescanResponse, JobMetadata
+7. apps/web/src/features/prescan/prescan-modal.tsx + src/viana/stages/prescan.py (current behavior)
 
-When done: follow AGENT_PROGRESS.md § On completing Step 1 (TRACKER, PROJECT_STATUS, Log).
+v0.1 scope: ViAna_Moving only. Prescan must PROPOSE time, date, location, horizon line, counting line.
+User must CONFIRM or EDIT each before submit. Future tasks differ (NP = metadata only; Junction = polygon + gates) — capture in task matrix even if not shipped.
+
+START with Phase 1.1:
+- Summarize your understanding of the product in 5–8 bullets.
+- Ask me structured questions (batch 5–8 at a time) about operators, prescan UX, queue, artifacts, and task-type differences.
+- Record Q&A in docs/ui/DISCOVERY.md §2.
+- Fill §3 task-type matrix and §5 backend gaps as we go.
+- Do NOT write REDESIGN.md until I confirm discovery sign-off (DISCOVERY.md §6).
+
+After sign-off, Phase 1.2:
+- Write docs/ui/REDESIGN.md (screens, ViAna_Moving propose→confirm flow, extensibility).
+- Update USER_FLOWS.md / COMPONENT_MAP.md if needed.
+- Copy backend gaps to docs/steps/STEP_2_BACKEND_ALIGNMENT.md § Work items.
+
+No apps/web/ code. When done: AGENT_PROGRESS.md § On completing Step 1.
 ```
 
 ---
 
-## Step 2 — Contract sync
+## Step 2 — Backend alignment (conditional)
 
 ```
-You are the ViAna CONTRACT agent.
+You are the ViAna BACKEND alignment agent (Step 2).
 
-Read: docs/governance/CONTRACT_SYNC.md, docs/steps/STEP_2_CONTRACT_SYNC.md, AGENT_PROGRESS.md
+Read:
+1. docs/steps/STEP_2_BACKEND_ALIGNMENT.md § Work items (from Step 1)
+2. docs/governance/CONTRACT_SYNC.md
+3. docs/ui/REDESIGN.md + DISCOVERY.md §5
+4. src/viana/stages/prescan.py, orchestrator prescan route, packages/contracts/schemas/
 
-Implement schema-first changes from Step 1 proposals only.
+Implement only listed work items: contracts, prescan engine, and/or API route.
+Schema-first for any payload changes. Add tests.
 
-When done: follow AGENT_PROGRESS.md § On completing Step 2.
+Surfaces: packages/contracts/, src/viana/stages/prescan.py, src/orchestrator/, tests/
+
+Do NOT edit apps/web/ (Step 3). When done: AGENT_PROGRESS.md § On completing Step 2.
+```
+
+### Step 2 — Engine-only slice
+
+```
+ViAna ENGINE agent — Step 2 prescan slice only.
+
+Read STEP_2_BACKEND_ALIGNMENT.md work items assigned to engine.
+Implement src/viana/stages/prescan.py + tests/viana/test_prescan.py.
+Schema changes → coordinate Contract step first.
+```
+
+### Step 2 — API-only slice
+
+```
+ViAna API agent — Step 2 prescan route slice only.
+
+Read STEP_2_BACKEND_ALIGNMENT.md + api_contracts.md.
+Map prescan HTTP to engine; update fixtures if response shape changed.
 ```
 
 ---
@@ -46,51 +100,52 @@ When done: follow AGENT_PROGRESS.md § On completing Step 2.
 ## Step 3 — UI implementation v2
 
 ```
-You are the ViAna UI IMPLEMENTATION agent.
+You are the ViAna UI IMPLEMENTATION agent (Step 3).
 
-Read: TRACKER.md, AGENT_PROGRESS.md, docs/ui/REDESIGN.md, STEP_3_UI_IMPLEMENTATION.md, apps/web/AGENTS.md
+Read:
+1. docs/ui/REDESIGN.md (required — from Step 1)
+2. docs/steps/STEP_3_UI_IMPLEMENTATION.md + TRACKER.md
+3. apps/web/AGENTS.md
 
 Env: NEXT_PUBLIC_USE_MOCKS=false, NEXT_PUBLIC_API_URL=http://localhost:8000
 
-Build order: 3.1 prescan → 3.2 dashboard → 3.3 artifacts → 3.4 polish → 3.5 docs.
-Update TRACKER after each sub-step. New API field → STOP → Step 2.
+Build: 3.1 prescan propose/confirm/edit → 3.2 dashboard metadata → 3.3 artifacts → 3.4 polish → 3.5 docs.
 
-When done: follow AGENT_PROGRESS.md § On completing Step 3.
+New API field needed? STOP → Step 2.
+
+When done: AGENT_PROGRESS.md § On completing Step 3.
 ```
 
 ---
 
-## Step 4 — E2E verification (QA)
+## Step 4 — E2E verification
 
 ```
-You are the ViAna QA agent for Step 4 (15-min CSV).
+ViAna QA agent — Step 4 (15-min CSV).
 
 Read: STEP_4_E2E_VERIFICATION.md, AGENT_PROGRESS.md, docs/ops/ENVIRONMENT_SETUP.md
 
-Run happy path with known user_start_time; write docs/steps/verification/4_15min_results.md.
-
-When done: follow AGENT_PROGRESS.md § On completing Step 4.
+Run ViAna_Moving happy path with known user_start_time.
+Write docs/steps/verification/4_15min_results.md.
 ```
 
 ---
 
-## Step 5 — Hardening (pick one item)
+## Step 5 — Hardening (one item)
 
 ```
-You are the ViAna agent for Step 5 item [5.1–5.6].
+ViAna agent — Step 5 item [5.1–5.6] only.
 
-Read: STEP_5_HARDENING.md, TRACKER.md, AGENT_PROGRESS.md § On completing Step 5.
-
-Implement one backlog item; update TRACKER and Step 5 Log.
+Read: STEP_5_HARDENING.md, TRACKER.md, AGENT_PROGRESS.md.
 ```
 
 ---
 
-## Engine chat (narrow — Step 4 bugfix only)
+## Engine — Step 4 bugfix only
 
 ```
-Engine bugfix for Step 4: metadata → time_map.json → _15min.csv.
+Engine bugfix: metadata → time_map.json → _15min.csv (Step 4).
 
-Read: STEP_4_E2E_VERIFICATION.md, tests/viana/test_time_map.py, test_aggregate.py.
-Fix engine only; update tests and Step 4 log. Do not edit apps/web/.
+Read STEP_4_E2E_VERIFICATION.md, test_time_map.py, test_aggregate.py.
+No apps/web/ edits.
 ```

@@ -1,23 +1,23 @@
 # Post-v0.1 plan (Steps 1–5)
 
-**Context:** Implementation Phases 0–9 are complete. Remaining work is product polish — prescan UX, wall-clock metadata, `{stem}_15min.csv` verification — then optional hardening.
+**Context:** Phases 0–9 complete. Next: **discover UX goals** → align backend if needed → implement UI → verify `_15min.csv` → harden.
 
-**Terminology:** **Phase** = original 0–9 build. **Step** = post-v0.1 work (numbered **1–5**).
+**Terminology:** **Phase** = 0–9 build. **Step** = post-v0.1 (numbered **1–5**).
 
-**Agents:** On start/complete of any Step, follow [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md).
+**Agents:** Follow [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md) on start/complete.
 
 ---
 
-## Chat strategy
+## Chat strategy (new vs reuse)
 
-**Start new chats** for all Steps. Archive Phase 1–9 build chats.
-
-| Old chat | Use when |
-|----------|----------|
-| Engine (Phases 1–5) | Engine bugs, `time_map` / aggregate fixes only |
-| API (Phase 6) | Route, worker, cancel behavior only |
-| UI (Phases 7–8) | Do not continue — start **UI v2** for Step 3 |
-| Planning | Planning only — not implementation |
+| Situation | Use |
+|-----------|-----|
+| Step 1 discovery + design | **One new chat** — Q&A and `REDESIGN.md` in same thread |
+| Paused Step 1, resume later | **New chat** with Step 1 kickoff + read `docs/ui/DISCOVERY.md` progress |
+| Step 2 backend work | **New chat(s)** — Contract / Engine / API; never Phase 1–9 build chats |
+| Step 3 UI build | **New chat** — UI v2 |
+| Step 4 QA | **New** or continue Step 3 chat |
+| This planning thread | **Do not** use for implementation |
 
 ---
 
@@ -25,33 +25,37 @@
 
 ```mermaid
 flowchart LR
-    S1[Step 1 UX design] --> B{Contract changes?}
-    B -->|Yes| S2[Step 2 Contract sync]
-    B -->|No| S3[Step 3 UI implement]
+    S1[Step 1 Discovery and design] --> G{Backend gaps?}
+    G -->|Yes| S2[Step 2 Backend alignment]
+    G -->|No| S3[Step 3 UI implement]
     S2 --> S3
-    S3 --> S4[Step 4 E2E verify 15min CSV]
-    S4 --> S5[Step 5 Hardening backlog]
+    S3 --> S4[Step 4 E2E 15min CSV]
+    S4 --> S5[Step 5 Hardening]
 ```
 
 ---
 
-## Step 1 — UX design
+## Step 1 — UX discovery & design
 
-**Chat:** New — UX design (design-only)  
-**Detail:** [`STEP_1_UX_DESIGN.md`](STEP_1_UX_DESIGN.md)
+**Chat:** New — interactive discovery, then design finalize  
+**Detail:** [`STEP_1_UX_DESIGN.md`](STEP_1_UX_DESIGN.md) · [`docs/ui/DISCOVERY.md`](../ui/DISCOVERY.md)
+
+**Key idea:** Agent asks questions, records answers, builds task-type prescan matrix (`ViAna_Moving`: propose time/location/lines → user confirms/edits). Then writes `REDESIGN.md`.
 
 ---
 
-## Step 2 — Contract sync (conditional)
+## Step 2 — Backend alignment (conditional)
 
-**Chat:** New — Contract (only if Step 1 proposes schema changes)  
-**Detail:** [`STEP_2_CONTRACT_SYNC.md`](STEP_2_CONTRACT_SYNC.md)
+**Chat:** New — Contract / Engine / API as needed  
+**Detail:** [`STEP_2_BACKEND_ALIGNMENT.md`](STEP_2_BACKEND_ALIGNMENT.md)
+
+Contract changes **and** prescan engine/API implementation if Step 1 requires it.
 
 ---
 
 ## Step 3 — UI implementation
 
-**Chat:** New — UI implementation v2  
+**Chat:** New — UI v2  
 **Detail:** [`STEP_3_UI_IMPLEMENTATION.md`](STEP_3_UI_IMPLEMENTATION.md)
 
 ---
@@ -63,9 +67,9 @@ flowchart LR
 
 ---
 
-## Step 5 — Hardening backlog
+## Step 5 — Hardening
 
-**Chat:** Per item (API / UI / Engine / DevOps)  
+**Chat:** Per backlog item  
 **Detail:** [`STEP_5_HARDENING.md`](STEP_5_HARDENING.md)
 
 ---
@@ -74,9 +78,8 @@ flowchart LR
 
 | Step | Objective | Chat |
 |------|-----------|------|
-| 1 | UX redesign | New — UX design |
-| 2 | Contract changes (if any) | New — Contract |
-| 3 | UI implementation | New — UI v2 |
-| 4 | 15-min CSV verification | UI v2 or QA |
-| 4 (engine bug) | `time_map` / aggregate fix | Engine (narrow) |
-| 5+ | Hardening | Per Step 5 table |
+| 1 | Discovery Q&A + UX spec | **New** — one chat for full Step 1 |
+| 2 | Contract + prescan backend | **New** — Backend (split Engine/API if large) |
+| 3 | UI implementation | **New** — UI v2 |
+| 4 | 15-min CSV verification | New QA or continue Step 3 |
+| 5+ | Hardening | Per item |

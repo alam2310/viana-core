@@ -8,8 +8,8 @@ Work **after** implementation Phases 0–9 is tracked here as **Steps 1–5** (n
 | [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md) | **What to update** when progressing through Steps 1–5 |
 | [`PLAN.md`](PLAN.md) | Full narrative plan, chat strategy, timeline |
 | [`KICKOFF_PROMPTS.md`](KICKOFF_PROMPTS.md) | Copy-paste prompts for new agent chats |
-| [`STEP_1_UX_DESIGN.md`](STEP_1_UX_DESIGN.md) | UX redesign (design-only) |
-| [`STEP_2_CONTRACT_SYNC.md`](STEP_2_CONTRACT_SYNC.md) | Contract changes (conditional) |
+| [`STEP_1_UX_DESIGN.md`](STEP_1_UX_DESIGN.md) | UX discovery & design (design-only) |
+| [`STEP_2_BACKEND_ALIGNMENT.md`](STEP_2_BACKEND_ALIGNMENT.md) | Contract + prescan backend (conditional) |
 | [`STEP_3_UI_IMPLEMENTATION.md`](STEP_3_UI_IMPLEMENTATION.md) | Build UI from redesign |
 | [`STEP_4_E2E_VERIFICATION.md`](STEP_4_E2E_VERIFICATION.md) | Verify `{stem}_15min.csv` end-to-end |
 | [`STEP_5_HARDENING.md`](STEP_5_HARDENING.md) | Post-ship hardening backlog |

@@ -25,6 +25,8 @@
 | File | Contents |
 |------|----------|
 | `DEVELOPMENT_GUIDE.md` | Local setup, env vars, monorepo map |
+| `DISCOVERY.md` | Step 1 Q&A log (post-v0.1 UX discovery) |
+| `REDESIGN.md` | Step 1 final UX spec (created during Step 1) |
 | `USER_FLOWS.md` | Step-by-step screens |
 | `CALIBRATION_CANVAS.md` | Line drawing, coords, clamping |
 | `OVERLAY_COLORS.md` | Processed-video line + per-class box colors |

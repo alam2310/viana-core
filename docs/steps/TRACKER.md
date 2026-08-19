@@ -1,9 +1,9 @@
 # Step tracker (living)
 
 **Last updated:** 2026-08-19  
-**Current Step:** **1** — UX design  
+**Current Step:** **1** — UX discovery & design (Phase 1.1 in progress)  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
-**Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md) — **read when starting or finishing any Step**
+**Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)
 
 > Update this file when a Step changes status. Agents: do not rely on chat memory.
 
@@ -13,36 +13,37 @@
 
 | Step | Name | Status | Owner chat | Started | Completed |
 |------|------|--------|------------|---------|-----------|
-| **1** | UX design | ⬜ Not started | New — UX design | — | — |
-| **2** | Contract sync | ⏸ Skipped (until needed) | New — Contract | — | — |
+| **1** | UX discovery & design | 🔄 In progress | UX discovery chat | 2026-08-19 | — |
+| **2** | Backend alignment | ⏸ Skipped until needed | New — Backend | — | — |
 | **3** | UI implementation | ⬜ Not started | New — UI v2 | — | — |
 | **4** | E2E verification | ⬜ Not started | UI v2 or QA | — | — |
 | **5** | Hardening backlog | ⬜ Not started | Per item | — | — |
 
-**Status legend:** ⬜ Not started · 🔄 In progress · ✅ Complete · ⏸ Blocked / skipped · ❌ Cancelled
+**Status legend:** ⬜ Not started · 🔄 In progress · ✅ Complete · ⏸ Skipped · ❌ Cancelled
 
 ---
 
-## Step 1 — UX design
+## Step 1 — UX discovery & design
 
-| Deliverable | Status | Path |
-|-------------|--------|------|
-| Redesign spec (flows + screens) | ⬜ | `docs/ui/REDESIGN.md` (create) |
-| Prescan modal spec | ⬜ | `docs/ui/REDESIGN.md` or `COMPONENT_MAP.md` |
-| Dashboard / queue spec | ⬜ | `docs/ui/REDESIGN.md` |
-| Aggregate / artifact UX | ⬜ | `docs/ui/REDESIGN.md` |
-| Contract proposals (if any) | ⬜ | `STEP_2_CONTRACT_SYNC.md` § Proposals |
+| Phase / deliverable | Status | Path |
+|-------------------|--------|------|
+| 1.1 Discovery Q&A + sign-off | 🔄 | `docs/ui/DISCOVERY.md` |
+| 1.2 Task-type prescan matrix | ⬜ | `DISCOVERY.md` §3 |
+| 1.3 Redesign spec | ⬜ | `docs/ui/REDESIGN.md` |
+| 1.4 Flows / component map | ⬜ | `USER_FLOWS.md`, `COMPONENT_MAP.md` |
+| 1.5 Backend gap list | ⬜ | `STEP_2_BACKEND_ALIGNMENT.md` § Work items |
 
 ---
 
-## Step 2 — Contract sync
+## Step 2 — Backend alignment
 
 | Gate | Status |
 |------|--------|
-| Required? | **TBD after Step 1** — likely no change |
-| Schemas updated | — |
-| Fixtures + TS synced | — |
-| `api_contracts.md` updated | — |
+| Required? | **TBD after Step 1** |
+| Contract / schema | — |
+| Prescan engine | — |
+| Prescan API route | — |
+| Tests updated | — |
 
 ---
 
@@ -50,7 +51,7 @@
 
 | Sub-step | Status | Surface |
 |----------|--------|---------|
-| 3.1 Prescan modal redesign | ⬜ | `apps/web/src/features/prescan/` |
+| 3.1 Prescan modal (propose → confirm/edit) | ⬜ | `apps/web/src/features/prescan/` |
 | 3.2 Dashboard metadata on submit | ⬜ | `apps/web/src/features/dashboard/` |
 | 3.3 Completed job artifacts + aggregate | ⬜ | dashboard / job cards |
 | 3.4 Polish (toasts, empty states) | ⬜ | `apps/web/` |
@@ -66,19 +67,18 @@
 | `{stem}_15min.csv` non-empty, correct windows | ⬜ |
 | `time_map.json` present on completed job | ⬜ |
 | Evidence in `verification/4_15min_results.md` | ⬜ |
-| `PROJECT_STATUS.md` updated | ⬜ |
 
 ---
 
-## Step 5 — Hardening (ordered backlog)
+## Step 5 — Hardening
 
 | Item | Work | Status | Chat |
 |------|------|--------|------|
-| 5.1 | Bake `trackers` + `numpy<2` in Docker image | ⬜ | API / DevOps |
-| 5.2 | Pause / resume / PAUSED UX | ⬜ | UI (+ API) |
+| 5.1 | Docker image bake | ⬜ | API / DevOps |
+| 5.2 | Pause / resume UX | ⬜ | UI (+ API) |
 | 5.3 | Faster DELETE → CANCELLED | ⬜ | API |
-| 5.4 | Browser / Playwright click-through | ⬜ | UI / QA |
-| 5.5 | Extra camera clip validation | ⬜ | Engine / QA |
+| 5.4 | Playwright UI pass | ⬜ | UI / QA |
+| 5.5 | Extra camera clip | ⬜ | Engine / QA |
 | 5.6 | GPU tests in CI | ⬜ | DevOps |
 
 ---
@@ -87,5 +87,6 @@
 
 | Date | Change |
 |------|--------|
-| 2026-08-19 | Renumbered Steps 1–5 (was A–E); added `AGENT_PROGRESS.md` |
-| 2026-08-19 | Created Step tracker; Phases 0–9 complete; Step 1 is current focus |
+| 2026-08-19 | Step 1 = discovery + design; Step 2 = backend alignment incl. prescan |
+| 2026-08-19 | Steps 1–5 numbered; `AGENT_PROGRESS.md` added |
+| 2026-08-19 | Tracker created; Phases 0–9 complete |

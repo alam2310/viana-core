@@ -26,40 +26,41 @@
 
 ---
 
-## On completing Step 1 — UX design
+## On completing Step 1 — UX discovery & design
 
 | # | Action | File(s) |
 |---|--------|---------|
 | 1 | Mark Step 1 ✅; set **Completed** date | `TRACKER.md` |
-| 2 | Check off all Step 1 deliverables | `TRACKER.md` § Step 1 |
-| 3 | Set **Current Step** → **2** (or **3** if Step 2 skipped) | `TRACKER.md` |
-| 4 | Update **Current focus** | `PROJECT_STATUS.md` |
-| 5 | Changelog entry | `PROJECT_STATUS.md` § Changelog |
-| 6 | Log completion note | `STEP_1_UX_DESIGN.md` § Log |
-| 7 | Ensure primary output exists | `docs/ui/REDESIGN.md` |
-| 8 | Update flows/components if changed | `docs/ui/USER_FLOWS.md`, `COMPONENT_MAP.md` |
-| 9 | File contract proposals (or mark none) | `STEP_2_CONTRACT_SYNC.md` § Proposals |
-| 10 | If no contract changes: mark Step 2 ⏸ Skipped | `TRACKER.md` |
+| 2 | Check off phases 1.1–1.5 in tracker | `TRACKER.md` § Step 1 |
+| 3 | Confirm `DISCOVERY.md` §6 signed off | `docs/ui/DISCOVERY.md` |
+| 4 | Set **Current Step** → **2** (or **3** if Step 2 skipped) | `TRACKER.md` |
+| 5 | Update **Current focus** | `PROJECT_STATUS.md` |
+| 6 | Changelog entry | `PROJECT_STATUS.md` § Changelog |
+| 7 | Log completion | `STEP_1_UX_DESIGN.md` § Log |
+| 8 | Ensure `REDESIGN.md` exists | `docs/ui/REDESIGN.md` |
+| 9 | Update flows/components if changed | `docs/ui/USER_FLOWS.md`, `COMPONENT_MAP.md` |
+| 10 | File Step 2 work items OR mark Step 2 ⏸ Skipped | `STEP_2_BACKEND_ALIGNMENT.md`, `TRACKER.md` |
 
-**Do not edit** `apps/web/` in Step 1 (design-only).
+**Do not edit** `apps/web/`, `src/viana/`, or `src/orchestrator/` in Step 1.
 
 ---
 
-## On completing Step 2 — Contract sync
+## On completing Step 2 — Backend alignment
 
-Skip this section if Step 2 was not required.
+Skip if Step 1 filed no work items and UX fits current prescan/API.
 
 | # | Action | File(s) |
 |---|--------|---------|
 | 1 | Mark Step 2 ✅ or ⏸ Skipped with reason | `TRACKER.md` |
-| 2 | Check schema / fixture / TS gates | `TRACKER.md` § Step 2 |
-| 3 | Set **Current Step** → **3** | `TRACKER.md` |
-| 4 | Update **Current focus** | `PROJECT_STATUS.md` |
-| 5 | Changelog if HTTP or schema changed | `PROJECT_STATUS.md` |
-| 6 | Log completion | `STEP_2_CONTRACT_SYNC.md` § Log |
-| 7 | Confirm contract order per | `docs/governance/CONTRACT_SYNC.md` |
+| 2 | Check contract + prescan gates | `TRACKER.md` § Step 2 |
+| 3 | All work items ✅ in `STEP_2_BACKEND_ALIGNMENT.md` | § Work items |
+| 4 | Set **Current Step** → **3** | `TRACKER.md` |
+| 5 | Update **Current focus** | `PROJECT_STATUS.md` |
+| 6 | Changelog if HTTP, prescan, or schema changed | `PROJECT_STATUS.md` |
+| 7 | Log completion | `STEP_2_BACKEND_ALIGNMENT.md` § Log |
+| 8 | Tests pass for touched paths | `tests/viana/test_prescan.py`, orchestrator tests |
 
-**Typical edits:** `packages/contracts/schemas/`, `typescript/index.ts`, `fixtures/`, `src/viana/config/job.py`, `docs/api_contracts.md`, `openapi.yaml`.
+**Typical edits:** `packages/contracts/*`, `src/viana/stages/prescan.py`, `src/orchestrator/routes/`, `docs/api_contracts.md`.
 
 ---
 
@@ -121,9 +122,12 @@ When **all** items done or explicitly deferred: mark Step 5 ✅ in `TRACKER.md`.
 | `docs/PROJECT_STATUS.md` | Step complete; focus change; changelog |
 | `docs/steps/STEP_N_*.md` | Log notes; proposals (Step 2) |
 | `docs/steps/AGENT_PROGRESS.md` | Only if process changes (rare) |
-| `docs/ui/REDESIGN.md` | Step 1 deliverable |
+| `docs/ui/DISCOVERY.md` | Step 1 discovery Q&A (before REDESIGN) |
+| `docs/ui/REDESIGN.md` | Step 1 final spec |
 | `docs/ui/COMPONENT_MAP.md` | Step 1 spec; Step 3 sync |
 | `packages/contracts/*` | Step 2 only |
+| `src/viana/stages/prescan.py` | Step 2 if prescan engine changes |
+| `src/orchestrator/` prescan routes | Step 2 if API changes |
 | `apps/web/*` | Step 3 only |
 | `docs/steps/verification/*` | Step 4+ evidence |
 
@@ -132,8 +136,9 @@ When **all** items done or explicitly deferred: mark Step 5 ✅ in `TRACKER.md`.
 ## Commit message examples
 
 ```
-Complete Step 1: prescan UX redesign spec
-Complete Step 2: add proposed_metadata to prescan schema
+Complete Step 1: UX discovery and REDESIGN spec
+Complete Step 2: prescan proposes separate OCR vs user fields
+Step 2: engine prescan per-task proposal behavior
 Step 3.1: prescan modal OCR review layout
 Complete Step 4: verify 15min CSV on hiv000001_inframe
 Step 5.1: bake trackers into Docker image

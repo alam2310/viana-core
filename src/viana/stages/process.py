@@ -324,7 +324,10 @@ def run_moving_count(
                                 "direction": crossing.direction,
                                 "frame_index": crossing.frame_index,
                                 "fps": meta.fps,
+                                "video_pts_ms": crossing.video_pts_ms,
                                 "event_timestamp": row.wall_time,
+                                "event_timestamp_source": row.wall_time_source,
+                                "event_timestamp_confidence": row.ocr_confidence,
                             },
                         )
                     )

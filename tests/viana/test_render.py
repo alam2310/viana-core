@@ -49,3 +49,17 @@ def test_ffmpeg_prefers_legacy_hevc_nvenc() -> None:
     assert args[:2] == ["-c:v", "hevc_nvenc"]
     assert "-cq" in args and "42" in args
     assert "-movflags" in args
+    assert "+frag_keyframe+empty_moov+default_base_moof" in args
+    assert "-frag_duration" in args and "1000000" in args
+
+
+def test_ffmpeg_fallbacks_keep_fragmented_mp4_flags() -> None:
+    """Fallback encoders still write streamable fragmented MP4."""
+    from pathlib import Path
+
+    x265 = ffmpeg_video_args(Path("out.mp4"), encoder_list="libx265")
+    x264 = ffmpeg_video_args(Path("out.mp4"), encoder_list="libx264")
+    for args in (x265, x264):
+        assert "-movflags" in args
+        assert "+frag_keyframe+empty_moov+default_base_moof" in args
+        assert "-frag_duration" in args and "1000000" in args

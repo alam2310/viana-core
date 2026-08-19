@@ -132,6 +132,9 @@ def test_moving_event_emitted_without_telemetry_detail(tmp_path: Path) -> None:
     assert events
     payload = events[0]["data"]
     assert payload["event_timestamp"] is not None
+    assert payload["event_timestamp_source"] in {"ocr_anchor", "user_fallback"}
+    assert isinstance(payload["video_pts_ms"], int | float)
+    assert "event_timestamp_confidence" in payload
 
 
 def test_run_refuses_silent_resume(tmp_path: Path) -> None:

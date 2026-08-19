@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 0 | 1 | 11 | 8 / 13 active |
+| 0 | 1 | 12 | 8 / 14 active |
 
 **Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
@@ -44,6 +44,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S18** | F015 | A/C | no | S14 | Normalize live monitor crossing title + `HH:MM:SS` actual-time formatter | open |
 | **S19** | F016 | A/B/C | no | S12 | Fix queue video length / ETA inflation and validate MP4 codec metadata in container | open |
 | **S20** | F010 | A/B | no | S13 | UI cannot render in-progress processed MP4 even when file is playable natively | open |
+| **S21** | F017 | C | no | — | Prescan OCR misses time/location when OSD text appears in alternate screen regions | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
@@ -73,6 +74,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S18** | 1. Open live monitor while crossings stream 2. Inspect section header + crossing time column | **Expected:** title follows title case (`Live Crossings`) and displayed time is actual identified event time formatted strictly as `HH:MM:SS`. **Actual:** header casing is inconsistent (`Live crossing`) and time formatting is not constrained to `HH:MM:SS` actual-time display. | Lane A/C: update live monitor copy + formatter in `apps/web/` to render `HH:MM:SS`; ensure value is sourced from actual event timestamp (from S14 payload path) rather than derived/local clock text. | — | Step 4 UI chat |
 | **S19** | 1. Queue a known long clip (~3h) 2. Observe Job Queue `Video length` and `Time remaining` | **Expected:** video length and ETA are in the right order of magnitude (3h clip should not show 20h+ remaining without evidence). **Actual:** ETA/video-length logic appears inflated/incorrect for long MP4 inputs. Also need to confirm container can read MP4 duration/properties reliably for this codec profile. | Lane A/B/C: audit ETA formula and units in `apps/web/` + API status fields (`video_duration_sec`, `processing_duration_sec`, fps/progress source). Validate media probe path in container (OpenCV/ffprobe/codec support) and fix image/runtime setup if metadata extraction is wrong for MP4 variants. | — | Step 4 UI chat |
 | **S20** | 1. Start a job and wait for `_processed.mp4` to grow 2. Verify file plays via Ubuntu native player 3. Open same artifact in live monitor/UI | **Expected:** if file is already stream-playable on disk, the UI player should render it while processing. **Actual:** native apps can play in-progress file, but browser/UI still fails to render (same user-facing symptom persists). | Follow-on under F010: Lane A/B to inspect artifact endpoint/proxy headers (Range, Content-Type, Accept-Ranges, CORS, cache), player source URL lifecycle, and browser codec/container compatibility vs native playback. | — | Step 4 UI chat |
+| **S21** | 1. Run prescan on a video where OSD layout differs (location at top-center, timestamp at bottom-left) 2. Inspect `proposed_metadata` | **Expected:** prescan extracts time/date/location despite changed on-screen text positions. **Actual:** current corner-ROI logic misses fields when OSD is not in assumed regions. | Lane C (`src/viana/stages/ocr.py`, `prescan.py`): extend OCR region strategy beyond fixed corners (adaptive multi-region scan / fallback full-frame text pass), preserve confidence handling, and avoid regressions on existing clips. | — | Step 4 UI chat |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine prescan · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `wontfix`  
@@ -156,6 +158,21 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 ---
 
+## F017 design note (adaptive OSD extraction)
+
+**Observed:** fixed ROI assumptions fail on videos where timestamp/location overlays move (e.g., location top-center, timestamp bottom-left).
+
+**Target:** prescan OCR should detect metadata robustly across varying overlay positions by combining:
+- broader ROI candidates (top/bottom/center bands),
+- confidence-ranked merge logic,
+- and a safe fallback pass when corner ROIs miss required fields.
+
+**Constraint:** maintain performance improvements from S08 while improving recall on layout-variant cameras.
+
+**Scope:** engine prescan OCR path (Lane C), no UI/API contract shape changes.
+
+---
+
 ## Changelog
 
 | Date | Change |
@@ -168,6 +185,7 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 | 2026-08-19 | Added S18 (F015) fix live monitor crossing title case + enforce actual-time `HH:MM:SS` formatter |
 | 2026-08-19 | Added S19 (F016) queue video length/ETA inflation + container MP4 codec metadata validation |
 | 2026-08-19 | Added S20 (F010 follow-on) UI still cannot render in-progress processed MP4 though native Ubuntu player can |
+| 2026-08-19 | Added S21 (F017) prescan OCR misses metadata when OSD text shifts to non-corner regions |
 | 2026-08-19 | S06 fixed (EasyOCR triage); S07 fixed — corner ROI OCR, `proposed_metadata` on `hiv000001_inframe.mp4` (`job_abec59713960`) |
 | 2026-08-19 | S09 (F006) deferred to Step 6.7; added S10 (F007) line proposal improvement |
 | 2026-08-19 | Merged F001–F006 + F003 scrub plan into single execution path S01–S09 |

@@ -189,7 +189,7 @@ def _frame_guided_lines(width: int, height: int, frame: object | None) -> Propos
                 ),
                 0.0,
             )
-        ordered = sorted(zip(intercepts, weights), key=lambda item: item[0])
+        ordered = sorted(zip(intercepts, weights, strict=False), key=lambda item: item[0])
         cum = 0.0
         total = sum(weights)
         intercept = ordered[-1][0]

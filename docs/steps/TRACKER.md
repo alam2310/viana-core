@@ -17,7 +17,7 @@
 | **2** | Contracts & API foundation | ✅ Complete | Contract + API | 2026-08-19 | 2026-08-19 |
 | **3** | Engine prescan & orchestrator | ✅ Complete | Engine + workers | 2026-08-19 | 2026-08-19 |
 | **4** | UI implementation | ✅ Complete | UI v2 | 2026-08-19 | 2026-08-19 |
-| **5** | E2E verification | 🔄 In progress | UI v2 or QA | 2026-08-19 | — |
+| **5** | E2E verification | ✅ Complete | UI v2 or QA | 2026-08-19 | 2026-08-19 |
 | **6** | Hardening backlog | ⬜ Not started | Per item | — | — |
 
 **Status legend:** ⬜ Not started · 🔄 In progress · ✅ Complete · ⏸ Skipped · ❌ Cancelled
@@ -107,9 +107,9 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Check | Status |
 |-------|--------|
-| Intake → confirm → READY → COMPLETED | ⬜ |
-| `_15min.csv` verified | ⬜ |
-| Evidence `verification/5_15min_results.md` | ⬜ |
+| Intake → confirm → READY → COMPLETED | ✅ |
+| `_15min.csv` verified | ✅ |
+| Evidence `verification/5_15min_results.md` | ✅ |
 
 ---
 
@@ -131,6 +131,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Step 5 QA evidence captured: intake→prescan→confirm(READY)→PROCESSING→COMPLETED→aggregate; `_15min.csv` verified with row/header samples; path-mapping negative path repro logged |
 | 2026-08-19 | S11–S12 (F008/F009) fixed — JobStatus timing fields on GET /jobs and GET /jobs/{id} |
 | 2026-08-19 | S08 (F002) fixed — prescan CLI 6.7s → 4.6s on `hiv000001_inframe.mp4`; S07 OCR fields unchanged |
 | 2026-08-19 | S09 deferred to 6.7; S10 (F007) line proposal added to stabilization path |

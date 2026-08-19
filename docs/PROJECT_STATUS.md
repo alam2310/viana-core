@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-19  
-**Current focus:** **Step 5** — E2E verification (see `docs/steps/TRACKER.md`)  
+**Current focus:** **Step 6** — hardening backlog (see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 unblocked).  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
@@ -35,8 +35,8 @@
 | 2 | Contracts & API foundation | ✅ Complete |
 | 3 | Engine prescan & orchestrator | ✅ Complete |
 | 4 | UI implementation | ✅ Complete |
-| 5 | E2E verification (`_15min.csv`) | ⬜ Not started |
-| 6 | Hardening backlog | ⬜ Not started |
+| 5 | E2E verification (`_15min.csv`) | ✅ Complete |
+| 6 | Hardening backlog | 🔄 In progress |
 
 **Goals (Steps 1–5):** Backend prescan lifecycle → UI redesign → verify `{stem}_15min.csv`.
 
@@ -77,6 +77,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Step 5 complete: QA verified intake→prescan→confirm READY→PROCESSING→COMPLETED→aggregate and validated `_15min.csv` evidence + path-mapping negative-path repro |
 | 2026-08-19 | Stabilization S11–S12: JobStatus `created_at`, `video_duration_sec`, `processing_duration_sec` on GET /jobs and GET /jobs/{id} |
 | 2026-08-19 | Stabilization S08: prescan CLI 6.7s → 4.6s on `hiv000001_inframe.mp4` (OSD frame probe + faster corner OCR); S07 metadata unchanged |
 | 2026-08-19 | Stabilization S01–S02: preview registry disk fallback verified; `GET /artifacts/{id}/source.mp4` with HTTP Range for prescan-phase jobs |

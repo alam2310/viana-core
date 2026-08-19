@@ -20,6 +20,7 @@
 | **5.4** | Browser / Playwright click-through | UI / QA |
 | **5.5** | Extra camera clip validation | Engine / QA |
 | **5.6** | GPU tests in CI | DevOps |
+| **5.7** | Container read arbitrary host paths (local + mounted external HDD) | DevOps / API |
 
 ---
 
@@ -34,3 +35,4 @@ Mark ✅ in `TRACKER.md` and log here. When all items done or deferred, mark Ste
 | Date | Note |
 |------|------|
 | 2026-08-19 | Migrated from parked list; numbered Steps 1–5 |
+| 2026-08-19 | Added **5.7** — container access to arbitrary host paths (external HDD) from Step 1 discovery |

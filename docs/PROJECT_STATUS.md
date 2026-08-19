@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-19  
-**Current focus:** **Step 1** — UX discovery & design (see `docs/steps/TRACKER.md`)  
+**Current focus:** **Step 2** — Backend alignment (see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none. Live `:8000/health` is Phase 6.  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
@@ -31,8 +31,8 @@
 
 | Step | Name | Status |
 |------|------|--------|
-| 1 | UX discovery & design | ⬜ Not started |
-| 2 | Backend alignment (contract + prescan) | ⏸ Skipped until needed |
+| 1 | UX discovery & design | ✅ Complete |
+| 2 | Backend alignment (contract + prescan) | ⬜ Not started |
 | 3 | UI implementation | ⬜ Not started |
 | 4 | E2E verification (`_15min.csv`) | ⬜ Not started |
 | 5 | Hardening backlog | ⬜ Not started |
@@ -45,10 +45,9 @@
 
 ## Next (legacy list — see Steps above)
 
-1. **Step 1** — Discovery Q&A + prescan UX spec (`ViAna_Moving`: propose → confirm/edit time, location, lines).
-2. **Step 2** — Backend alignment if prescan/API/contracts must change.
-3. **Step 3** — Implement redesign; persist metadata on submit.
-4. **Step 4** — Verify 15-min grid on test clip.
+1. **Step 2** — Backend alignment: job status lifecycle, intake/confirm APIs, prescan worker queue.
+2. **Step 3** — Implement redesign per `docs/ui/REDESIGN.md`.
+3. **Step 4** — Verify 15-min grid on test clip.
 
 ## Parked (revisit later)
 
@@ -79,6 +78,7 @@ See **Step 5** in [`docs/steps/STEP_5_HARDENING.md`](steps/STEP_5_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Step 1 complete: `DISCOVERY.md`, `REDESIGN.md`, flows, Step 2 work items |
 | 2026-08-19 | Step 1 = discovery + design; Step 2 = backend alignment incl. prescan |
 | 2026-08-19 | Post-v0.1 Steps plan + tracker under `docs/steps/` |
 | 2026-08-19 | Phase 9 signed off; `legacy/` removed; `training/uvh/` + `docs/ops/ENVIRONMENT_SETUP.md` + `docs/archive/ITVA_RESEARCH_LOG.md`; compose `build: .` |

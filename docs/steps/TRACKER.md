@@ -1,7 +1,7 @@
 # Step tracker (living)
 
 **Last updated:** 2026-08-19  
-**Current Step:** **1** — UX discovery & design (Phase 1.1 in progress)  
+**Current Step:** **2** — Backend alignment  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
 **Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)
 
@@ -13,8 +13,8 @@
 
 | Step | Name | Status | Owner chat | Started | Completed |
 |------|------|--------|------------|---------|-----------|
-| **1** | UX discovery & design | 🔄 In progress | UX discovery chat | 2026-08-19 | — |
-| **2** | Backend alignment | ⏸ Skipped until needed | New — Backend | — | — |
+| **1** | UX discovery & design | ✅ Complete | UX discovery chat | 2026-08-19 | 2026-08-19 |
+| **2** | Backend alignment | ⬜ Not started | New — Backend | — | — |
 | **3** | UI implementation | ⬜ Not started | New — UI v2 | — | — |
 | **4** | E2E verification | ⬜ Not started | UI v2 or QA | — | — |
 | **5** | Hardening backlog | ⬜ Not started | Per item | — | — |
@@ -27,11 +27,11 @@
 
 | Phase / deliverable | Status | Path |
 |-------------------|--------|------|
-| 1.1 Discovery Q&A + sign-off | 🔄 | `docs/ui/DISCOVERY.md` |
-| 1.2 Task-type prescan matrix | ⬜ | `DISCOVERY.md` §3 |
-| 1.3 Redesign spec | ⬜ | `docs/ui/REDESIGN.md` |
-| 1.4 Flows / component map | ⬜ | `USER_FLOWS.md`, `COMPONENT_MAP.md` |
-| 1.5 Backend gap list | ⬜ | `STEP_2_BACKEND_ALIGNMENT.md` § Work items |
+| 1.1 Discovery Q&A + sign-off | ✅ | `docs/ui/DISCOVERY.md` |
+| 1.2 Task-type prescan matrix | ✅ | `DISCOVERY.md` §3 |
+| 1.3 Redesign spec | ✅ | `docs/ui/REDESIGN.md` |
+| 1.4 Flows / component map | ✅ | `USER_FLOWS.md`, `COMPONENT_MAP.md` |
+| 1.5 Backend gap list | ✅ | `STEP_2_BACKEND_ALIGNMENT.md` § Work items |
 
 ---
 
@@ -39,7 +39,7 @@
 
 | Gate | Status |
 |------|--------|
-| Required? | **TBD after Step 1** |
+| Required? | **Yes** — Step 1 filed work items |
 | Contract / schema | — |
 | Prescan engine | — |
 | Prescan API route | — |
@@ -80,6 +80,7 @@
 | 5.4 | Playwright UI pass | ⬜ | UI / QA |
 | 5.5 | Extra camera clip | ⬜ | Engine / QA |
 | 5.6 | GPU tests in CI | ⬜ | DevOps |
+| 5.7 | Container read arbitrary host paths (local + external HDD) | ⬜ | DevOps / API |
 
 ---
 
@@ -87,6 +88,7 @@
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Step 1 complete: DISCOVERY + REDESIGN + Step 2 work items |
 | 2026-08-19 | Step 1 = discovery + design; Step 2 = backend alignment incl. prescan |
 | 2026-08-19 | Steps 1–5 numbered; `AGENT_PROGRESS.md` added |
 | 2026-08-19 | Tracker created; Phases 0–9 complete |

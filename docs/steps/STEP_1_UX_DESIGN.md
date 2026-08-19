@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🔄 In progress — see [`TRACKER.md`](TRACKER.md) |
+| **Status** | ✅ Complete — see [`TRACKER.md`](TRACKER.md) |
 | **Chat** | **New** — UX discovery & design (one chat for whole Step 1) |
 | **Blocks** | Step 2 (if backend gaps), Step 3 |
 | **Blocked by** | — |
@@ -102,4 +102,5 @@ Use chat Q&A; record in `DISCOVERY.md` §2. Suggested themes:
 |------|------|
 | 2026-08-19 | Step created (numbered Steps 1–5) |
 | 2026-08-19 | Split into discovery + design; added task-type prescan matrix |
-| 2026-08-19 | Phase 1.1 discovery started — UX chat; first Q&A batch sent |
+| 2026-08-19 | Phase 1.1: telemetry UX plan (§9), PRESCAN_FAILED status, container path backlog 5.7 |
+| 2026-08-19 | Step 1 complete — REDESIGN.md, flows, component map, Step 2 work items |

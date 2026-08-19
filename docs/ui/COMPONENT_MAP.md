@@ -1,19 +1,53 @@
-# Component Map (planned)
+# Component Map (Step 1 redesign → Step 3 implementation)
 
-| Feature module | Path (planned) | Responsibility |
-|----------------|----------------|----------------|
-| Container | `features/container/` | docker health, start |
-| Projects | `features/projects/` | project_id, output parent display |
-| Queue | `features/queue/` | job list, localStorage cache of project_id |
-| Prescan | `features/prescan/` | modal, scrubber, OCR review |
+**Spec:** [`REDESIGN.md`](REDESIGN.md)
+
+## Feature modules
+
+| Module | Path | Responsibility |
+|--------|------|----------------|
+| Container | `features/container/` | Docker health, start |
+| Project | `features/project/` | `project_id`, browsable `output_dir`, task type picker |
+| Intake | `features/intake/` | Host path browser, file/folder/multi-select |
+| Queue | `features/queue/` | Job table, FIFO, row actions, status labels |
+| Prescan | `features/prescan/` | Review modal: canvas, OCR, scrubber, summary step |
 | Calibration | `features/calibration/` | HTML5 canvas, line drag, profiles |
-| Telemetry | `features/telemetry/` | WS hook, detail toggle |
-| Dashboard | `app/page.tsx` | layout, active job viewport |
+| Telemetry | `features/telemetry/` | WS hook, progress strip, crossing feed, activity log, raw JSON toggle |
+| Monitor | `features/monitor/` | Live sidebar: partial MP4 + telemetry stack |
+| Dashboard | `app/page.tsx` | Layout: project bar + intake + queue + monitor drawer |
 
-## Shadcn components (from `docs/specs/ui_specifications.md`)
+## New / changed vs Phase 8
 
-- Modal: prescan review
-- Toast: errors
-- Dropdown: task type (ViAna only for v0.1)
-- Progress: job bars
-- Table: telemetry (virtualized list for performance)
+| Component | Change |
+|-----------|--------|
+| `queue-panel.tsx` | → **JobQueueTable** with full status lifecycle |
+| `prescan-modal.tsx` | Side-by-side layout + review summary step |
+| `telemetry-panel.tsx` | Replace raw JSON with structured views |
+| `dashboard.tsx` | Remove localStorage drafts; backend job sync only |
+| `path-browser.tsx` | **New** — host API filesystem picker |
+| `monitor-sidebar.tsx` | **New** — video + telemetry |
+| `project-bar.tsx` | **New** — project_id + output_dir + task type |
+
+## Shadcn / UI primitives
+
+| Primitive | Use |
+|-----------|-----|
+| Table | Job queue, crossing feed (virtualized wrapper) |
+| Sheet / Dialog | Prescan review (wide), monitor sidebar |
+| Progress | Row progress + ETA strip |
+| Toast | Errors, container path warning |
+| Button | Review, Monitor, Retry, Cancel, Artifacts |
+| Dropdown | Task type |
+| Badge | Status operator labels |
+
+## API dependencies (Step 2)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /jobs/intake` | Create job(s) from path(s) |
+| `PATCH /jobs/{id}/prescan` | Confirm reviewed calibration → `READY` |
+| `POST /jobs/{id}/prescan/retry` | `PRESCAN_FAILED` → retry |
+| `GET /jobs` | Queue table sync |
+| `GET /api/fs/browse` | Host path browser (Step 3 host route) |
+| `GET /artifacts/.../partial.mp4` | Live monitor (range requests) |
+| `WS /ws/jobs` | Progress, crossings, logs |

@@ -77,21 +77,22 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 0/9 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) S01–S09 |
+| **4.stab** Stabilization path | 🔄 5/8 active | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) S01–S08, S10 (S09 → 6.7) |
 
 ### Stabilization execution path (follow in order)
 
 | Seq | Work | Lane | Status |
 |-----|------|------|--------|
 | S01 | F004 — verify preview JPEG after restart | B | fixed |
-| S02 | F003 — `GET /artifacts/{id}/source.mp4` | B | open |
-| S03 | F003 — Next.js source proxy | A | open |
-| S04 | F003 — prescan scrub via video seek (not prescan API) | A | open |
-| S05 | F003 — Re-scan OCR only + docs | A/B | open |
+| S02 | F003 — `GET /artifacts/{id}/source.mp4` | B | fixed |
+| S03 | F003 — Next.js source proxy | A | fixed |
+| S04 | F003 — prescan scrub via video seek (not prescan API) | A | fixed |
+| S05 | F003 — Re-scan OCR only + docs | A/B | fixed |
 | S06 | F005 — EasyOCR triage | C | open |
 | S07 | F001 — corner ROI OCR (**Step 5 blocker**) | C | open |
 | S08 | F002 — prescan latency | C | open |
-| S09 | F006 — intake path validation | B | open |
+| S10 | F007 — horizon/counting line proposal | C | open |
+| ~~S09~~ | F006 — intake path validation | B | **deferred → 6.7** |
 
 ---
 
@@ -117,7 +118,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 6.4 | Playwright | ⬜ |
 | 6.5 | Extra camera clip | ⬜ |
 | 6.6 | GPU CI | ⬜ |
-| 6.7 | Container host path access | ⬜ |
+| 6.7 | Container host path access + API intake path validation (S09 / F006) | ⬜ |
 
 ---
 
@@ -125,6 +126,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | S09 deferred to 6.7; S10 (F007) line proposal added to stabilization path |
 | 2026-08-19 | Stabilization execution path S01–S09 (merged findings + scrub plan) |
 | 2026-08-19 | Stabilization workflow + backlog; Step 5 blocked until prescan fixes |
 | 2026-08-19 | Step 4 complete: API-driven queue, intake browser, prescan review, live monitor, structured telemetry |

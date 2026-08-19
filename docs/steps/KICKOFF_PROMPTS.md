@@ -94,7 +94,7 @@ Env: NEXT_PUBLIC_USE_MOCKS=false, NEXT_PUBLIC_API_URL=http://localhost:8000
 
 Build: 4.1 intake+queue → 4.2 prescan review → 4.3 live monitor → 4.4 artifacts → 4.5 polish.
 
-Stabilization: follow execution path S01–S09 in docs/steps/STABILIZATION_BACKLOG.md (lane A: S03–S05). Do not start Step 5 until S07 (F001) cleared.
+Stabilization: follow execution path S01–S08, S10 in docs/steps/STABILIZATION_BACKLOG.md (lane A: S03–S05). Do not start Step 5 until S07 (F001) cleared. S09 deferred to Step 6.7.
 
 When stabilization blockers clear: AGENT_PROGRESS.md § Step 4.
 ```
@@ -125,7 +125,7 @@ You are the ViAna ENGINE/ORCHESTRATOR agent — Step 3 stabilization patch.
 
 Read: STABILIZATION.md, STABILIZATION_BACKLOG.md — assigned Seq rows only (respect Depends).
 
-Lane B: S01–S02, S09. Lane C: S06–S08. Fix orchestrator/prescan. Update backlog Status + Fix commit. No apps/web/.
+Lane B: S01–S02. Lane C: S06–S08, S10. Fix orchestrator/prescan. Update backlog Status + Fix commit. No apps/web/. S09 deferred to Step 6.7.
 Add tests. Log in STEP_3 § Log.
 ```
 

@@ -20,7 +20,7 @@
 | **6.4** | Browser / Playwright click-through | UI / QA |
 | **6.5** | Extra camera clip validation | Engine / QA |
 | **6.6** | GPU tests in CI | DevOps |
-| **6.7** | Container read arbitrary host paths (local + external HDD) | DevOps / API |
+| **6.7** | Container host path access + API intake path validation (**S09 / F006**) | DevOps / API |
 
 ---
 
@@ -35,4 +35,5 @@ Mark each item ✅ in `TRACKER.md`. When all done or deferred, mark Step 6 ✅.
 | Date | Note |
 |------|------|
 | 2026-08-19 | Renumbered from Step 5; six-step plan |
+| 2026-08-19 | **6.7** absorbs stabilization **S09** (F006 API intake path validation) |
 | 2026-08-19 | **6.7** from Step 1 discovery (G21) |

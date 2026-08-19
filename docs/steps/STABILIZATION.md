@@ -3,7 +3,7 @@
 **Purpose:** Record bugs and optimizations found during Step 4 acceptance **without** starting Step 5 or reopening full Steps 2–3.
 
 **Living backlog:** [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md)  
-**Execution path:** [`STABILIZATION_BACKLOG.md` § Execution path](STABILIZATION_BACKLOG.md#execution-path) — **S01→S09**, single ordered sequence  
+**Execution path:** [`STABILIZATION_BACKLOG.md` § Execution path](STABILIZATION_BACKLOG.md#execution-path) — **S01–S08, S10** (S09 deferred to Step 6.7), single ordered sequence  
 **Triage owner:** Planning chat (human + coordinator agent) — assigns lane and kickoff prompt.
 
 ---

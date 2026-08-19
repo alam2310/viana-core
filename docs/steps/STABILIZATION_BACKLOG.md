@@ -13,7 +13,9 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 1 | 0 | 5 | 5 / 9 |
+| 1 | 0 | 2 | 5 / 8 active |
+
+**Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
 ---
 
@@ -31,9 +33,10 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S06** | F005 | C | no | — | Triage EasyOCR in container (installed? hits on test frame?) | open |
 | **S07** | F001 | C | **yes** | S06 | Corner ROI OSD OCR → populated `proposed_metadata` | open |
 | **S08** | F002 | C | no | — | Reduce first prescan latency (dark-frame scan / cold start) | open |
-| **S09** | F006 | B | no | — | API rejects or normalizes container-unreadable intake paths | open |
+| **S10** | F007 | C | no | S07 | Improve horizon + counting line proposal (CV / geometry) | open |
+| ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
-**After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08–S09 are polish (may continue in parallel).
+**After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
 
 ---
 
@@ -49,7 +52,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S06** | 1. `docker exec` into API container 2. Run prescan on `hiv000001_inframe.mp4` 3. Inspect OCR stdout | **Expected:** EasyOCR installed; corner OSD yields hits. **Actual:** `optional_easyocr_reader()` may return `[]`; full-frame read misses small corner text. | `ocr.py`, `cli.py`, Docker image — outcome informs S07 scope | — | — |
 | **S07** | 1. Intake `data/raw/hiv000001_inframe.mp4` 2. `AWAITING_REVIEW` 3. Open review | **Expected:** `proposed_metadata` has time (HH:MM:SS), date (DD-MM-YYYY), location from 1–2 corner ROIs. **Actual:** fields empty; operator types all metadata. **Gates Step 5.** | `src/viana/stages/ocr.py`, `prescan.py`, `time_map.py` | — | — |
 | **S08** | 1. Intake one short clip 2. Time until `AWAITING_REVIEW` | **Expected:** prescan in a few seconds. **Actual:** 30s+ (dark-frame scan up to 30s + EasyOCR cold start). | `prescan.py`, `configs/engine_defaults.yaml` | — | — |
-| **S09** | 1. POST intake with host path outside docker mounts (no UI translation) | **Expected:** API rejects or normalizes before prescan. **Actual:** `Video not found` at prescan. **UI mitigated:** `container-paths.ts`. Defer full fix to Step 6.7 if approved. | `pool.py`, `docker-compose.yml` | — | — |
+| **S10** | 1. Intake `hiv000001_inframe.mp4` (or parity clip) 2. `AWAITING_REVIEW` 3. Open review modal | **Expected:** `proposed_lines` match road geometry (horizon near vanishing point, counting line on lane boundary) — usable without large edits. **Actual:** `propose_lines()` uses fixed normalized y-ratios or aspect-matched profile only (`lines.py` `geometric_lines`); no frame-based CV. Lines often misaligned vs operator “best” calibration (see `PARITY_NOTES.md` geometry B vs D). | `src/viana/stages/lines.py`, `prescan.py` (pass sampled frame), `tests/viana/test_prescan.py`; reference `legacy/` parity geometry only for bounds | — | — |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine prescan · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `wontfix`  
@@ -70,10 +73,25 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 ---
 
+## F007 design note (line proposal)
+
+**Today:** `propose_lines(width, height, profiles)` never inspects the sampled frame pixels. Fallback is `geometric_lines()` with fixed norms (`_HORIZON_Y`, `_COUNTING_Y`) or a profile matched by aspect ratio only (`confidence` 0.4 vs 0.85).
+
+**Target:** Use the prescan sample frame (same frame as OCR / preview JPEG) to propose horizon and counting lines that align with visible road geometry — e.g. edge/vanishing-point heuristics, optional lane/horizon cues — while staying within frame bounds and returning `ProposedLines.confidence` honestly.
+
+**Not Step 5 blocker:** operator can edit lines before confirm (discovery Q#4). Improves UX and reduces calibration time.
+
+**Reference clips:** `hiv000001_inframe.mp4`; human-review geometry in `tests/viana/fixtures/PARITY_NOTES.md` § geometry B/D.
+
+**Session:** Step 3 engine patch after S07 (or parallel with S08). Lane C only.
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | S09 (F006) deferred to Step 6.7; added S10 (F007) line proposal improvement |
 | 2026-08-19 | Merged F001–F006 + F003 scrub plan into single execution path S01–S09 |
 | 2026-08-19 | S03–S05 fixed: `/api/proxy/source`, video scrub canvas, prescan/preview on Re-scan only |
 | 2026-08-19 | S01 fixed (`45a82a4` disk rglob fallback); S02 fixed (`GET /artifacts/{id}/source.mp4`) |
@@ -86,4 +104,4 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 | Seq | Reason | Date |
 |-----|--------|------|
-| — | | |
+| **S09** (F006) | API intake path validation — UI mitigated via `container-paths.ts`; full fix → **Step 6.7** | 2026-08-19 |

@@ -29,8 +29,6 @@ import {
 } from "@/lib/geometry";
 import { validateMetadataFields } from "@/lib/validation";
 
-type Step = "edit" | "summary";
-
 function mergeOcrMetadata(
   prev: {
     user_start_time: string;
@@ -77,7 +75,6 @@ export function PrescanReviewModal({
   onClose: () => void;
   onConfirmed: (jobId: string) => void;
 }) {
-  const [step, setStep] = useState<Step>("edit");
   const [loading, setLoading] = useState(false);
   const [frameLoading, setFrameLoading] = useState(false);
   const [rescanning, setRescanning] = useState(false);
@@ -295,8 +292,7 @@ export function PrescanReviewModal({
               {job.source_video_path}
             </p>
             <p className="mt-1 text-xs text-neutral-500">
-              Step {step === "edit" ? "1–2" : "3"}:{" "}
-              {step === "edit" ? "Edit" : "Confirm summary"}
+              Edit metadata and lines, then confirm when ready.
             </p>
           </div>
           <Button type="button" size="sm" variant="ghost" onClick={onClose}>
@@ -306,45 +302,7 @@ export function PrescanReviewModal({
 
         {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
 
-        {step === "summary" ? (
-          <div className="mt-4 space-y-3 text-sm">
-            <h3 className="font-medium">Review summary</h3>
-            <dl className="grid gap-2 sm:grid-cols-2">
-              <div>
-                <dt className="text-neutral-500">Time</dt>
-                <dd className="font-mono">{metadata.user_start_time}</dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">Date</dt>
-                <dd className="font-mono">{metadata.user_start_date}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-neutral-500">Location</dt>
-                <dd>{metadata.location}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-neutral-500">Horizon line</dt>
-                <dd className="font-mono text-xs">
-                  {horizon ? formatLineCoords(horizon) : "—"}
-                </dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-neutral-500">Counting line</dt>
-                <dd className="font-mono text-xs">
-                  {counting ? formatLineCoords(counting) : "—"}
-                </dd>
-              </div>
-            </dl>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setStep("edit")}>
-                Back
-              </Button>
-              <Button type="button" disabled={loading} onClick={() => void submitConfirm()}>
-                {loading ? "Submitting…" : "Confirm → READY"}
-              </Button>
-            </div>
-          </div>
-        ) : meta && horizon && counting ? (
+        {meta && horizon && counting ? (
           <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <div className="flex flex-col gap-3">
               <p className="text-xs text-neutral-500">
@@ -481,9 +439,9 @@ export function PrescanReviewModal({
                 <Button
                   type="button"
                   disabled={allIssues.length > 0 || loading || rescanning}
-                  onClick={() => setStep("summary")}
+                  onClick={() => void submitConfirm()}
                 >
-                  Next: summary
+                  {loading ? "Submitting…" : "Confirm → READY"}
                 </Button>
               </div>
             </div>

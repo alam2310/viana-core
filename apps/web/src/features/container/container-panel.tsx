@@ -5,12 +5,15 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { ContainerStatus } from "@/lib/container-types";
 
+const BENIGN_STOP_ERRORS = new Set([
+  "container_not_found",
+  "docker_not_installed",
+  "docker_inspect_failed",
+]);
+
 function containerHint(status: ContainerStatus | null): string | null {
   if (!status || status.running) {
     return null;
-  }
-  if (status.error === "container_not_found") {
-    return "ViAna container is not running. Click Start below to launch it with Docker Compose.";
   }
   if (status.error === "docker_not_installed") {
     return "Docker is not available on this host. Install Docker to run the ViAna orchestrator.";
@@ -60,11 +63,7 @@ export function ContainerPanel({
   const hint = containerHint(status);
   const actionError =
     error ??
-    (status?.error &&
-    status.error !== "container_not_found" &&
-    status.error !== "docker_not_installed"
-      ? status.error
-      : null);
+    (status?.error && !BENIGN_STOP_ERRORS.has(status.error) ? status.error : null);
 
   if (compact) {
     return (

@@ -178,45 +178,18 @@ export function Dashboard() {
     }
     setIntakeBusy(true);
     setError(null);
-    let createdJobIds: string[] = [];
     try {
-      const response = await intakeJobs({
+      await intakeJobs({
         task_type: "ViAna_Moving",
         project_id: projectId,
         source_video_paths: paths,
         ...(outputDir.trim() ? { output_dir: outputDir.trim() } : {}),
       });
-      createdJobIds = response.jobs.map((item) => item.job_id);
       await refreshJobs();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIntakeBusy(false);
-    }
-
-    if (createdJobIds.length === 1) {
-      void waitForPrescanReview(createdJobIds[0]);
-    }
-  }
-
-  async function waitForPrescanReview(jobId: string) {
-    for (let attempt = 0; attempt < 60; attempt += 1) {
-      try {
-        const list = await refreshJobs();
-        const job = list.find((item) => item.job_id === jobId);
-        if (job?.status === "AWAITING_REVIEW") {
-          setReviewJob(job);
-          return;
-        }
-        if (job?.status === "PRESCAN_FAILED") {
-          setError(job.error_message ?? "Prescan failed");
-          return;
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-        return;
-      }
-      await new Promise((resolve) => window.setTimeout(resolve, 2000));
     }
   }
 

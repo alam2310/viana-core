@@ -15,6 +15,7 @@ import { JobDetailsPanel } from "@/features/telemetry/job-details-panel";
 import { IconMoon, IconSun, RoundIconButton } from "@/components/ui/icon-button";
 import {
   cancelJob,
+  getJob,
   getHealth,
   intakeJobs,
   listJobs,
@@ -264,16 +265,29 @@ export function Dashboard() {
     }
   }
 
-  async function onCancel(jobId: string) {
+  async function onStop(jobId: string) {
     setBusyId(jobId);
     setError(null);
     try {
       await cancelJob(jobId);
-      if (monitorJob?.job_id === jobId) {
-        setMonitorJob(null);
-      }
-      if (selectedJob?.job_id === jobId) {
-        setSelectedJob(null);
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 250);
+        });
+        const latest = await getJob(jobId);
+        if (latest.status === "CANCELLED") {
+          await refreshJobs();
+          return;
+        }
+        if (latest.status === "PAUSED") {
+          await cancelJob(jobId);
+          await refreshJobs();
+          return;
+        }
+        if (latest.status !== "PROCESSING") {
+          await refreshJobs();
+          return;
+        }
       }
       await refreshJobs();
     } catch (err) {
@@ -375,7 +389,7 @@ export function Dashboard() {
           onRetryPrescan={(id) => void onRetryPrescan(id)}
           onResume={(id) => void onResume(id)}
           onStartFresh={(id) => void onStartFresh(id)}
-          onCancel={(id) => void onCancel(id)}
+          onStop={(id) => void onStop(id)}
           onOpenOutput={(job) => {
             if (!mountConfig || !job.output_dir) {
               return;

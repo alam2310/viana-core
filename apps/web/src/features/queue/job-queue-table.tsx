@@ -4,7 +4,6 @@ import type { JobStatusResponse } from "@viana/contracts";
 
 import {
   IconCancel,
-  IconPause,
   IconFolder,
   IconMonitor,
   IconResume,
@@ -61,7 +60,7 @@ export function JobQueueTable({
   onRetryPrescan,
   onResume,
   onStartFresh,
-  onCancel,
+  onStop,
   onOpenOutput,
 }: {
   jobs: JobStatusResponse[];
@@ -74,7 +73,7 @@ export function JobQueueTable({
   onRetryPrescan: (jobId: string) => void;
   onResume: (jobId: string) => void;
   onStartFresh: (jobId: string) => void;
-  onCancel: (jobId: string) => void;
+  onStop: (jobId: string) => void;
   onOpenOutput: (job: JobStatusResponse) => void;
 }) {
   const sorted = sortJobsBySubmitted(jobs);
@@ -222,17 +221,6 @@ export function JobQueueTable({
                           <IconMonitor size={16} />
                         </RoundIconButton>
                       ) : null}
-                      {job.status === "PROCESSING" ? (
-                        <RoundIconButton
-                          label="Pause Job"
-                          size="sm"
-                          variant="warning"
-                          disabled={busyId === job.job_id}
-                          onClick={() => onCancel(job.job_id)}
-                        >
-                          <IconPause size={16} />
-                        </RoundIconButton>
-                      ) : null}
                       {job.status === "PAUSED" ? (
                         <RoundIconButton
                           label="Resume Job"
@@ -272,7 +260,7 @@ export function JobQueueTable({
                           size="sm"
                           variant="danger"
                           disabled={busyId === job.job_id}
-                          onClick={() => onCancel(job.job_id)}
+                          onClick={() => onStop(job.job_id)}
                         >
                           <IconCancel size={16} />
                         </RoundIconButton>

@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 0 | 1 | 12 | 10 / 22 active |
+| 0 | 1 | 10 | 12 / 22 active |
 
 **Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
@@ -36,8 +36,8 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S10** | F007 | C | no | S07 | Improve horizon + counting line proposal (CV / geometry) | open |
 | **S11** | F008 | B/D | no | — | `JobStatus.created_at` + sortable submitted time in API | fixed |
 | **S12** | F009 | B/D | no | — | `JobStatus.video_duration_sec` + `processing_duration_sec` from API (not UI localStorage) | fixed |
-| **S13** | F010 | B/C | no | — | Growing `_processed.mp4` streamable during job (moov/fragmented MP4) | open |
-| **S14** | F011 | C | no | — | Emit `MOVING_EVENT` without `telemetry_detail` gate; include crossing timestamp | open |
+| **S13** | F010 | B/C | no | — | Growing `_processed.mp4` streamable during job (moov/fragmented MP4) | fixed |
+| **S14** | F011 | C | no | — | Emit `MOVING_EVENT` without `telemetry_detail` gate; include crossing timestamp | fixed |
 | **S15** | F012 | B/D | no | — | 15-min CSV schema: add `date` column; change `window_start`/`window_end` to HH:MM | open |
 | **S16** | F013 | A | no | — | Theme toggle regression: action buttons keep dark styling after returning to light mode | open |
 | **S17** | F014 | A | no | — | Remove duplicate `Recent crossing` table from job details widget | open |
@@ -68,8 +68,8 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S10** | 1. Intake `hiv000001_inframe.mp4` (or parity clip) 2. `AWAITING_REVIEW` 3. Open review modal | **Expected:** `proposed_lines` match road geometry (horizon near vanishing point, counting line on lane boundary) — usable without large edits. **Actual:** `propose_lines()` uses fixed normalized y-ratios or aspect-matched profile only (`lines.py` `geometric_lines`); no frame-based CV. Lines often misaligned vs operator “best” calibration (see `PARITY_NOTES.md` geometry B vs D). | `src/viana/stages/lines.py`, `prescan.py` (pass sampled frame), `tests/viana/test_prescan.py`; reference `legacy/` parity geometry only for bounds | — | — |
 | **S11** | 1. Intake job 2. `GET /jobs` | **Expected:** each job has `created_at` (ISO) for queue sort. **Actual:** UI uses localStorage fallback until API field exists. | `job_status.schema.json`, `pool.py` `JobRecord`, `to_status()` | `81106c0` | orchestrator tests (S11) |
 | **S12** | 1. Prescan completes 2. `GET /jobs/{id}` | **Expected:** `video_duration_sec` and `processing_duration_sec` on status for queue columns. **Actual:** UI estimates video length from progress fps when available; run time uses localStorage timestamps captured while dashboard is open during `PROCESSING` — shows `—` for jobs completed before first poll or after page refresh. | prescan worker persists meta on `JobRecord`; schema + TS types; `job-local-meta.ts` | `81106c0` | orchestrator tests (S12) |
-| **S13** | 1. `PROCESSING` job 2. Open live monitor 3. Try partial MP4 in VLC | **Expected:** `_processed.mp4` playable while growing. **Actual:** file not playable until job completes (moov atom at end). | `src/viana/stages/process.py` video writer, or HLS segment endpoint | — | Step 4 UI chat |
-| **S14** | 1. Confirm prescan with `telemetry_detail: true` 2. Monitor during `PROCESSING` | **Expected:** `MOVING_EVENT` on WS for every crossing with wall-clock or video timestamp. **Actual:** events gated on `telemetry_detail`; no timestamp in payload (frame_index only). **UI workaround (2026-08-19):** crossings table derives wall-clock from `user_start_time` + `user_start_date` + `frame_index`/`fps` until API emits `event_timestamp`. | `process.py` emit block, `telemetry.schema.json`, `telemetry-formatters.ts` | — | Step 4 UI chat |
+| **S13** | 1. `PROCESSING` job 2. Open live monitor 3. Try partial MP4 in VLC | **Expected:** `_processed.mp4` playable while growing. **Actual (before):** file not playable until job completes (moov atom at end). **After:** FFmpeg writer always emits fragmented MP4 with frequent fragments/keyframes (`frag_duration=1s`) so in-progress output is streamable. | `src/viana/stages/render.py`, `tests/viana/test_render.py`, `tests/orchestrator/test_job_routes.py` | uncommitted | `pytest tests/viana/test_render.py tests/orchestrator/test_job_routes.py -q` |
+| **S14** | 1. Confirm prescan with `telemetry_detail: true/false` 2. Monitor during `PROCESSING` | **Expected:** `MOVING_EVENT` on WS for every crossing with wall-clock or video timestamp. **Actual (before):** events gated on `telemetry_detail`; no timestamp in payload (frame_index only). **After:** emission is unconditional and payload carries `event_timestamp`, `event_timestamp_source`, `event_timestamp_confidence`, `video_pts_ms` (plus existing frame/fps fields). | `src/viana/stages/process.py`, `tests/viana/test_process.py`, `tests/orchestrator/test_job_routes.py` | uncommitted | `pytest tests/viana/test_process.py tests/orchestrator/test_job_routes.py -q` |
 | **S15** | 1. Generate `_15min.csv` 2. Inspect header/rows | **Expected:** `date` (DD-MM-YYYY or ISO date) plus `window_start`/`window_end` as `HH:MM` to avoid client-side ISO parsing. **Actual:** CSV emits ISO datetime in `window_start`/`window_end`; UI currently parses ISO and derives HH:MM. | `events_15min.schema.json`, aggregate writer, contracts TS sync; then update UI parser to consume new format directly | — | Step 4 UI chat |
 | **S16** | 1. Switch to dark theme 2. Return to light theme 3. Visit intake, prescan dialogs, and live monitor | **Expected:** button colors and variants re-compute on every theme change. **Actual:** several buttons remain in dark-style colors after switching back to light. Repro controls: top widget `Output directory` browse button; Select Files dialog `Cancel` + `Add all videos` + `Add selected`; Prescan review dialog `Close` + `Cancel` + `Re-scan OCR`; Live monitor dialog `Close`. | Lane A (`apps/web/`): inspect variant token mapping and theme-driven class/state updates in project/intake + prescan-review + live-monitor components; ensure dark↔light toggles are symmetric and not cached/stale. | — | Step 4 UI chat |
 | **S17** | 1. Open job details widget 2. Open live monitor for same job | **Expected:** crossings are shown in one canonical place (live monitor `Live crossing` view), avoiding duplicate UI sections. **Actual:** job details also shows `Recent crossing`, duplicating information and adding noise. | Lane A (`apps/web/`): remove `Recent crossing` table from job details widget; keep crossing visibility in live monitor only; verify no empty-state/layout regressions in details card. | — | Step 4 UI chat |
@@ -209,6 +209,7 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | S13 fixed (fragmented MP4 writer hardening + tests); S14 fixed (`MOVING_EVENT` timestamp payload enriched and verified on WS/tests) |
 | 2026-08-19 | S11–S12 fixed — required `created_at`; `video_duration_sec` from prescan; frozen `processing_duration_sec` on GET /jobs |
 | 2026-08-19 | S08 fixed — `viana prescan` 6.7s → 4.6s on `hiv000001_inframe.mp4`; 2× tight OSD ROI + t=2s probe; S07 metadata unchanged |
 | 2026-08-19 | S11–S14 backend triage: created_at, video duration, streamable partial MP4, MOVING_EVENT |

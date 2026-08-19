@@ -77,6 +77,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Stabilization S13–S14 fixed: in-progress processed MP4 fragmented for streaming during PROCESSING; MOVING_EVENT now carries timestamp/source/confidence + video_pts_ms |
 | 2026-08-19 | Step 5 complete: QA verified intake→prescan→confirm READY→PROCESSING→COMPLETED→aggregate and validated `_15min.csv` evidence + path-mapping negative-path repro |
 | 2026-08-19 | Stabilization S11–S12: JobStatus `created_at`, `video_duration_sec`, `processing_duration_sec` on GET /jobs and GET /jobs/{id} |
 | 2026-08-19 | Stabilization S08: prescan CLI 6.7s → 4.6s on `hiv000001_inframe.mp4` (OSD frame probe + faster corner OCR); S07 metadata unchanged |

@@ -824,6 +824,47 @@ def test_progress_telemetry_includes_eta_and_crossings(
     assert payload["data"]["crossing_count"] == 3
 
 
+def test_ws_forwards_moving_event_with_timestamp(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """S14: MOVING_EVENT telemetry reaches WS with timestamp fields."""
+    line = json.dumps(
+        {
+            "job_id": "pending",
+            "status": "PROCESSING",
+            "telemetry_type": "MOVING_EVENT",
+            "data": {
+                "track_id": 9,
+                "class_name": "Car",
+                "direction": "in",
+                "frame_index": 42,
+                "fps": 25.0,
+                "video_pts_ms": 1680.0,
+                "event_timestamp": "2026-03-15T09:00:01.680000Z",
+                "event_timestamp_source": "ocr_anchor",
+                "event_timestamp_confidence": 0.92,
+            },
+        }
+    )
+
+    class MovingEventPopen(InstantPopen):
+        def __init__(self) -> None:
+            super().__init__(_run_result_json("job_evt"), line + "\n")
+
+    monkeypatch.setattr(
+        "orchestrator.workers.pool.start_viana_process",
+        lambda *_args, **_kwargs: MovingEventPopen(),
+    )
+    reset_pool()
+    with client.websocket_connect("/ws/jobs") as websocket:
+        response = client.post("/jobs", json=VALID_SUBMIT)
+        assert response.status_code == 201
+        payload = websocket.receive_json()
+    assert payload["telemetry_type"] == "MOVING_EVENT"
+    assert payload["data"]["event_timestamp"] == "2026-03-15T09:00:01.680000Z"
+    assert payload["data"]["event_timestamp_source"] == "ocr_anchor"
+
+
 def _assert_iso_datetime(value: object) -> None:
     """Require a JSON Schema date-time string (ISO-8601, UTC Z ok)."""
     assert isinstance(value, str) and value

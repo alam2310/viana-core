@@ -350,6 +350,50 @@ def test_prescan_rewrites_preview_url(
     assert image.status_code == 200
 
 
+def test_prescan_preview_survives_registry_restart(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Preview JPEG resolves from disk when in-memory registry is empty (S01)."""
+    import orchestrator.preview_registry as preview_registry
+
+    preview = tmp_path / "nh48" / "prescan" / "prescan_restart_preview.jpg"
+    preview.parent.mkdir(parents=True)
+    preview.write_bytes(b"\xff\xd8\xff")
+    stdout = json.dumps(
+        {
+            "prescan_id": "prescan_restart",
+            "video_meta": {
+                "width": 1920,
+                "height": 1080,
+                "fps": 25.0,
+                "duration_sec": 1.0,
+                "frame_count": 25,
+            },
+            "ocr": {},
+            "preview_url": str(preview),
+            "profiles": [],
+        }
+    )
+
+    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+        return CompletedProcess(args=list(args), returncode=0, stdout=stdout, stderr="")
+
+    monkeypatch.setattr("orchestrator.routes.prescan.run_viana", fake_run)
+    response = client.post(
+        "/utils/prescan",
+        json={
+            "source_video_path": SOURCE,
+            "project_id": "nh48",
+            "frame_offset_sec": 0.0,
+        },
+    )
+    assert response.status_code == 200
+    preview_registry._PREVIEW_FILES.clear()
+    image = client.get("/utils/prescan/prescan_restart/preview.jpg")
+    assert image.status_code == 200
+    assert image.headers["content-type"].startswith("image/jpeg")
+
+
 def test_profiles_roundtrip(client: TestClient) -> None:
     """GET/POST profiles write JSON under the project output dir."""
     empty = client.get("/projects/nh48/profiles")
@@ -654,6 +698,34 @@ def test_job_prescan_preview_at_offset(
     assert response.status_code == 200
     assert captured["frame_offset"] == 15.0
     assert response.json()["preview_url"] == "/utils/prescan/prescan_scrub/preview.jpg"
+
+
+def test_source_mp4_served_with_range(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """GET /artifacts/{id}/source.mp4 streams intake video with HTTP Range (S02)."""
+    source = tmp_path / "clip.mp4"
+    payload = b"\x00\x00\x00\x18ftypmp42" + b"\xab" * 100
+    source.write_bytes(payload)
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [str(source)]},
+    )
+    job_id = intake.json()["jobs"][0]["job_id"]
+    get_pool().stub_awaiting_review(job_id)
+    response = client.get(f"/artifacts/{job_id}/source.mp4")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("video/mp4")
+    assert response.content == payload
+    ranged = client.get(
+        f"/artifacts/{job_id}/source.mp4",
+        headers={"Range": "bytes=0-7"},
+    )
+    assert ranged.status_code == 206
+    assert ranged.content == payload[:8]
+    get_pool().get_job(job_id).status = "PROCESSING"
+    denied = client.get(f"/artifacts/{job_id}/source.mp4")
+    assert denied.status_code == 404
 
 
 def test_partial_processed_mp4_served(

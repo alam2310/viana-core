@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 1 | 0 | 5 | 1 / 9 |
+| 1 | 0 | 5 | 2 / 9 |
 
 ---
 
@@ -24,7 +24,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | Seq | ID | Lane | Blocker | Depends | Title | Status |
 |-----|-----|------|---------|---------|-------|--------|
 | **S01** | F004 | B | no | — | Verify preview JPEG survives orchestrator restart | fixed |
-| **S02** | F003 | B | no | — | Add `GET /artifacts/{job_id}/source.mp4` (Range, prescan-phase jobs) | open |
+| **S02** | F003 | B | no | — | Add `GET /artifacts/{job_id}/source.mp4` (Range, prescan-phase jobs) | fixed |
 | **S03** | F003 | A | no | S02 | Next.js `/api/proxy/source` — same-origin video stream | open |
 | **S04** | F003 | A | no | S03 | Prescan scrub: video seek → canvas; **no** `prescan/preview` on slider | open |
 | **S05** | F003 | A/B | no | S04 | `prescan/preview` only for **Re-scan OCR**; docs sync (`api_contracts`, `COMPONENT_MAP`) | open |
@@ -41,8 +41,8 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 
 | Seq | Repro | Expected vs actual | Files / notes | Fix commit | Verified |
 |-----|-------|-------------------|---------------|------------|----------|
-| **S01** | 1. Prescan → `AWAITING_REVIEW` 2. Restart `viana_core` 3. Open review | **Expected:** `proposed_preview_url` JPEG still loads. **Actual:** in-memory registry empty → 404. | `src/orchestrator/preview_registry.py` — disk `rglob` fallback | disk rglob fallback (uncommitted) | Step 4 UI chat |
-| **S02** | 1. Job in `AWAITING_REVIEW` 2. `GET /artifacts/{id}/source.mp4` with Range | **Expected:** streams `job.source_video_path` for browser seek (mirror G19 partial MP4). **Actual:** no source endpoint; scrub must spawn prescan. | `src/orchestrator/routes/artifacts.py`, `api_contracts.md`, orchestrator test | — | — |
+| **S01** | 1. Prescan → `AWAITING_REVIEW` 2. Restart `viana_core` 3. Open review | **Expected:** `proposed_preview_url` JPEG still loads. **Actual:** in-memory registry empty → 404. | `src/orchestrator/preview_registry.py` — disk `rglob` fallback | `45a82a4` | orchestrator test (S01) |
+| **S02** | 1. Job in `AWAITING_REVIEW` 2. `GET /artifacts/{id}/source.mp4` with Range | **Expected:** streams `job.source_video_path` for browser seek (mirror G19 partial MP4). **Actual:** no source endpoint; scrub must spawn prescan. | `src/orchestrator/routes/artifacts.py`, `api_contracts.md`, orchestrator test | uncommitted | orchestrator test (S02) |
 | **S03** | 1. S02 deployed 2. Open review modal | **Expected:** browser loads source via same-origin proxy (like `/api/proxy/preview`). **Actual:** cross-origin or no URL. | `apps/web/src/app/api/proxy/source/route.ts`, `api-client.ts` | — | — |
 | **S04** | 1. Open prescan review 2. Move frame-offset slider | **Expected:** frame updates in &lt;200ms from local video seek; lines unchanged. **Actual:** each scrub calls `GET /jobs/{id}/prescan/preview` → full `viana prescan` subprocess (OCR + lines + JPEG). | `prescan-review-modal.tsx`, `calibration-canvas.tsx` — hidden `<video>`, `seeked` → `drawImage`; remove offset→`prescanPreview` effect; `loadedmetadata` → `duration_sec` | — | — |
 | **S05** | 1. Click **Re-scan OCR at Ns** | **Expected:** only explicit re-scan hits prescan API; slider does not. **Actual:** (after S04) re-scan still calls `prescanPreview`; metadata-only merge. Also: `applyToOthers` should use `job.proposed_*` / status, not `prescanPreview(0)` for resolution. | `prescan-review-modal.tsx`, `docs/api_contracts.md` § artifacts, `docs/ui/COMPONENT_MAP.md` | — | — |
@@ -75,6 +75,7 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 | Date | Change |
 |------|--------|
 | 2026-08-19 | Merged F001–F006 + F003 scrub plan into single execution path S01–S09 |
+| 2026-08-19 | S01 fixed (`45a82a4` disk rglob fallback); S02 fixed (`GET /artifacts/{id}/source.mp4`) |
 | 2026-08-19 | F001–F006 logged from Step 4 acceptance testing (UI chat thread) |
 | 2026-08-19 | Backlog created; Step 5 gated on blockers |
 

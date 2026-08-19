@@ -132,6 +132,7 @@ Response: full `JobStatus` with `confirmed_metadata` and `confirmed_task_paramet
 | PATCH | `/jobs/{id}/prescan` | Confirm review → `READY` |
 | POST | `/jobs/{id}/prescan/retry` | `PRESCAN_FAILED` → `PRESCAN_PENDING` |
 | GET | `/jobs/{id}/prescan/preview` | Re-run prescan at `frame_offset_sec` (scrub preview) |
+| GET | `/artifacts/{id}/source.mp4` | Intake source MP4 with HTTP Range (prescan review scrub; `PRESCAN_*`, `AWAITING_REVIEW`, `READY`) |
 | GET | `/artifacts/{id}/partial.mp4` | Partial `_processed.mp4` with HTTP Range (live monitor) |
 | GET | `/jobs` | List jobs (`?project_id=`) |
 | GET | `/jobs/{id}` | Status — see `job_status.schema.json`, fixtures `job_status_paused.json`, `job_status_awaiting_review.json` |

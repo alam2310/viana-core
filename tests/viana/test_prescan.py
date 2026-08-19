@@ -90,6 +90,21 @@ def test_frame_guided_lines_are_deterministic() -> None:
     assert first.confidence == second.confidence
 
 
+def test_frame_guided_lines_keep_parallel_direction() -> None:
+    """Horizon/counting should follow one dominant road direction."""
+    cv2 = __import__("pytest").importorskip("cv2")
+    np = __import__("numpy")
+    frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    cv2.line(frame, (0, 260), (1279, 430), (255, 255, 255), 4)
+    cv2.line(frame, (0, 500), (1279, 670), (255, 255, 255), 4)
+    proposed = propose_lines(1280, 720, [], frame=frame)
+    h_dy = proposed.horizon_line.end[1] - proposed.horizon_line.start[1]
+    c_dy = proposed.counting_line.end[1] - proposed.counting_line.start[1]
+    assert h_dy > 0
+    assert c_dy > 0
+    assert abs(h_dy - c_dy) <= 80
+
+
 def test_invalid_frame_shape_falls_back_to_geometric() -> None:
     """Mismatched frame dimensions should not crash frame-guided path."""
     np = __import__("numpy")

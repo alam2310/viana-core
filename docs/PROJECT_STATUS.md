@@ -77,6 +77,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | Stabilization S10 partial: refined no-profile line fallback with dominant-slope parallel fitting and extra tests; further tuning needed on sample camera views before closure |
 | 2026-08-19 | Stabilization S10 fixed: no-profile prescan line proposal now uses deterministic frame-guided edge fitting with bounds-safe clamping and cue-based confidence; profile override precedence unchanged |
 | 2026-08-19 | Stabilization S15 fixed: 15-min CSV contract/output aligned to `date` + `HH:MM` windows; UI parser groups by `date+window+class` to avoid cross-day merge |
 | 2026-08-19 | Stabilization S13–S14 fixed: in-progress processed MP4 fragmented for streaming during PROCESSING; MOVING_EVENT now carries timestamp/source/confidence + video_pts_ms |

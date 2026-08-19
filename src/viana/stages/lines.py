@@ -144,27 +144,44 @@ def _frame_guided_lines(width: int, height: int, frame: object | None) -> Propos
             y_mid = (y1 + y2) * 0.5
             candidates.append((x1, y1, x2, y2, slope, y_mid))
 
+    slope_samples: list[float] = []
+    slope_weights: list[float] = []
+    for x1, y1, x2, y2, slope, _y_mid in candidates:
+        seg_len = sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2))
+        slope_samples.append(slope)
+        slope_weights.append(seg_len)
+    if not slope_samples:
+        return None
+    slope_order = sorted(range(len(slope_samples)), key=lambda idx: slope_samples[idx])
+    total_weight = sum(slope_weights)
+    running = 0.0
+    dominant_slope = slope_samples[slope_order[-1]]
+    for idx in slope_order:
+        running += slope_weights[idx]
+        if running >= total_weight * 0.5:
+            dominant_slope = slope_samples[idx]
+            break
+    dominant_slope = max(-0.45, min(0.45, dominant_slope))
+
     def fit_band_line(
         y_min_ratio: float,
         y_max_ratio: float,
-        slope_limit: float,
         fallback_y: float,
     ) -> tuple[LineSegment, float]:
         y_min = height * y_min_ratio
         y_max = height * y_max_ratio
-        points_x: list[float] = []
-        points_y: list[float] = []
+        intercepts: list[float] = []
         weights: list[float] = []
         for x1, y1, x2, y2, slope, y_mid in candidates:
-            if abs(slope) > slope_limit:
+            if abs(slope - dominant_slope) > 0.22:
                 continue
             if y_mid < y_min or y_mid > y_max:
                 continue
             seg_len = sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2))
-            points_x.extend((x1, x2))
-            points_y.extend((y1, y2))
+            intercepts.append(y1 - (dominant_slope * x1))
+            intercepts.append(y2 - (dominant_slope * x2))
             weights.extend((seg_len, seg_len))
-        if len(points_x) < 4:
+        if len(intercepts) < 4:
             return (
                 LineSegment(
                     start=clamp_point(0, int(fallback_y), width, height),
@@ -172,17 +189,18 @@ def _frame_guided_lines(width: int, height: int, frame: object | None) -> Propos
                 ),
                 0.0,
             )
-        coeff = np.polyfit(
-            np.asarray(points_x, dtype=np.float64),
-            np.asarray(points_y, dtype=np.float64),
-            1,
-            w=np.asarray(weights, dtype=np.float64),
-        )
-        slope = float(coeff[0])
-        intercept = float(coeff[1])
+        ordered = sorted(zip(intercepts, weights), key=lambda item: item[0])
+        cum = 0.0
+        total = sum(weights)
+        intercept = ordered[-1][0]
+        for value, weight in ordered:
+            cum += weight
+            if cum >= total * 0.5:
+                intercept = value
+                break
         y_left = int(round(intercept))
-        y_right = int(round((slope * (width - 1)) + intercept))
-        support = min(1.0, len(points_x) / 32.0)
+        y_right = int(round((dominant_slope * (width - 1)) + intercept))
+        support = min(1.0, len(intercepts) / 36.0)
         return (
             LineSegment(
                 start=clamp_point(0, y_left, width, height),
@@ -191,8 +209,8 @@ def _frame_guided_lines(width: int, height: int, frame: object | None) -> Propos
             support,
         )
 
-    horizon, horizon_support = fit_band_line(0.22, 0.72, 0.28, height * 0.6)
-    counting, counting_support = fit_band_line(0.45, 0.96, 0.35, height * 0.86)
+    horizon, horizon_support = fit_band_line(0.20, 0.72, height * 0.56)
+    counting, counting_support = fit_band_line(0.42, 0.97, height * 0.84)
 
     if counting.start[1] <= horizon.start[1] and counting.end[1] <= horizon.end[1]:
         offset = max(12, int(height * 0.08))

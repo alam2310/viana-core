@@ -40,8 +40,9 @@ def floor_window(moment: datetime) -> datetime:
 
 
 def format_window(moment: datetime) -> str:
-    """Format a window edge as ``...Z`` date-time."""
-    return moment.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    """Format a window edge as HH:MM."""
+    utc = moment.astimezone(timezone.utc)
+    return utc.strftime("%H:%M")
 
 
 def _assert_run_complete_or_partial(
@@ -109,6 +110,7 @@ def build_aggregate_rows(
     for window_start in windows:
         window_end = window_start + WINDOW
         date, location = meta.get(window_start, (None, None))
+        resolved_date = date or window_start.strftime("%d-%m-%Y")
         is_partial = last_window_partial and window_start == last_start
         for vehicle in aggregatable:
             info = class_by_name[vehicle.name]
@@ -117,11 +119,11 @@ def build_aggregate_rows(
                     Aggregate15MinRow(
                         window_start=format_window(window_start),
                         window_end=format_window(window_end),
+                        date=resolved_date,
                         class_name=vehicle.name,
                         direction=direction,
                         count=counts[(window_start, vehicle.name, direction)],
                         partial=is_partial,
-                        date=date,
                         location=location,
                         category=info.category,
                         class_type=info.class_type,

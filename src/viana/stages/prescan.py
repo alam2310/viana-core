@@ -161,10 +161,14 @@ def find_best_frame_offset(
         if duration_sec <= 0:
             return 0.0
         limit = min(scan_sec, max(0.0, duration_sec - (1.0 / fps)))
+        # Keep prescan responsive: probe a short opening window first, where
+        # CCTV OSD usually appears, instead of scanning the entire dark window.
+        probe_limit = min(limit, 8.0)
         best_offset = 0.0
         best_luminance = -1.0
+        best_osd_score = -1.0
         offset = 0.0
-        while offset <= limit:
+        while offset <= probe_limit:
             capture.set(cv2.CAP_PROP_POS_MSEC, offset * 1000.0)
             ok, frame = capture.read()
             if not ok:
@@ -173,10 +177,15 @@ def find_best_frame_offset(
             osd_score = osd_band_score(frame)
             if luminance >= luminance_threshold and osd_score > 20.0:
                 return offset
-            if luminance > best_luminance:
+            if luminance >= luminance_threshold and osd_score > best_osd_score:
+                best_osd_score = osd_score
+                best_offset = offset
+            if luminance > best_luminance and best_osd_score < 0:
                 best_luminance = luminance
                 best_offset = offset
             offset += step_sec
+        if best_osd_score > 0:
+            return best_offset
         return best_offset
     finally:
         capture.release()
@@ -274,7 +283,7 @@ def run_prescan(
     sampled = probe(source, resolved_offset)
     parsed, ocr_conf = _ocr_from_sample(sampled, defaults.ocr.min_confidence, ocr_reader)
     profiles = list_profiles(output_dir)
-    lines = propose_lines(sampled.meta.width, sampled.meta.height, profiles)
+    lines = propose_lines(sampled.meta.width, sampled.meta.height, profiles, frame=sampled.frame)
     ident = prescan_id or new_prescan_id()
     preview = preview_jpeg_path(output_dir, ident)
     write_preview_jpeg(preview, sampled.preview_jpeg)

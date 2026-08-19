@@ -89,8 +89,9 @@ def test_aggregate_row_count_non_negative() -> None:
     """15-min counts cannot be negative."""
     with pytest.raises(ValidationError):
         Aggregate15MinRow(
-            window_start="2026-03-15T09:00:00Z",
-            window_end="2026-03-15T09:15:00Z",
+            window_start="09:00",
+            window_end="09:15",
+            date="15-03-2026",
             class_name="Car",
             direction="in",
             count=-1,

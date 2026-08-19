@@ -139,7 +139,7 @@ export function JobQueueTable({
                     </p>
                   </td>
                   <td className="px-2 py-1 text-xs text-muted whitespace-nowrap">
-                    {formatSubmittedAt(local.submittedAt)}
+                    {formatSubmittedAt(job.created_at ?? local.submittedAt)}
                   </td>
                   <td className="px-2 py-1">
                     <span
@@ -155,7 +155,9 @@ export function JobQueueTable({
                     {gpuIdFromDevice(job.gpu_device)}
                   </td>
                   <td className="px-2 py-1 font-mono text-xs text-muted whitespace-nowrap">
-                    {formatVideoLengthHms(local.videoDurationSec)}
+                    {formatVideoLengthHms(
+                      job.video_duration_sec ?? local.videoDurationSec,
+                    )}
                   </td>
                   <td className="px-2 py-1 font-mono text-xs text-muted whitespace-nowrap">
                     {formatVideoLengthHms(runTimeSec(job, local))}

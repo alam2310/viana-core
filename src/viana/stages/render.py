@@ -59,6 +59,8 @@ _HEVC_NVENC_ARGS = [
     "1",
     "-temporal-aq",
     "1",
+    "-movflags",
+    "+frag_keyframe+empty_moov+default_base_moof",
 ]
 
 
@@ -68,8 +70,32 @@ def ffmpeg_video_args(path: Path, *, encoder_list: str) -> list[str]:
     if "hevc_nvenc" in encoder_list:
         return [*_HEVC_NVENC_ARGS, out]
     if "libx265" in encoder_list:
-        return ["-c:v", "libx265", "-pix_fmt", "yuv420p", "-crf", "34", "-preset", "medium", out]
-    return ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "30", "-preset", "medium", out]
+        return [
+            "-c:v",
+            "libx265",
+            "-pix_fmt",
+            "yuv420p",
+            "-crf",
+            "34",
+            "-preset",
+            "medium",
+            "-movflags",
+            "+frag_keyframe+empty_moov+default_base_moof",
+            out,
+        ]
+    return [
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "30",
+        "-preset",
+        "medium",
+        "-movflags",
+        "+frag_keyframe+empty_moov+default_base_moof",
+        out,
+    ]
 
 
 class FrameRenderer(Protocol):

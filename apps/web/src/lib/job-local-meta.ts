@@ -30,7 +30,7 @@ export function getJobLocalMeta(jobId: string): JobLocalMeta {
   return readMap()[jobId] ?? {};
 }
 
-/** Track submit/processing times until API exposes `created_at` / durations (backend S11–S12). */
+/** Track submit/processing times as fallback when API fields are absent. */
 export function syncJobLocalMeta(jobs: JobStatusResponse[]): void {
   if (typeof window === "undefined") {
     return;
@@ -123,9 +123,15 @@ export function processingDurationSec(meta: JobLocalMeta): number | undefined {
  * API exposes `processing_started_at` / `processing_duration_sec` (S12).
  */
 export function runTimeSec(
-  _job: JobStatusResponse,
+  job: JobStatusResponse,
   meta: JobLocalMeta,
 ): number | undefined {
+  if (
+    typeof job.processing_duration_sec === "number" &&
+    Number.isFinite(job.processing_duration_sec)
+  ) {
+    return job.processing_duration_sec;
+  }
   return processingDurationSec(meta);
 }
 
@@ -134,8 +140,8 @@ export function sortJobsBySubmitted(
 ): JobStatusResponse[] {
   const map = readMap();
   return [...jobs].sort((a, b) => {
-    const ta = map[a.job_id]?.submittedAt ?? "";
-    const tb = map[b.job_id]?.submittedAt ?? "";
+    const ta = a.created_at ?? map[a.job_id]?.submittedAt ?? "";
+    const tb = b.created_at ?? map[b.job_id]?.submittedAt ?? "";
     if (ta !== tb) {
       return tb.localeCompare(ta);
     }

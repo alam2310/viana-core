@@ -50,7 +50,10 @@
     "proposed_lines": { "$ref": "#/$defs/ProposedLines" },
     "proposed_preview_url": { "type": ["string", "null"] },
     "confirmed_metadata": { "$ref": "#/$defs/JobMetadata" },
-    "confirmed_task_parameters": { "$ref": "#/$defs/ViAnaTaskParameters" }
+    "confirmed_task_parameters": { "$ref": "#/$defs/ViAnaTaskParameters" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "video_duration_sec": { "type": "number", "minimum": 0 },
+    "processing_duration_sec": { "type": "number", "minimum": 0 }
   },
   "$defs": {
     "Point": {

@@ -235,6 +235,9 @@ def test_post_jobs_assigns_backend_fields(client: TestClient) -> None:
     payload = status.json()
     assert payload["status"] == "COMPLETED"
     assert payload["project_id"] == "nh48"
+    assert isinstance(payload.get("created_at"), str)
+    duration = payload.get("processing_duration_sec")
+    assert duration is None or duration >= 0
     listed = client.get("/jobs?project_id=nh48")
     assert listed.status_code == 200
     assert any(item["job_id"] == job_id for item in listed.json())
@@ -626,6 +629,7 @@ def test_intake_prescan_worker_reaches_awaiting_review(
     assert payload["status"] == "AWAITING_REVIEW"
     assert payload["proposed_metadata"]["user_start_time"] == "09:00:00"
     assert payload["proposed_preview_url"] == "/utils/prescan/prescan_abc/preview.jpg"
+    assert payload["video_duration_sec"] == 1.0
 
 
 def test_retry_prescan_from_failed(

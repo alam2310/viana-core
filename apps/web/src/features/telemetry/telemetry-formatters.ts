@@ -201,14 +201,16 @@ export function crossingsFromTelemetry(
     rows.push({
       id: `${msg.job_id}-${rows.length}-${frame ?? 0}`,
       time:
-        frame !== undefined && fps
-          ? eventTimeFromFrame(
-              frame,
-              fps,
-              options?.startTime,
-              options?.startDate,
-            )
-          : "—",
+        typeof data.event_timestamp === "string" && data.event_timestamp.trim()
+          ? data.event_timestamp
+          : frame !== undefined && fps
+            ? eventTimeFromFrame(
+                frame,
+                fps,
+                options?.startTime,
+                options?.startDate,
+              )
+            : "—",
       vehicle:
         typeof data.class_name === "string" ? data.class_name : "Unknown",
       direction,

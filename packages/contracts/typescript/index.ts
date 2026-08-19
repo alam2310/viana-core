@@ -128,6 +128,9 @@ export interface JobStatusResponse {
   proposed_preview_url?: string | null;
   confirmed_metadata?: JobMetadata;
   confirmed_task_parameters?: ViAnaTaskParameters;
+  created_at?: string;
+  video_duration_sec?: number;
+  processing_duration_sec?: number;
 }
 
 export interface Checkpoint {

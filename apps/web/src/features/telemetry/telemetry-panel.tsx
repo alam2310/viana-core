@@ -50,7 +50,7 @@ export function TelemetryPanel({
           <p className="text-sm font-medium">
             {progress ? formatProgressLine(progress) : "No progress yet"}
           </p>
-          {telemetryDetail && crossings.length > 0 ? (
+          {crossings.length > 0 ? (
             <div>
               <h3 className="text-xs font-medium text-muted">Recent crossings</h3>
               <ul className="mt-1 max-h-24 overflow-y-auto text-xs">

@@ -7,10 +7,14 @@ export interface Aggregate15MinRow {
   countOut: number;
 }
 
-/** Extract HH:MM from ISO timestamps like `2024-10-18T08:30:00Z`. */
+/** Extract HH:MM from either ISO timestamps or already-normalized HH:MM values. */
 export function isoTimestampToHm(value: string): string {
   if (!value.trim()) {
     return "—";
+  }
+  const hmMatch = value.match(/^(\d{2}):(\d{2})$/);
+  if (hmMatch) {
+    return `${hmMatch[1]}:${hmMatch[2]}`;
   }
   const match = value.match(/T(\d{2}):(\d{2})/);
   if (match) {

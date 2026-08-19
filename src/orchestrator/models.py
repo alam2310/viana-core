@@ -79,6 +79,9 @@ class JobStatus(BaseModel):
     proposed_preview_url: str | None = None
     confirmed_metadata: JobMetadata | None = None
     confirmed_task_parameters: ViAnaTaskParameters | None = None
+    created_at: str | None = None
+    video_duration_sec: float | None = Field(default=None, ge=0)
+    processing_duration_sec: float | None = Field(default=None, ge=0)
 
 
 class PrescanRequest(BaseModel):

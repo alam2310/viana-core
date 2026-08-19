@@ -6,11 +6,11 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "window_start", "window_end", "class_name", "direction", "count", "partial"
+    "window_start", "window_end", "date", "class_name", "direction", "count", "partial"
   ],
   "properties": {
-    "window_start": { "type": "string", "format": "date-time" },
-    "window_end": { "type": "string", "format": "date-time" },
+    "window_start": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+    "window_end": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
     "date": { "type": "string" },
     "location": { "type": "string" },
     "class_name": { "type": "string" },

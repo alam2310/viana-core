@@ -313,20 +313,21 @@ def run_moving_count(
                     )
                     csv_writer.write_row(row)
                     events_rows += 1
-                    if job.task_parameters.telemetry_detail:
-                        emit(
-                            TelemetryMessage(
-                                job_id=job.job_id,
-                                status="PROCESSING",
-                                telemetry_type="MOVING_EVENT",
-                                data={
-                                    "track_id": crossing.track_id,
-                                    "class_name": row.class_name,
-                                    "direction": crossing.direction,
-                                    "frame_index": crossing.frame_index,
-                                },
-                            )
+                    emit(
+                        TelemetryMessage(
+                            job_id=job.job_id,
+                            status="PROCESSING",
+                            telemetry_type="MOVING_EVENT",
+                            data={
+                                "track_id": crossing.track_id,
+                                "class_name": row.class_name,
+                                "direction": crossing.direction,
+                                "frame_index": crossing.frame_index,
+                                "fps": meta.fps,
+                                "event_timestamp": row.wall_time,
+                            },
                         )
+                    )
                 writer_renderer.write(frame, cv_result)
                 processed = frame.index + 1
                 progress_every = (

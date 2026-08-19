@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,7 +37,7 @@ from viana.config.job import (
 from viana.config.job import (
     JobSubmitRequest as EngineSubmit,
 )
-from viana.io.checkpoint import load_checkpoint
+from viana.io.checkpoint import load_checkpoint, utc_now_iso
 from viana.io.paths import artifact_paths
 
 logger = get_logger(__name__)
@@ -85,6 +86,10 @@ class JobRecord:
     confirmed_metadata: JobMetadata | None = None
     confirmed_task_parameters: ViAnaTaskParameters | None = None
     prescan_queue_position: int = 0
+    created_at: str | None = None
+    video_duration_sec: float | None = None
+    processing_started_monotonic: float | None = None
+    processing_ended_monotonic: float | None = None
 
 
 class WorkerPool:
@@ -160,6 +165,9 @@ class WorkerPool:
             proposed_preview_url=job.proposed_preview_url,
             confirmed_metadata=job.confirmed_metadata,
             confirmed_task_parameters=job.confirmed_task_parameters,
+            created_at=job.created_at,
+            video_duration_sec=job.video_duration_sec,
+            processing_duration_sec=_processing_duration_sec(job),
         )
 
     def to_submit_response(self, job: JobRecord) -> JobSubmitResponse:
@@ -186,6 +194,7 @@ class WorkerPool:
                     source_video_path=path,
                     project_id=body.project_id,
                     output_dir=output_dir,
+                    created_at=utc_now_iso(),
                 )
                 self._jobs[job_id] = job
                 self._prescan_queue.append(job_id)
@@ -326,6 +335,7 @@ class WorkerPool:
                 location=body.metadata.location,
             ),
             confirmed_task_parameters=body.task_parameters,
+            created_at=utc_now_iso(),
         )
         with self._lock:
             self._jobs[job_id] = job
@@ -467,6 +477,9 @@ class WorkerPool:
                 self._queue.pop(0)
                 job.gpu_device = device
                 job.status = "PROCESSING"
+                if job.processing_started_monotonic is None:
+                    job.processing_started_monotonic = time.monotonic()
+                    job.processing_ended_monotonic = None
                 job.queue_position = 0
                 self._refresh_queue_positions()
             self._spawn(job)
@@ -663,8 +676,10 @@ class WorkerPool:
                         if checkpoint is not None and not checkpoint.is_complete():
                             job.status = "PAUSED"
                             job.error_message = "worker cancelled"
+                            job.processing_ended_monotonic = time.monotonic()
                             return
                     job.status = "CANCELLED"
+                    job.processing_ended_monotonic = time.monotonic()
                     return
                 if returncode != 0:
                     job.status = "FAILED"
@@ -676,8 +691,10 @@ class WorkerPool:
                             checkpoint = None
                         if checkpoint is not None and not checkpoint.is_complete():
                             job.status = "PAUSED"
+                    job.processing_ended_monotonic = time.monotonic()
                     return
                 job.status = "COMPLETED"
+                job.processing_ended_monotonic = time.monotonic()
                 aggregate_target = job
         if aggregate_target is not None:
             self._auto_aggregate(aggregate_target)
@@ -714,6 +731,20 @@ def _sync_progress(job: JobRecord, data: dict[str, Any]) -> None:
         )
 
 
+def _processing_duration_sec(job: JobRecord) -> float | None:
+    """Return elapsed processing wall-clock seconds when known."""
+    start = job.processing_started_monotonic
+    if start is None:
+        return None
+    end = (
+        job.processing_ended_monotonic
+        if job.processing_ended_monotonic is not None
+        else time.monotonic()
+    )
+    elapsed = end - start
+    return round(elapsed, 2) if elapsed > 0 else None
+
+
 def _apply_prescan_payload(job: JobRecord, payload: dict[str, Any]) -> None:
     """Map ``PrescanResponse`` JSON onto job proposal fields."""
     ocr = payload.get("ocr")
@@ -731,6 +762,11 @@ def _apply_prescan_payload(job: JobRecord, payload: dict[str, Any]) -> None:
     if isinstance(prescan_id, str) and isinstance(disk, str) and disk:
         register_preview(prescan_id, Path(disk))
         job.proposed_preview_url = preview_http_url(prescan_id)
+    meta = payload.get("video_meta")
+    if isinstance(meta, dict):
+        duration = meta.get("duration_sec")
+        if isinstance(duration, int | float) and duration >= 0:
+            job.video_duration_sec = float(duration)
 
 
 def _parse_run_result(stdout: str) -> dict[str, Any] | None:

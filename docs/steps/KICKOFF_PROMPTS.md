@@ -118,6 +118,29 @@ For new issues: append Seq row per STABILIZATION.md. Do not edit src/viana/ or s
 
 ---
 
+## Step 5 — UI follow-up (new session only)
+
+```
+You are the ViAna UI follow-up agent (new session required).
+
+Rule: do NOT reuse the old Step 4 implementation chat. Start a fresh chat for all
+UI follow-up tied to stabilization issues (S11–S15 consumers).
+
+Read first:
+- docs/steps/TRACKER.md
+- docs/steps/STABILIZATION_BACKLOG.md
+- apps/web/AGENTS.md
+
+Scope:
+- Consume backend/API contract additions in apps/web only.
+- Remove or reduce temporary localStorage fallbacks when API fields exist.
+- Keep queue, telemetry, and 15-min views aligned with contracts.
+
+Do not edit src/viana/ or src/orchestrator/ in this session.
+```
+
+---
+
 ## Step 3 — Stabilization patch (lanes B/C)
 
 ```

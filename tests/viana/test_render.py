@@ -48,3 +48,4 @@ def test_ffmpeg_prefers_legacy_hevc_nvenc() -> None:
     args = ffmpeg_video_args(Path("out.mp4"), encoder_list="libx264\nhevc_nvenc\nlibx265")
     assert args[:2] == ["-c:v", "hevc_nvenc"]
     assert "-cq" in args and "42" in args
+    assert "-movflags" in args

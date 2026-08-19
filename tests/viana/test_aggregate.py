@@ -58,11 +58,12 @@ def test_zero_fill_and_exclude_pedestrian() -> None:
     jeep_in = next(row for row in rows if row.class_name == "Jeep" and row.direction == "in")
     assert car_in.count == 2
     assert jeep_in.count == 0
-    assert car_in.window_start == "2026-03-15T09:00:00Z"
-    assert car_in.window_end == "2026-03-15T09:15:00Z"
+    assert car_in.window_start == "09:00"
+    assert car_in.window_end == "09:15"
+    assert car_in.date == "15-03-2026"
     assert car_in.partial is False
     windows = {row.window_start for row in rows}
-    assert windows == {"2026-03-15T09:00:00Z"}
+    assert windows == {"09:00"}
     aggregatable = len(taxonomy.aggregatable())
     assert len(rows) == aggregatable * 2
 
@@ -76,7 +77,7 @@ def test_spans_two_clock_windows() -> None:
     ]
     rows = build_aggregate_rows(events, taxonomy)
     starts = sorted({row.window_start for row in rows})
-    assert starts == ["2026-03-15T09:00:00Z", "2026-03-15T09:15:00Z"]
+    assert starts == ["09:00", "09:15"]
 
 
 def test_incomplete_checkpoint_requires_partial(tmp_path: Path) -> None:
@@ -105,6 +106,6 @@ def test_incomplete_checkpoint_requires_partial(tmp_path: Path) -> None:
         events_path, out_path, taxonomy, partial=True, checkpoint_path=ckpt_path
     )
     assert rows
-    assert all(row.partial for row in rows if row.window_start == "2026-03-15T09:00:00Z")
+    assert all(row.partial for row in rows if row.window_start == "09:00")
     header = out_path.read_text(encoding="utf-8").splitlines()[0].split(",")
     assert tuple(header) == events_15min_columns()

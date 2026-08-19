@@ -95,11 +95,11 @@ class Aggregate15MinRow(BaseModel):
 
     window_start: str
     window_end: str
+    date: str
     class_name: str
     direction: CrossingDirection
     count: int = Field(ge=0)
     partial: bool
-    date: str | None = None
     location: str | None = None
     category: str | None = None
     class_type: str | None = None

@@ -19,6 +19,7 @@ logger = get_logger(__name__)
 
 router = APIRouter(tags=["utils"])
 
+
 @router.post("/utils/prescan")
 def post_prescan(body: PrescanRequest) -> dict[str, Any]:
     """OCR + line proposal. Spawns `python -m viana prescan`."""

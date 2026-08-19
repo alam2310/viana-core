@@ -475,9 +475,7 @@ class WorkerPool:
         """Start PRESCAN_PENDING jobs up to ``MAX_CONCURRENT_PRESCAN_JOBS``."""
         while True:
             with self._lock:
-                running = sum(
-                    1 for job in self._jobs.values() if job.status == "PRESCAN_RUNNING"
-                )
+                running = sum(1 for job in self._jobs.values() if job.status == "PRESCAN_RUNNING")
                 if running >= MAX_CONCURRENT_PRESCAN_JOBS:
                     return
                 job_id: str | None = None

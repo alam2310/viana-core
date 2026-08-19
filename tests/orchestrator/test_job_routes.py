@@ -674,9 +674,7 @@ def test_partial_processed_mp4_served(
     assert response.headers["content-type"].startswith("video/mp4")
 
 
-def test_auto_aggregate_on_completed(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_auto_aggregate_on_completed(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """COMPLETED job triggers background aggregate (G12)."""
     aggregate_calls: list[list[str]] = []
 

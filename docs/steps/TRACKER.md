@@ -1,7 +1,7 @@
 # Step tracker (living)
 
 **Last updated:** 2026-08-19  
-**Current Step:** **4 (stabilization)** — prescan/queue fixes before Step 5  
+**Current Step:** **5** — E2E verification (`_15min.csv`)  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
 **Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)
 
@@ -16,8 +16,8 @@
 | **1** | UX discovery & design | ✅ Complete | UX discovery | 2026-08-19 | 2026-08-19 |
 | **2** | Contracts & API foundation | ✅ Complete | Contract + API | 2026-08-19 | 2026-08-19 |
 | **3** | Engine prescan & orchestrator | ✅ Complete | Engine + workers | 2026-08-19 | 2026-08-19 |
-| **4** | UI implementation | 🔄 Stabilization | UI v2 | 2026-08-19 | — |
-| **5** | E2E verification | ⏸ Blocked (stabilization) | UI v2 or QA | — | — |
+| **4** | UI implementation | ✅ Complete | UI v2 | 2026-08-19 | 2026-08-19 |
+| **5** | E2E verification | 🔄 In progress | UI v2 or QA | 2026-08-19 | — |
 | **6** | Hardening backlog | ⬜ Not started | Per item | — | — |
 
 **Status legend:** ⬜ Not started · 🔄 In progress · ✅ Complete · ⏸ Skipped · ❌ Cancelled
@@ -77,7 +77,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 5/8 active | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) S01–S08, S10 (S09 → 6.7) |
+| **4.stab** Stabilization path | 🔄 7 fixed / 7 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) S01–S08, S10–S15 (S09 → 6.7) |
 
 ### Stabilization execution path (follow in order)
 
@@ -89,16 +89,21 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S04 | F003 — prescan scrub via video seek (not prescan API) | A | fixed |
 | S05 | F003 — Re-scan OCR only + docs | A/B | fixed |
 | S06 | F005 — EasyOCR triage | C | open |
-| S07 | F001 — corner ROI OCR (**Step 5 blocker**) | C | open |
+| S07 | F001 — corner ROI OCR (**Step 5 blocker**) | C | fixed |
 | S08 | F002 — prescan latency | C | open |
 | S10 | F007 — horizon/counting line proposal | C | open |
+| S11 | F008 — `created_at` + sortable submitted time in API | B/D | open |
+| S12 | F009 — `video_duration_sec` + `processing_duration_sec` in API | B/D | open |
+| S13 | F010 — streamable growing `_processed.mp4` during processing | B/C | open |
+| S14 | F011 — emit `MOVING_EVENT` without `telemetry_detail` gate + timestamp | C | open |
+| S15 | F012 — 15-min CSV: add `date`, HH:MM window columns | B/D | open |
 | ~~S09~~ | F006 — intake path validation | B | **deferred → 6.7** |
 
 ---
 
 ## Step 5 — E2E verification
 
-**Blocked by:** Step 4 stabilization complete — no open **blockers** in [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md).
+**Gate status:** Unblocked (`S07` fixed). Continue S08/S10–S15 polish in parallel with Step 5.
 
 | Check | Status |
 |-------|--------|

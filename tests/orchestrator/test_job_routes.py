@@ -5,7 +5,9 @@ from __future__ import annotations
 import io
 import json
 import threading
+import time
 from collections.abc import Iterator
+from datetime import datetime
 from pathlib import Path
 from subprocess import CompletedProcess
 from typing import Any
@@ -235,12 +237,14 @@ def test_post_jobs_assigns_backend_fields(client: TestClient) -> None:
     payload = status.json()
     assert payload["status"] == "COMPLETED"
     assert payload["project_id"] == "nh48"
-    assert isinstance(payload.get("created_at"), str)
-    duration = payload.get("processing_duration_sec")
-    assert duration is None or duration >= 0
+    _assert_iso_datetime(payload["created_at"])
+    assert isinstance(payload["processing_duration_sec"], int | float)
+    assert payload["processing_duration_sec"] >= 0
     listed = client.get("/jobs?project_id=nh48")
     assert listed.status_code == 200
-    assert any(item["job_id"] == job_id for item in listed.json())
+    listed_row = next(item for item in listed.json() if item["job_id"] == job_id)
+    assert listed_row["created_at"] == payload["created_at"]
+    assert listed_row["processing_duration_sec"] == payload["processing_duration_sec"]
 
 
 def test_post_jobs_409_on_incomplete_checkpoint(client: TestClient, tmp_path: Path) -> None:
@@ -630,6 +634,12 @@ def test_intake_prescan_worker_reaches_awaiting_review(
     assert payload["proposed_metadata"]["user_start_time"] == "09:00:00"
     assert payload["proposed_preview_url"] == "/utils/prescan/prescan_abc/preview.jpg"
     assert payload["video_duration_sec"] == 1.0
+    _assert_iso_datetime(payload["created_at"])
+    assert payload["processing_duration_sec"] is None
+    listed = client.get("/jobs?project_id=nh48").json()
+    listed_row = next(item for item in listed if item["job_id"] == job_id)
+    assert listed_row["created_at"] == payload["created_at"]
+    assert listed_row["video_duration_sec"] == 1.0
 
 
 def test_retry_prescan_from_failed(
@@ -812,3 +822,91 @@ def test_progress_telemetry_includes_eta_and_crossings(
     assert payload["telemetry_type"] == "PROGRESS"
     assert payload["data"]["eta_sec"] == 2.0
     assert payload["data"]["crossing_count"] == 3
+
+
+def _assert_iso_datetime(value: object) -> None:
+    """Require a JSON Schema date-time string (ISO-8601, UTC Z ok)."""
+    assert isinstance(value, str) and value
+    datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def test_intake_list_includes_created_at_before_prescan(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """S11: GET /jobs returns created_at as soon as intake registers the job."""
+
+    def fail_prescan(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+        if args and args[0] == "prescan":
+            return CompletedProcess(args=list(args), returncode=1, stdout="", stderr="held")
+        return CompletedProcess(args=list(args), returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("orchestrator.workers.pool.run_viana", fail_prescan)
+    reset_pool()
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    assert intake.status_code == 201
+    job_id = intake.json()["jobs"][0]["job_id"]
+    listed = client.get("/jobs?project_id=nh48")
+    assert listed.status_code == 200
+    row = next(item for item in listed.json() if item["job_id"] == job_id)
+    _assert_iso_datetime(row["created_at"])
+    assert row["video_duration_sec"] is None
+    assert row["processing_duration_sec"] is None
+    detail = client.get(f"/jobs/{job_id}").json()
+    assert detail["created_at"] == row["created_at"]
+
+
+def test_processing_duration_live_then_frozen(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """S12: processing_duration_sec grows during PROCESSING and freezes after COMPLETED."""
+    holds: list[HoldPopen] = []
+
+    def start(_args: object) -> HoldPopen:
+        proc = HoldPopen()
+        holds.append(proc)
+        return proc
+
+    monkeypatch.setattr("orchestrator.workers.pool.start_viana_process", start)
+    reset_pool()
+    response = client.post("/jobs", json=VALID_SUBMIT)
+    assert response.status_code == 201
+    job_id = response.json()["job_id"]
+    get_pool().wait_for_status(job_id, "PROCESSING", timeout=5.0)
+    first = client.get(f"/jobs/{job_id}").json()
+    _assert_iso_datetime(first["created_at"])
+    assert isinstance(first["processing_duration_sec"], int | float)
+    time.sleep(0.05)
+    second = client.get(f"/jobs/{job_id}").json()
+    assert second["processing_duration_sec"] >= first["processing_duration_sec"]
+    holds[0].release()
+    get_pool().wait_job(job_id, timeout=5.0)
+    done = client.get(f"/jobs/{job_id}").json()
+    assert done["status"] == "COMPLETED"
+    frozen = done["processing_duration_sec"]
+    assert isinstance(frozen, int | float)
+    assert frozen >= 0
+    time.sleep(0.05)
+    again = client.get(f"/jobs/{job_id}").json()
+    assert again["processing_duration_sec"] == frozen
+    listed = next(item for item in client.get("/jobs").json() if item["job_id"] == job_id)
+    assert listed["processing_duration_sec"] == frozen
+    assert listed["created_at"] == done["created_at"]
+
+
+def test_processing_duration_helper_freezes_after_end(tmp_path: Path) -> None:
+    """processing_duration_sec uses a frozen end timestamp, not wall-clock after stop."""
+    from orchestrator.workers.pool import JobRecord, _processing_duration_sec
+
+    job = JobRecord(
+        job_id="job_timing",
+        status="COMPLETED",
+        source_video_path=Path(SOURCE),
+        project_id="nh48",
+        output_dir=tmp_path,
+    )
+    job.processing_started_monotonic = 100.0
+    job.processing_ended_monotonic = 101.25
+    assert _processing_duration_sec(job) == 1.25

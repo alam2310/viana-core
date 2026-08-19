@@ -6,7 +6,7 @@ import json
 import threading
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from subprocess import Popen  # nosec B404
 from typing import Any, Literal
@@ -86,7 +86,7 @@ class JobRecord:
     confirmed_metadata: JobMetadata | None = None
     confirmed_task_parameters: ViAnaTaskParameters | None = None
     prescan_queue_position: int = 0
-    created_at: str | None = None
+    created_at: str = field(default_factory=utc_now_iso)
     video_duration_sec: float | None = None
     processing_started_monotonic: float | None = None
     processing_ended_monotonic: float | None = None
@@ -367,6 +367,7 @@ class WorkerPool:
         job.command = "resume"
         job.status = "READY"
         job.error_message = None
+        job.processing_ended_monotonic = None
         with self._lock:
             if job.job_id not in self._queue:
                 self._queue.append(job.job_id)
@@ -385,6 +386,8 @@ class WorkerPool:
         job.command = "run"
         job.status = "READY"
         job.error_message = None
+        job.processing_started_monotonic = None
+        job.processing_ended_monotonic = None
         with self._lock:
             if job.job_id not in self._queue:
                 self._queue.append(job.job_id)
@@ -621,6 +624,7 @@ class WorkerPool:
                     job.status = "FAILED"
                     job.error_message = str(exc)
                     job.process = None
+                    _mark_processing_ended(job)
         finally:
             self._drain()
 
@@ -676,10 +680,10 @@ class WorkerPool:
                         if checkpoint is not None and not checkpoint.is_complete():
                             job.status = "PAUSED"
                             job.error_message = "worker cancelled"
-                            job.processing_ended_monotonic = time.monotonic()
+                            _mark_processing_ended(job)
                             return
                     job.status = "CANCELLED"
-                    job.processing_ended_monotonic = time.monotonic()
+                    _mark_processing_ended(job)
                     return
                 if returncode != 0:
                     job.status = "FAILED"
@@ -691,11 +695,11 @@ class WorkerPool:
                             checkpoint = None
                         if checkpoint is not None and not checkpoint.is_complete():
                             job.status = "PAUSED"
-                    job.processing_ended_monotonic = time.monotonic()
+                    _mark_processing_ended(job)
                     return
                 job.status = "COMPLETED"
-                job.processing_ended_monotonic = time.monotonic()
                 aggregate_target = job
+            _mark_processing_ended(job)
         if aggregate_target is not None:
             self._auto_aggregate(aggregate_target)
 
@@ -732,7 +736,7 @@ def _sync_progress(job: JobRecord, data: dict[str, Any]) -> None:
 
 
 def _processing_duration_sec(job: JobRecord) -> float | None:
-    """Return elapsed processing wall-clock seconds when known."""
+    """Return elapsed processing wall-clock seconds when a GPU run has started."""
     start = job.processing_started_monotonic
     if start is None:
         return None
@@ -741,8 +745,15 @@ def _processing_duration_sec(job: JobRecord) -> float | None:
         if job.processing_ended_monotonic is not None
         else time.monotonic()
     )
-    elapsed = end - start
-    return round(elapsed, 2) if elapsed > 0 else None
+    return round(max(0.0, end - start), 2)
+
+
+def _mark_processing_ended(job: JobRecord) -> None:
+    """Freeze processing_duration_sec once a GPU run leaves PROCESSING."""
+    if job.processing_started_monotonic is None:
+        return
+    if job.processing_ended_monotonic is None:
+        job.processing_ended_monotonic = time.monotonic()
 
 
 def _apply_prescan_payload(job: JobRecord, payload: dict[str, Any]) -> None:

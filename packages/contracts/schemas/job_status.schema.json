@@ -10,7 +10,8 @@
     "source_video_path",
     "project_id",
     "output_dir",
-    "checkpoint_exists"
+    "checkpoint_exists",
+    "created_at"
   ],
   "properties": {
     "job_id": { "type": "string" },
@@ -52,8 +53,8 @@
     "confirmed_metadata": { "$ref": "#/$defs/JobMetadata" },
     "confirmed_task_parameters": { "$ref": "#/$defs/ViAnaTaskParameters" },
     "created_at": { "type": "string", "format": "date-time" },
-    "video_duration_sec": { "type": "number", "minimum": 0 },
-    "processing_duration_sec": { "type": "number", "minimum": 0 }
+    "video_duration_sec": { "type": ["number", "null"], "minimum": 0 },
+    "processing_duration_sec": { "type": ["number", "null"], "minimum": 0 }
   },
   "$defs": {
     "Point": {

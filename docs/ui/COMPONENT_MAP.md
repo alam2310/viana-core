@@ -60,3 +60,5 @@
 | `viana.output_dir` | Output directory override |
 | `viana.task_type` | Task picker (Moving only enabled v0.1) |
 | `viana.telemetry_detail` | Default for next prescan confirm |
+
+Queue **Submitted**, **Video length**, and **Run time** use API `created_at`, `video_duration_sec`, and `processing_duration_sec` (not localStorage).

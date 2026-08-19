@@ -15,10 +15,7 @@ import {
 import type { MountConfig } from "@/lib/container-paths";
 import { toHostPath } from "@/lib/container-paths";
 import { videoStem } from "@/lib/geometry";
-import {
-  formatSubmittedAt,
-  getJobLocalMeta,
-} from "@/lib/job-local-meta";
+import { formatSubmittedAt } from "@/lib/job-local-meta";
 import { formatJobErrorMessage } from "@/lib/job-errors";
 import { openPathInFileManager } from "@/lib/fs-open";
 import { cn } from "@/lib/utils";
@@ -124,7 +121,6 @@ export function JobDetailsPanel({
     );
   }
 
-  const local = getJobLocalMeta(job.job_id);
   const progress = progressFromTelemetry(messages, job.job_id);
   const meta = job.confirmed_metadata ?? job.proposed_metadata;
   const crossings = crossingsFromTelemetry(
@@ -164,7 +160,7 @@ export function JobDetailsPanel({
         </p>
         <p>
           <span className="text-muted">Submitted:</span>{" "}
-          {formatSubmittedAt(local.submittedAt)}
+          {formatSubmittedAt(job.created_at)}
         </p>
         {errorText ? (
           <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">

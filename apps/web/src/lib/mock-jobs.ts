@@ -73,6 +73,7 @@ export function mockIntakeJobs(request: JobIntakeRequest): JobIntakeResponse {
       output_dir: outputDir,
       checkpoint_exists: false,
       queue_position: item.queue_position,
+      created_at: new Date().toISOString(),
     });
     return item;
   });
@@ -138,6 +139,7 @@ export function mockRecordSubmit(
     queue_position: response.queue_position,
     confirmed_metadata: request.metadata as ConfirmedJobMetadata | undefined,
     confirmed_task_parameters: request.task_parameters,
+    created_at: new Date().toISOString(),
   };
   jobs.set(status.job_id, status);
   return response;

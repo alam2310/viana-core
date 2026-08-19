@@ -24,7 +24,6 @@ import {
   subscribeJobTelemetry,
 } from "@/lib/api-client";
 import { formatJobErrorMessage } from "@/lib/job-errors";
-import { syncJobLocalMeta } from "@/lib/job-local-meta";
 import { PROJECT_ID_PATTERN } from "@/lib/geometry";
 import {
   type MountConfig,
@@ -73,7 +72,6 @@ export function Dashboard() {
 
   const refreshJobs = useCallback(async (id = projectId) => {
     const list = await listJobs(id);
-    syncJobLocalMeta(list);
     setJobs(list);
     setSelectedJob((prev) => {
       if (!prev) {

@@ -143,6 +143,14 @@ Response: full `JobStatus` with `confirmed_metadata` and `confirmed_task_paramet
 | GET | `/artifacts/{id}/partial.mp4` | Partial `_processed.mp4` with HTTP Range (live monitor) |
 | GET | `/jobs` | List jobs (`?project_id=`) |
 | GET | `/jobs/{id}` | Status — see `job_status.schema.json`, fixtures `job_status_paused.json`, `job_status_awaiting_review.json` |
+
+**JobStatus timing fields** (queue columns; do not use UI localStorage for these):
+
+| Field | When set | Notes |
+|-------|----------|--------|
+| `created_at` | Intake or `POST /jobs` | Required ISO-8601 UTC (`…Z`). Sort key for submitted time. |
+| `video_duration_sec` | Prescan success | Copied from prescan `video_meta.duration_sec`. `null` until then. |
+| `processing_duration_sec` | First `PROCESSING` | Live elapsed GPU wall-clock while running; frozen on `COMPLETED` / `FAILED` / `CANCELLED` / `PAUSED`. `null` before the GPU run starts. |
 | POST | `/jobs/{id}/resume` | Explicit resume from checkpoint |
 | POST | `/jobs/{id}/start-fresh` | Delete checkpoint, restart |
 | DELETE | `/jobs/{id}` | Cancel worker |

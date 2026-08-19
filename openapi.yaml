@@ -418,6 +418,27 @@ components:
     JobStatus:
       type: object
       description: See packages/contracts/schemas/job_status.schema.json
+      required:
+        - job_id
+        - status
+        - task_type
+        - source_video_path
+        - project_id
+        - output_dir
+        - checkpoint_exists
+        - created_at
+      properties:
+        created_at:
+          type: string
+          format: date-time
+        video_duration_sec:
+          type: number
+          minimum: 0
+          nullable: true
+        processing_duration_sec:
+          type: number
+          minimum: 0
+          nullable: true
 
     JobStatusEnum:
       type: string

@@ -128,9 +128,12 @@ export interface JobStatusResponse {
   proposed_preview_url?: string | null;
   confirmed_metadata?: JobMetadata;
   confirmed_task_parameters?: ViAnaTaskParameters;
-  created_at?: string;
-  video_duration_sec?: number;
-  processing_duration_sec?: number;
+  /** ISO-8601 UTC; set by the API at intake/submit. */
+  created_at: string;
+  /** Source video length from prescan `video_meta.duration_sec`; null until prescan succeeds. */
+  video_duration_sec?: number | null;
+  /** GPU wall-clock seconds from first PROCESSING; live while running, frozen when the run ends. */
+  processing_duration_sec?: number | null;
 }
 
 export interface Checkpoint {

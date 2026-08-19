@@ -22,7 +22,6 @@ import { videoStem } from "@/lib/geometry";
 import {
   formatSubmittedAt,
   formatVideoLengthHms,
-  getJobLocalMeta,
   runTimeSec,
   sortJobsBySubmitted,
 } from "@/lib/job-local-meta";
@@ -117,7 +116,6 @@ export function JobQueueTable({
           <tbody>
             {sorted.map((job) => {
               const pct = progressPct(job);
-              const local = getJobLocalMeta(job.job_id);
               const paused = job.status === "PAUSED";
               return (
                 <tr
@@ -139,7 +137,7 @@ export function JobQueueTable({
                     </p>
                   </td>
                   <td className="px-2 py-1 text-xs text-muted whitespace-nowrap">
-                    {formatSubmittedAt(job.created_at ?? local.submittedAt)}
+                    {formatSubmittedAt(job.created_at)}
                   </td>
                   <td className="px-2 py-1">
                     <span
@@ -155,12 +153,10 @@ export function JobQueueTable({
                     {gpuIdFromDevice(job.gpu_device)}
                   </td>
                   <td className="px-2 py-1 font-mono text-xs text-muted whitespace-nowrap">
-                    {formatVideoLengthHms(
-                      job.video_duration_sec ?? local.videoDurationSec,
-                    )}
+                    {formatVideoLengthHms(job.video_duration_sec)}
                   </td>
                   <td className="px-2 py-1 font-mono text-xs text-muted whitespace-nowrap">
-                    {formatVideoLengthHms(runTimeSec(job, local))}
+                    {formatVideoLengthHms(runTimeSec(job))}
                   </td>
                   <td className="px-2 py-1">
                     {pct !== null ? (

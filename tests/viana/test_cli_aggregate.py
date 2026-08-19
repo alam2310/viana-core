@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -9,7 +10,7 @@ from uuid import uuid4
 from typer.testing import CliRunner
 
 from viana.cli import app
-from viana.io.csv_schema import RawCrossingEventRow
+from viana.io.csv_schema import RawCrossingEventRow, events_15min_columns
 from viana.io.events import EventsCsvWriter
 
 runner = CliRunner()
@@ -51,7 +52,16 @@ def test_cli_aggregate_writes_15min_csv(tmp_path: Path) -> None:
     payload = json.loads(result.stdout)
     assert payload["status"] == "ok"
     assert payload["rows"] > 0
-    assert (tmp_path / "clip_15min.csv").is_file()
+    out_path = tmp_path / "clip_15min.csv"
+    assert out_path.is_file()
+    with out_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        assert reader.fieldnames is not None
+        assert tuple(reader.fieldnames) == events_15min_columns()
+        first = next(reader)
+    assert first["date"] == "15-03-2026"
+    assert first["window_start"] == "09:00"
+    assert first["window_end"] == "09:15"
 
 
 def test_cli_aggregate_missing_events(tmp_path: Path) -> None:

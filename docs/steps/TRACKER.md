@@ -77,7 +77,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 12 fixed / 2 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) S01–S08, S10–S15 (S09 → 6.7) |
+| **4.stab** Stabilization path | 🔄 13 fixed / 1 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) S01–S08, S10–S15 (S09 → 6.7) |
 
 ### Stabilization execution path (follow in order)
 
@@ -96,7 +96,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S12 | F009 — `video_duration_sec` + `processing_duration_sec` in API | B/D | fixed |
 | S13 | F010 — streamable growing `_processed.mp4` during processing | B/C | fixed |
 | S14 | F011 — emit `MOVING_EVENT` without `telemetry_detail` gate + timestamp | C | fixed |
-| S15 | F012 — 15-min CSV: add `date`, HH:MM window columns | B/D | open |
+| S15 | F012 — 15-min CSV: add `date`, HH:MM window columns | B/D | fixed |
 | ~~S09~~ | F006 — intake path validation | B | **deferred → 6.7** |
 
 ---
@@ -131,6 +131,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | S15 fixed — `_15min.csv` contract/output aligned (`date` + `HH:MM` windows), parser grouped by `date+window+class`, tests updated |
 | 2026-08-19 | Step 5 QA evidence captured: intake→prescan→confirm(READY)→PROCESSING→COMPLETED→aggregate; `_15min.csv` verified with row/header samples; path-mapping negative path repro logged |
 | 2026-08-19 | S11–S12 (F008/F009) fixed — JobStatus timing fields on GET /jobs and GET /jobs/{id} |
 | 2026-08-19 | S08 (F002) fixed — prescan CLI 6.7s → 4.6s on `hiv000001_inframe.mp4`; S07 OCR fields unchanged |

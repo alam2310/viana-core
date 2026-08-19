@@ -1,4 +1,5 @@
 export interface Aggregate15MinRow {
+  date: string;
   windowStart: string;
   windowEnd: string;
   windowLabel: string;
@@ -25,6 +26,16 @@ export function isoTimestampToHm(value: string): string {
 
 export function formatAggregateWindow(windowStart: string, windowEnd: string): string {
   return `${isoTimestampToHm(windowStart)} – ${isoTimestampToHm(windowEnd)}`;
+}
+
+export function formatAggregateDateWindow(
+  date: string,
+  windowStart: string,
+  windowEnd: string,
+): string {
+  const day = date.trim();
+  const window = formatAggregateWindow(windowStart, windowEnd);
+  return day ? `${day} ${window}` : window;
 }
 
 function parseCsvLine(line: string): string[] {
@@ -62,6 +73,7 @@ export function parse15MinCsv(text: string): Aggregate15MinRow[] {
   const col = (name: string) => header.indexOf(name);
   const startIdx = col("window_start");
   const endIdx = col("window_end");
+  const dateIdx = col("date");
   const classIdx = col("class_name");
   const directionIdx = col("direction");
   const countIdx = col("count");
@@ -69,6 +81,7 @@ export function parse15MinCsv(text: string): Aggregate15MinRow[] {
   if (
     startIdx < 0 ||
     endIdx < 0 ||
+    dateIdx < 0 ||
     classIdx < 0 ||
     directionIdx < 0 ||
     countIdx < 0
@@ -83,19 +96,21 @@ export function parse15MinCsv(text: string): Aggregate15MinRow[] {
       continue;
     }
     const cols = parseCsvLine(line);
+    const date = cols[dateIdx] ?? "";
     const windowStart = cols[startIdx] ?? "";
     const windowEnd = cols[endIdx] ?? "";
     const vehicleClass = cols[classIdx] ?? "—";
     const direction = (cols[directionIdx] ?? "").toLowerCase();
     const count = Number.parseInt(cols[countIdx] ?? "0", 10) || 0;
-    const key = `${windowStart}|${windowEnd}|${vehicleClass}`;
+    const key = `${date}|${windowStart}|${windowEnd}|${vehicleClass}`;
 
     let row = map.get(key);
     if (!row) {
       row = {
+        date,
         windowStart,
         windowEnd,
-        windowLabel: formatAggregateWindow(windowStart, windowEnd),
+        windowLabel: formatAggregateDateWindow(date, windowStart, windowEnd),
         vehicleClass,
         countIn: 0,
         countOut: 0,

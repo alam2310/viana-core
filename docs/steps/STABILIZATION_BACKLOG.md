@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 0 | 1 | 12 | 8 / 14 active |
+| 0 | 1 | 11 | 10 / 21 active |
 
 **Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
@@ -34,8 +34,8 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S07** | F001 | C | **yes** | S06 | Corner ROI OSD OCR → populated `proposed_metadata` | fixed |
 | **S08** | F002 | C | no | — | Reduce prescan wall-clock (OCR works; intake still 30s+) | fixed |
 | **S10** | F007 | C | no | S07 | Improve horizon + counting line proposal (CV / geometry) | open |
-| **S11** | F008 | B/D | no | — | `JobStatus.created_at` + sortable submitted time in API | open |
-| **S12** | F009 | B/D | no | — | `JobStatus.video_duration_sec` + `processing_duration_sec` from API (not UI localStorage) | open |
+| **S11** | F008 | B/D | no | — | `JobStatus.created_at` + sortable submitted time in API | fixed |
+| **S12** | F009 | B/D | no | — | `JobStatus.video_duration_sec` + `processing_duration_sec` from API (not UI localStorage) | fixed |
 | **S13** | F010 | B/C | no | — | Growing `_processed.mp4` streamable during job (moov/fragmented MP4) | open |
 | **S14** | F011 | C | no | — | Emit `MOVING_EVENT` without `telemetry_detail` gate; include crossing timestamp | open |
 | **S15** | F012 | B/D | no | — | 15-min CSV schema: add `date` column; change `window_start`/`window_end` to HH:MM | open |
@@ -45,6 +45,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S19** | F016 | A/B/C | no | S12 | Fix queue video length / ETA inflation and validate MP4 codec metadata in container | open |
 | **S20** | F010 | A/B | no | S13 | UI cannot render in-progress processed MP4 even when file is playable natively | open |
 | **S21** | F017 | C | no | — | Prescan OCR misses time/location when OSD text appears in alternate screen regions | open |
+| **S22** | F018 | B/C | no | — | Intake/prescan triggers `[Errno 24] Too many open files`, followed by API 502 in UI refresh | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
@@ -64,8 +65,8 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S07** | 1. Intake `data/raw/hiv000001_inframe.mp4` 2. `AWAITING_REVIEW` 3. Open review | **Expected:** `proposed_metadata` has time (HH:MM:SS), date (DD-MM-YYYY), location from 1–2 corner ROIs. **Actual (before):** fields empty. **After:** `02:21:25`, `18-10-2024`, `LITO-RARARANKI` on intake job `job_abec59713960`. | `src/viana/stages/ocr.py`, `prescan.py`, `time_map.py` | engine S06–S07 | engine S07 intake |
 | **S08** | 1. Intake `hiv000001_inframe.mp4` 2. Time until `AWAITING_REVIEW` | **Expected:** prescan in a few seconds. **Actual (before):** 30s+ reported; engine CLI `viana prescan` **6.676s** (OCR 5.55s @ 4× wide ROI; opening scan + second VideoCapture). **After (2026-08-19):** CLI **4.60s** (sample_opening_frame 0.069s at t=2.0s; OCR parse 3.76s on 2× tight ROI). S07 fields unchanged: `02:21:25`, `18-10-2024`, `LITO-RARARANKI`. Scan window 30s→4s; probe t=2s first; CLI no longer imports process/YOLO on prescan. | `prescan.py`, `ocr.py`, `cli.py`, `configs/engine_defaults.yaml` | `153431f` | engine CLI before/after on `hiv000001_inframe.mp4` |
 | **S10** | 1. Intake `hiv000001_inframe.mp4` (or parity clip) 2. `AWAITING_REVIEW` 3. Open review modal | **Expected:** `proposed_lines` match road geometry (horizon near vanishing point, counting line on lane boundary) — usable without large edits. **Actual:** `propose_lines()` uses fixed normalized y-ratios or aspect-matched profile only (`lines.py` `geometric_lines`); no frame-based CV. Lines often misaligned vs operator “best” calibration (see `PARITY_NOTES.md` geometry B vs D). | `src/viana/stages/lines.py`, `prescan.py` (pass sampled frame), `tests/viana/test_prescan.py`; reference `legacy/` parity geometry only for bounds | — | — |
-| **S11** | 1. Intake job 2. `GET /jobs` | **Expected:** each job has `created_at` (ISO) for queue sort. **Actual:** UI uses localStorage fallback until API field exists. | `job_status.schema.json`, `pool.py` `JobRecord`, `to_status()` | — | Step 4 UI chat |
-| **S12** | 1. Prescan completes 2. `GET /jobs/{id}` | **Expected:** `video_duration_sec` and `processing_duration_sec` on status for queue columns. **Actual:** UI estimates video length from progress fps when available; run time uses localStorage timestamps captured while dashboard is open during `PROCESSING` — shows `—` for jobs completed before first poll or after page refresh. | prescan worker persists meta on `JobRecord`; schema + TS types; `job-local-meta.ts` | — | Step 4 UI chat |
+| **S11** | 1. Intake job 2. `GET /jobs` | **Expected:** each job has `created_at` (ISO) for queue sort. **Actual:** UI uses localStorage fallback until API field exists. | `job_status.schema.json`, `pool.py` `JobRecord`, `to_status()` | pending | orchestrator tests (S11) |
+| **S12** | 1. Prescan completes 2. `GET /jobs/{id}` | **Expected:** `video_duration_sec` and `processing_duration_sec` on status for queue columns. **Actual:** UI estimates video length from progress fps when available; run time uses localStorage timestamps captured while dashboard is open during `PROCESSING` — shows `—` for jobs completed before first poll or after page refresh. | prescan worker persists meta on `JobRecord`; schema + TS types; `job-local-meta.ts` | pending | orchestrator tests (S12) |
 | **S13** | 1. `PROCESSING` job 2. Open live monitor 3. Try partial MP4 in VLC | **Expected:** `_processed.mp4` playable while growing. **Actual:** file not playable until job completes (moov atom at end). | `src/viana/stages/process.py` video writer, or HLS segment endpoint | — | Step 4 UI chat |
 | **S14** | 1. Confirm prescan with `telemetry_detail: true` 2. Monitor during `PROCESSING` | **Expected:** `MOVING_EVENT` on WS for every crossing with wall-clock or video timestamp. **Actual:** events gated on `telemetry_detail`; no timestamp in payload (frame_index only). **UI workaround (2026-08-19):** crossings table derives wall-clock from `user_start_time` + `user_start_date` + `frame_index`/`fps` until API emits `event_timestamp`. | `process.py` emit block, `telemetry.schema.json`, `telemetry-formatters.ts` | — | Step 4 UI chat |
 | **S15** | 1. Generate `_15min.csv` 2. Inspect header/rows | **Expected:** `date` (DD-MM-YYYY or ISO date) plus `window_start`/`window_end` as `HH:MM` to avoid client-side ISO parsing. **Actual:** CSV emits ISO datetime in `window_start`/`window_end`; UI currently parses ISO and derives HH:MM. | `events_15min.schema.json`, aggregate writer, contracts TS sync; then update UI parser to consume new format directly | — | Step 4 UI chat |
@@ -75,6 +76,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S19** | 1. Queue a known long clip (~3h) 2. Observe Job Queue `Video length` and `Time remaining` | **Expected:** video length and ETA are in the right order of magnitude (3h clip should not show 20h+ remaining without evidence). **Actual:** ETA/video-length logic appears inflated/incorrect for long MP4 inputs. Also need to confirm container can read MP4 duration/properties reliably for this codec profile. | Lane A/B/C: audit ETA formula and units in `apps/web/` + API status fields (`video_duration_sec`, `processing_duration_sec`, fps/progress source). Validate media probe path in container (OpenCV/ffprobe/codec support) and fix image/runtime setup if metadata extraction is wrong for MP4 variants. | — | Step 4 UI chat |
 | **S20** | 1. Start a job and wait for `_processed.mp4` to grow 2. Verify file plays via Ubuntu native player 3. Open same artifact in live monitor/UI | **Expected:** if file is already stream-playable on disk, the UI player should render it while processing. **Actual:** native apps can play in-progress file, but browser/UI still fails to render (same user-facing symptom persists). | Follow-on under F010: Lane A/B to inspect artifact endpoint/proxy headers (Range, Content-Type, Accept-Ranges, CORS, cache), player source URL lifecycle, and browser codec/container compatibility vs native playback. | — | Step 4 UI chat |
 | **S21** | 1. Run prescan on a video where OSD layout differs (location at top-center, timestamp at bottom-left) 2. Inspect `proposed_metadata` | **Expected:** prescan extracts time/date/location despite changed on-screen text positions. **Actual:** current corner-ROI logic misses fields when OSD is not in assumed regions. | Lane C (`src/viana/stages/ocr.py`, `prescan.py`): extend OCR region strategy beyond fixed corners (adaptive multi-region scan / fallback full-frame text pass), preserve confidence handling, and avoid regressions on existing clips. | — | Step 4 UI chat |
+| **S22** | 1. Select/add two videos to intake job 2. Observe prescan/job processing in container 3. Repeat with one file after failure | **Expected:** intake and prescan work repeatedly without process/file descriptor exhaustion. **Actual:** `[Errno 24] Too many open files`; afterwards UI refresh hits API 502 (`fetch failed`) until container restart. | Lane B/C: investigate FD leaks in orchestrator workers and engine prescan/process paths (open files, pipes, VideoCapture/ffmpeg handles, subprocess stdio). Add runtime diagnostics (`lsof`/fd counts) and ensure cleanup on success/failure/cancel. Confirm Next.js proxy 502 is downstream symptom, not root cause. | — | Step 4 UI chat |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine prescan · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `wontfix`  
@@ -173,10 +175,26 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 ---
 
+## F018 design note (file descriptor exhaustion)
+
+**Observed:** multi-file intake can trigger `[Errno 24] Too many open files`; after that, even single-file operations fail and UI sees API 502 until container restart.
+
+**Target:** eliminate FD leaks and make worker lifecycle resilient by:
+- closing subprocess pipes and video/ffmpeg handles deterministically,
+- joining/tearing down worker threads/processes on terminal states,
+- and adding guardrails/diagnostics for FD growth under repeated intake/prescan cycles.
+
+**Symptom link:** Next.js `ApiClientError` 502 during `refreshJobs` is likely secondary once orchestrator becomes unhealthy.
+
+**Scope:** orchestrator + engine runtime resource management (Lane B/C), plus minimal UI error-surface hardening if needed.
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
+| 2026-08-19 | S11–S12 fixed — required `created_at`; `video_duration_sec` from prescan; frozen `processing_duration_sec` on GET /jobs |
 | 2026-08-19 | S08 fixed — `viana prescan` 6.7s → 4.6s on `hiv000001_inframe.mp4`; 2× tight OSD ROI + t=2s probe; S07 metadata unchanged |
 | 2026-08-19 | S11–S14 backend triage: created_at, video duration, streamable partial MP4, MOVING_EVENT |
 | 2026-08-19 | Added S15 backend schema request for 15-min CSV window/date format alignment |
@@ -186,6 +204,7 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 | 2026-08-19 | Added S19 (F016) queue video length/ETA inflation + container MP4 codec metadata validation |
 | 2026-08-19 | Added S20 (F010 follow-on) UI still cannot render in-progress processed MP4 though native Ubuntu player can |
 | 2026-08-19 | Added S21 (F017) prescan OCR misses metadata when OSD text shifts to non-corner regions |
+| 2026-08-19 | Added S22 (F018) file-descriptor exhaustion (`Errno 24`) causing downstream API 502 until container restart |
 | 2026-08-19 | S06 fixed (EasyOCR triage); S07 fixed — corner ROI OCR, `proposed_metadata` on `hiv000001_inframe.mp4` (`job_abec59713960`) |
 | 2026-08-19 | S09 (F006) deferred to Step 6.7; added S10 (F007) line proposal improvement |
 | 2026-08-19 | Merged F001–F006 + F003 scrub plan into single execution path S01–S09 |

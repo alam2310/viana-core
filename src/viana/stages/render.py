@@ -37,7 +37,40 @@ def overlay_bgr(class_id: int) -> tuple[int, int, int]:
     return OVERLAY_BGR.get(class_id, _DEFAULT_OVERLAY_BGR)
 
 
-# HEVC NVENC: same pipeline as legacy, higher CQ than legacy 38 for a smaller review file.
+# Fragmented MP4 (S13): empty moov + moof/mdat so growing files are streamable.
+_FRAG_MP4_ARGS = [
+    "-frag_duration",
+    "1000000",
+    "-movflags",
+    "+frag_keyframe+empty_moov+default_base_moof",
+]
+
+# H.264 for browser <video> (S20). Prefer NVENC when listed, else libx264.
+# HEVC is smaller but Chrome/Firefox on Linux cannot decode hev1/hvc1 in <video>.
+_H264_NVENC_ARGS = [
+    "-c:v",
+    "h264_nvenc",
+    "-pix_fmt",
+    "yuv420p",
+    "-preset",
+    "p7",
+    "-tune",
+    "hq",
+    "-rc",
+    "vbr",
+    "-cq",
+    "28",
+    "-b:v",
+    "0",
+    "-g",
+    "30",
+    "-keyint_min",
+    "30",
+    "-forced-idr",
+    "1",
+    *_FRAG_MP4_ARGS,
+]
+
 _HEVC_NVENC_ARGS = [
     "-c:v",
     "hevc_nvenc",
@@ -65,16 +98,38 @@ _HEVC_NVENC_ARGS = [
     "30",
     "-forced-idr",
     "1",
-    "-frag_duration",
-    "1000000",
-    "-movflags",
-    "+frag_keyframe+empty_moov+default_base_moof",
+    *_FRAG_MP4_ARGS,
 ]
 
 
 def ffmpeg_video_args(path: Path, *, encoder_list: str) -> list[str]:
-    """Pick the smallest review encode: NVENC HEVC, else libx265, else x264 CRF."""
+    """Pick a browser-playable review encode, then size-oriented HEVC fallbacks.
+
+    Preference (S20): ``h264_nvenc`` → ``libx264`` → ``hevc_nvenc`` → ``libx265``.
+    All paths keep fragmented MP4 flags (S13) for in-progress streaming.
+    """
     out = str(path)
+    if "h264_nvenc" in encoder_list:
+        return [*_H264_NVENC_ARGS, out]
+    if "libx264" in encoder_list:
+        return [
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-crf",
+            "30",
+            "-preset",
+            "medium",
+            "-g",
+            "30",
+            "-keyint_min",
+            "30",
+            "-sc_threshold",
+            "0",
+            *_FRAG_MP4_ARGS,
+            out,
+        ]
     if "hevc_nvenc" in encoder_list:
         return [*_HEVC_NVENC_ARGS, out]
     if "libx265" in encoder_list:
@@ -93,10 +148,7 @@ def ffmpeg_video_args(path: Path, *, encoder_list: str) -> list[str]:
             "30",
             "-sc_threshold",
             "0",
-            "-frag_duration",
-            "1000000",
-            "-movflags",
-            "+frag_keyframe+empty_moov+default_base_moof",
+            *_FRAG_MP4_ARGS,
             out,
         ]
     return [
@@ -114,10 +166,7 @@ def ffmpeg_video_args(path: Path, *, encoder_list: str) -> list[str]:
         "30",
         "-sc_threshold",
         "0",
-        "-frag_duration",
-        "1000000",
-        "-movflags",
-        "+frag_keyframe+empty_moov+default_base_moof",
+        *_FRAG_MP4_ARGS,
         out,
     ]
 
@@ -199,7 +248,7 @@ def annotate_bgr(
 
 
 class FfmpegRenderer:
-    """Pipe BGR frames to FFmpeg (legacy HEVC NVENC when the GPU encoder exists)."""
+    """Pipe BGR frames to FFmpeg (H.264 NVENC when available; fragmented MP4)."""
 
     def __init__(self, path: Path, width: int, height: int, fps: float) -> None:
         ffmpeg = shutil.which("ffmpeg")

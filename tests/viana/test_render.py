@@ -41,25 +41,38 @@ def test_annotate_bgr_writes_class_name_above_box() -> None:
     assert tuple(int(v) for v in canvas[40, 20]) == overlay_bgr(4)
 
 
-def test_ffmpeg_prefers_legacy_hevc_nvenc() -> None:
-    """Processed MP4 prefers NVENC HEVC when the encoder is listed."""
+def test_ffmpeg_prefers_h264_nvenc_for_browser() -> None:
+    """Processed MP4 prefers H.264 NVENC over HEVC so browser <video> can decode (S20)."""
     from pathlib import Path
 
-    args = ffmpeg_video_args(Path("out.mp4"), encoder_list="libx264\nhevc_nvenc\nlibx265")
-    assert args[:2] == ["-c:v", "hevc_nvenc"]
-    assert "-cq" in args and "42" in args
+    args = ffmpeg_video_args(
+        Path("out.mp4"),
+        encoder_list="libx264\nhevc_nvenc\nlibx265\nh264_nvenc",
+    )
+    assert args[:2] == ["-c:v", "h264_nvenc"]
+    assert "-cq" in args and "28" in args
     assert "-movflags" in args
     assert "+frag_keyframe+empty_moov+default_base_moof" in args
     assert "-frag_duration" in args and "1000000" in args
 
 
-def test_ffmpeg_fallbacks_keep_fragmented_mp4_flags() -> None:
-    """Fallback encoders still write streamable fragmented MP4."""
+def test_ffmpeg_prefers_libx264_before_hevc() -> None:
+    """Without h264_nvenc, software H.264 beats HEVC for browser playback."""
     from pathlib import Path
 
+    args = ffmpeg_video_args(Path("out.mp4"), encoder_list="libx264\nhevc_nvenc\nlibx265")
+    assert args[:2] == ["-c:v", "libx264"]
+    assert "+frag_keyframe+empty_moov+default_base_moof" in args
+
+
+def test_ffmpeg_fallbacks_keep_fragmented_mp4_flags() -> None:
+    """HEVC fallbacks still write streamable fragmented MP4 (S13)."""
+    from pathlib import Path
+
+    hevc = ffmpeg_video_args(Path("out.mp4"), encoder_list="hevc_nvenc")
     x265 = ffmpeg_video_args(Path("out.mp4"), encoder_list="libx265")
     x264 = ffmpeg_video_args(Path("out.mp4"), encoder_list="libx264")
-    for args in (x265, x264):
+    for args in (hevc, x265, x264):
         assert "-movflags" in args
         assert "+frag_keyframe+empty_moov+default_base_moof" in args
         assert "-frag_duration" in args and "1000000" in args

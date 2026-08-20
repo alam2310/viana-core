@@ -730,6 +730,8 @@ def test_source_mp4_served_with_range(
     response = client.get(f"/artifacts/{job_id}/source.mp4")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("video/mp4")
+    assert response.headers.get("accept-ranges") == "bytes"
+    assert response.headers.get("content-disposition", "").startswith("inline")
     assert response.content == payload
     ranged = client.get(
         f"/artifacts/{job_id}/source.mp4",
@@ -758,6 +760,17 @@ def test_partial_processed_mp4_served(
     response = client.get(f"/artifacts/{job_id}/partial.mp4")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("video/mp4")
+    assert response.headers.get("accept-ranges") == "bytes"
+    assert response.headers.get("cache-control") == "no-store"
+    disposition = response.headers.get("content-disposition", "")
+    assert disposition.startswith("inline")
+    ranged = client.get(
+        f"/artifacts/{job_id}/partial.mp4",
+        headers={"Range": "bytes=0-3"},
+    )
+    assert ranged.status_code == 206
+    assert ranged.content == b"\x00\x00\x00\x18"
+    assert ranged.headers.get("content-range", "").startswith("bytes 0-3/")
 
 
 def test_auto_aggregate_on_completed(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

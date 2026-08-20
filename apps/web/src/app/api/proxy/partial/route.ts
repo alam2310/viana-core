@@ -42,6 +42,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       headers.set("Content-Type", "video/mp4");
     }
     headers.set("Cache-Control", "no-store");
+    headers.set("Content-Disposition", "inline");
     const contentLength = response.headers.get("Content-Length");
     if (contentLength) {
       headers.set("Content-Length", contentLength);

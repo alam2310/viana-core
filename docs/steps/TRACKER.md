@@ -97,6 +97,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S13 | F010 — streamable growing `_processed.mp4` during processing | B/C | fixed |
 | S14 | F011 — emit `MOVING_EVENT` without `telemetry_detail` gate + timestamp | C | fixed |
 | S15 | F012 — 15-min CSV: add `date`, HH:MM window columns | B/D | fixed |
+| S20 | F010 follow-on — browser live monitor play of in-progress MP4 (H.264) | A/B | fixed |
 | ~~S09~~ | F006 — intake path validation | B | **deferred → 6.7** |
 
 ---

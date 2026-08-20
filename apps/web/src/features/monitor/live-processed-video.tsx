@@ -15,6 +15,7 @@ export function LiveProcessedVideo({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [available, setAvailable] = useState(false);
   const [statusText, setStatusText] = useState("Waiting for processed video…");
+  const [mediaError, setMediaError] = useState<string | null>(null);
   const [cacheBust, setCacheBust] = useState(0);
   const lastTimeRef = useRef(0);
 
@@ -31,7 +32,7 @@ export function LiveProcessedVideo({
     const timer = window.setTimeout(() => {
       setCacheBust(refreshKey);
     }, 2000);
-    return () => window.clearInterval(timer);
+    return () => window.clearTimeout(timer);
   }, [refreshKey]);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export function LiveProcessedVideo({
     }
 
     setAvailable(false);
+    setMediaError(null);
     setStatusText("Waiting for processed video…");
     void probe();
     const timer = window.setInterval(() => void probe(), 3000);
@@ -82,13 +84,29 @@ export function LiveProcessedVideo({
     const savedTime = lastTimeRef.current;
     video.load();
     const onLoaded = () => {
-      if (savedTime > 0 && savedTime < video.duration) {
+      setMediaError(null);
+      if (savedTime > 0 && Number.isFinite(video.duration) && savedTime < video.duration) {
         video.currentTime = savedTime;
       }
       void video.play().catch(() => undefined);
     };
+    const onError = () => {
+      const code = video.error?.code;
+      // MEDIA_ERR_SRC_NOT_SUPPORTED = 4 — typically HEVC/hev1 in Chromium.
+      if (code === 4) {
+        setMediaError(
+          "Browser cannot decode this processed MP4 (needs H.264 / avc1). Native players may still play HEVC.",
+        );
+      } else {
+        setMediaError(`Video decode error (code ${code ?? "?"}).`);
+      }
+    };
     video.addEventListener("loadedmetadata", onLoaded, { once: true });
-    return () => video.removeEventListener("loadedmetadata", onLoaded);
+    video.addEventListener("error", onError);
+    return () => {
+      video.removeEventListener("loadedmetadata", onLoaded);
+      video.removeEventListener("error", onError);
+    };
   }, [src, available]);
 
   useEffect(() => {
@@ -106,22 +124,28 @@ export function LiveProcessedVideo({
   return (
     <div>
       {available ? (
-        <video
-          ref={videoRef}
-          key={src}
-          className="w-full rounded border border-border bg-black"
-          controls
-          playsInline
-          src={src}
-        >
-          <track kind="captions" />
-        </video>
+        <div className="space-y-2">
+          <video
+            ref={videoRef}
+            key={src}
+            className="w-full rounded border border-border bg-black"
+            controls
+            playsInline
+            preload="metadata"
+            src={src}
+          >
+            <track kind="captions" />
+          </video>
+          {mediaError ? (
+            <p className="text-xs text-muted">{mediaError}</p>
+          ) : null}
+        </div>
       ) : (
         <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded border border-dashed border-border bg-accent px-4 text-center text-sm text-muted">
           <p>{statusText}</p>
           <p className="text-xs text-muted">
-            Live preview may stay blank until processing finishes — the growing MP4
-            file is often not playable until the job completes (backend fix tracked).
+            Live preview appears once the growing processed MP4 is available over the
+            same-origin proxy (Range streaming).
           </p>
         </div>
       )}

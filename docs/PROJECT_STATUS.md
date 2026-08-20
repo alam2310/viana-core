@@ -1,6 +1,6 @@
 # Project Status (Living Document)
 
-**Last updated:** 2026-08-19  
+**Last updated:** 2026-08-20  
 **Current focus:** **Step 6** — hardening backlog (see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 unblocked).  
@@ -69,7 +69,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 - Container `viana_core`: `docker compose build && up`; publishes **8000**
 - Scripted live flow: health → prescan → submit → progress → COMPLETED → aggregate → 409 → start-fresh → cancel
 - **15-min CSV:** engine supports `viana aggregate`; needs wall-clock from prescan UI (not a legacy parity gap)
-- **YOLO + FFmpeg:** HEVC NVENC cq 42 processed MP4; NumPy &lt; 2 + trackers `--no-deps`
+- **YOLO + FFmpeg:** H.264 NVENC (cq 28) processed MP4 for browser live monitor; HEVC fallback only if H.264 encoders missing; NumPy &lt; 2 + trackers `--no-deps`
 
 ---
 
@@ -77,6 +77,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-20 | Stabilization S20 fixed: live monitor blank was Chromium rejecting HEVC `_processed.mp4` (Range/proxy OK); encoder prefers H.264 for browser; S13 fragmented MP4 retained |
 | 2026-08-19 | Stabilization S10 partial: refined no-profile line fallback with dominant-slope parallel fitting and extra tests; further tuning needed on sample camera views before closure |
 | 2026-08-19 | Stabilization S10 fixed: no-profile prescan line proposal now uses deterministic frame-guided edge fitting with bounds-safe clamping and cue-based confidence; profile override precedence unchanged |
 | 2026-08-19 | Stabilization S15 fixed: 15-min CSV contract/output aligned to `date` + `HH:MM` windows; UI parser groups by `date+window+class` to avoid cross-day merge |

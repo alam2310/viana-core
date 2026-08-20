@@ -134,9 +134,19 @@ export function CalibrationCanvas({
   const [preview, setPreview] = useState<HTMLImageElement | null>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [videoFrameTick, setVideoFrameTick] = useState(0);
+  /** Prefer JPEG/video intrinsic size so line-derived prop height cannot stretch the frame. */
+  const [mediaSize, setMediaSize] = useState<{ width: number; height: number } | null>(
+    null,
+  );
+  const frameWidth = mediaSize?.width ?? width;
+  const frameHeight = mediaSize?.height ?? height;
   const displayWidth = 720;
-  const scale = displayWidth / width;
-  const displayHeight = Math.round(height * scale);
+  const scale = displayWidth / frameWidth;
+  const displayHeight = Math.round(frameHeight * scale);
+
+  useEffect(() => {
+    setMediaSize(null);
+  }, [previewUrl, sourceVideoUrl]);
 
   useEffect(() => {
     if (!previewUrl) {
@@ -159,8 +169,21 @@ export function CalibrationCanvas({
         objectUrl = URL.createObjectURL(blob);
         const image = new Image();
         image.onload = () => {
-          if (!cancelled) {
-            setPreview(image);
+          if (cancelled) {
+            return;
+          }
+          setPreview(image);
+          const naturalW = image.naturalWidth;
+          const naturalH = image.naturalHeight;
+          if (naturalW > 0 && naturalH > 0) {
+            setMediaSize({ width: naturalW, height: naturalH });
+            onVideoMeta?.({
+              width: naturalW,
+              height: naturalH,
+              fps: 25,
+              duration_sec: 0,
+              frame_count: 0,
+            });
           }
         };
         image.onerror = () => {
@@ -182,6 +205,7 @@ export function CalibrationCanvas({
         URL.revokeObjectURL(objectUrl);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bind once per preview URL
   }, [previewUrl]);
 
   useEffect(() => {
@@ -204,6 +228,9 @@ export function CalibrationCanvas({
       }
       const fps = 25;
       const durationSec = video.duration;
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        setMediaSize({ width: video.videoWidth, height: video.videoHeight });
+      }
       onVideoMeta?.({
         width: video.videoWidth,
         height: video.videoHeight,
@@ -345,8 +372,8 @@ export function CalibrationCanvas({
 
   function applyChange(next: { horizon: LineSegment; counting: LineSegment }) {
     onChange({
-      horizon: clampLine(next.horizon, width, height),
-      counting: clampLine(next.counting, width, height),
+      horizon: clampLine(next.horizon, frameWidth, frameHeight),
+      counting: clampLine(next.counting, frameWidth, frameHeight),
     });
   }
 
@@ -392,8 +419,8 @@ export function CalibrationCanvas({
     ];
     const moved = translateLine(drag.snapshot, delta);
     const clamped: LineSegment = {
-      start: clampPoint(moved.start, width, height),
-      end: clampPoint(moved.end, width, height),
+      start: clampPoint(moved.start, frameWidth, frameHeight),
+      end: clampPoint(moved.end, frameWidth, frameHeight),
     };
     if (drag.line === "horizon") {
       applyChange({ horizon: clamped, counting });

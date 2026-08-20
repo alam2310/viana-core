@@ -12,7 +12,7 @@ import {
   CalibrationCanvas,
   formatLineCoords,
 } from "@/features/calibration/calibration-canvas";
-import { initialVideoMeta, estimateVideoMetaFromLines } from "@/features/prescan/prescan-meta";
+import { initialVideoMeta, estimateVideoMetaFromLines, mergeVideoMeta } from "@/features/prescan/prescan-meta";
 import { Button } from "@/components/ui/button";
 import {
   confirmPrescan,
@@ -138,7 +138,9 @@ export function PrescanReviewModal({
           if (cancelled) {
             return;
           }
-          setVideoMeta(preview.video_meta);
+          setVideoMeta((prev) =>
+            mergeVideoMeta(prev, preview.video_meta, job.video_duration_sec),
+          );
           setPreviewPath(preview.preview_url);
           setPreviewToken(Date.now());
           if (!job.proposed_lines && preview.proposed_lines) {
@@ -165,7 +167,9 @@ export function PrescanReviewModal({
     setError(null);
     try {
       const preview = await prescanPreview(job.job_id, frameOffset);
-      setVideoMeta(preview.video_meta);
+      setVideoMeta((prev) =>
+        mergeVideoMeta(prev, preview.video_meta, job.video_duration_sec),
+      );
       setPreviewPath(preview.preview_url);
       setPreviewToken(Date.now());
       setMetadata((prev) => mergeOcrMetadata(prev, preview.ocr, true));
@@ -343,7 +347,11 @@ export function PrescanReviewModal({
                 previewUrl={previewUrl}
                 sourceVideoUrl={sourceVideoUrl(job.job_id)}
                 frameOffsetSec={offset}
-                onVideoMeta={setVideoMeta}
+                onVideoMeta={(incoming) =>
+                  setVideoMeta((prev) =>
+                    mergeVideoMeta(prev, incoming, job.video_duration_sec),
+                  )
+                }
                 onFrameLoading={setFrameLoading}
                 onChange={(next) => {
                   setHorizon(next.horizon);

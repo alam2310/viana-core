@@ -81,7 +81,8 @@ def apply_container_timing(
         return fps_val, frames if frames > 0 else 1, duration
 
     stream = _first_video_stream(payload)
-    fmt = payload.get("format") if isinstance(payload.get("format"), dict) else {}
+    format_obj = payload.get("format")
+    fmt: dict[str, Any] = format_obj if isinstance(format_obj, dict) else {}
     size_bytes = _int_or_zero(fmt.get("size"))
     if size_bytes <= 0:
         try:

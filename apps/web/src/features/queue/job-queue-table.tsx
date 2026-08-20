@@ -49,6 +49,18 @@ function timeRemaining(job: JobStatusResponse): string {
   return formatEta(job.progress.eta_sec);
 }
 
+/** Pause from operator stop is resumable; engine failure parked as PAUSED is not. */
+function isResumablePause(job: JobStatusResponse): boolean {
+  if (job.status !== "PAUSED") {
+    return false;
+  }
+  const message = job.error_message?.trim() ?? "";
+  if (!message) {
+    return true;
+  }
+  return /^(worker cancelled|interrupted)$/i.test(message);
+}
+
 export function JobQueueTable({
   jobs,
   busyId,
@@ -221,7 +233,7 @@ export function JobQueueTable({
                           <IconMonitor size={16} />
                         </RoundIconButton>
                       ) : null}
-                      {job.status === "PAUSED" ? (
+                      {isResumablePause(job) ? (
                         <RoundIconButton
                           label="Resume Job"
                           variant="success"

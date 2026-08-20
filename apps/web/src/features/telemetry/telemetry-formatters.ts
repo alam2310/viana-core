@@ -151,9 +151,13 @@ function formatEventTimestamp(value: string): string {
     return trimmed;
   }
 
-  const isoOrDateTime = new Date(trimmed);
-  if (!Number.isNaN(isoOrDateTime.getTime())) {
-    return formatWallClockTime(isoOrDateTime);
+  // Engine encodes OSD / user start clock as naive UTC ISO (`...Z`).
+  // Extract that clock directly — do not convert through the browser timezone.
+  const isoClock = trimmed.match(
+    /^\d{4}-\d{2}-\d{2}[T ](\d{2}):(\d{2}):(\d{2})/,
+  );
+  if (isoClock) {
+    return `${isoClock[1]}:${isoClock[2]}:${isoClock[3]}`;
   }
 
   const inlineHms = trimmed.match(/(\d{2}):(\d{2}):(\d{2})/);
@@ -162,6 +166,24 @@ function formatEventTimestamp(value: string): string {
   }
 
   return "—";
+}
+
+function eventTimeFromElapsedMs(
+  elapsedMs: number,
+  startTime?: string,
+  startDate?: string,
+): string | null {
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) {
+    return null;
+  }
+  if (!startTime?.trim() || !startDate?.trim()) {
+    return null;
+  }
+  const base = parseStartDateTime(startDate, startTime);
+  if (!base) {
+    return null;
+  }
+  return formatWallClockTime(new Date(base.getTime() + elapsedMs));
 }
 
 function eventTimeFromFrame(
@@ -173,15 +195,15 @@ function eventTimeFromFrame(
   if (!fps || fps <= 0) {
     return "—";
   }
-  if (!startTime?.trim() || !startDate?.trim()) {
-    return frameToClock(frame, fps);
+  const fromStart = eventTimeFromElapsedMs(
+    (frame / fps) * 1000,
+    startTime,
+    startDate,
+  );
+  if (fromStart) {
+    return fromStart;
   }
-  const base = parseStartDateTime(startDate, startTime);
-  if (!base) {
-    return frameToClock(frame, fps);
-  }
-  const event = new Date(base.getTime() + (frame / fps) * 1000);
-  return formatWallClockTime(event);
+  return frameToClock(frame, fps);
 }
 
 export function crossingsFromTelemetry(
@@ -209,12 +231,28 @@ export function crossingsFromTelemetry(
         ? data.direction.charAt(0).toUpperCase() + data.direction.slice(1)
         : "—";
     const rawDirection = typeof data.direction === "string" ? data.direction : "";
+    const videoPtsMs =
+      typeof data.video_pts_ms === "number" ? data.video_pts_ms : undefined;
+    const elapsedMs =
+      typeof videoPtsMs === "number"
+        ? videoPtsMs
+        : frame !== undefined && fps && fps > 0
+          ? (frame / fps) * 1000
+          : undefined;
+    const fromVideoStart =
+      elapsedMs !== undefined
+        ? eventTimeFromElapsedMs(
+            elapsedMs,
+            options?.startTime,
+            options?.startDate,
+          )
+        : null;
     rows.push({
       id: `${msg.job_id}-${rows.length}-${frame ?? 0}`,
-      time:
-        typeof data.event_timestamp === "string" && data.event_timestamp.trim()
+      time: fromVideoStart
+        ? fromVideoStart
+        : typeof data.event_timestamp === "string" && data.event_timestamp.trim()
           ? formatEventTimestamp(data.event_timestamp)
-          // Residual fallback: old payloads without event_timestamp.
           : frame !== undefined && fps
             ? eventTimeFromFrame(
                 frame,

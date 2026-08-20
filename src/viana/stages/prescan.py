@@ -17,7 +17,7 @@ from viana.io.paths import prescan_dir
 from viana.io.profiles import CalibrationProfile, list_profiles
 from viana.stages.lines import ProposedLines, propose_lines
 from viana.stages.ocr import (
-    DEFAULT_OSD_ROIS,
+    OSD_SCORE_ROIS,
     CornerOsdReader,
     OcrReader,
     is_corner_osd_reader,
@@ -122,7 +122,7 @@ def _frame_mean_luminance(frame: object) -> float:
 
 
 def osd_band_score(frame: object) -> float:
-    """Return variance in the top-left metadata ROI (high when OSD text is visible)."""
+    """Return max grayscale stddev across OSD candidate bands (S07/S21)."""
     try:
         import cv2
         import numpy as np
@@ -130,11 +130,17 @@ def osd_band_score(frame: object) -> float:
         return 0.0
     bgr: Any = frame
     height, width = bgr.shape[:2]
-    roi = DEFAULT_OSD_ROIS[0]
-    y2 = max(1, int(height * roi.y_end))
-    x2 = max(1, int(width * roi.x_end))
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    return float(np.std(gray[0:y2, 0:x2]))
+    scores: list[float] = []
+    for roi in OSD_SCORE_ROIS:
+        y1 = max(0, min(height, int(height * roi.y_start)))
+        y2 = max(0, min(height, int(height * roi.y_end)))
+        x1 = max(0, min(width, int(width * roi.x_start)))
+        x2 = max(0, min(width, int(width * roi.x_end)))
+        if y2 <= y1 or x2 <= x1:
+            continue
+        scores.append(float(np.std(gray[y1:y2, x1:x2])))
+    return max(scores) if scores else 0.0
 
 
 def _osd_frame_usable(

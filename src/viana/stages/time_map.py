@@ -19,12 +19,17 @@ DATE_LOOSE_PATTERN = re.compile(r"\d{2}[-/ ]\d{2}[-/ ]\d{4}")
 TIME_SPACED_PATTERN = re.compile(r"\b(\d{2})\s+(\d{2})\s+(\d{2})\b")
 TIME_PARTIAL_PATTERN = re.compile(r"\b(\d{2})\s+(\d{2}):(\d{2})\b")
 TIME_DOT_PATTERN = re.compile(r"\b(\d{2})\s+(\d{2})[.:](\d{2})\b")
+TIME_SEP_PATTERN = re.compile(r"\b(\d{2})[.:](\d{2})[.:](\d{2})\b")
+TIME_FLEX_PATTERN = re.compile(r"\b(\d{2})\s*[:.\"'`*;]\s*(\d{2})\s*[:.\"'`*;]\s*(\d{2})\b")
+TIME_COLON_SPACE_PATTERN = re.compile(r"\b(\d{2})[:.](\d{2})\s+(\d{2})\b")
 TIME_COMPACT_PATTERN = re.compile(r"\b(\d{2})\s+(\d{4})\b")
+TIME_GLUED_PATTERN = re.compile(r"\b(\d{6})\b")
 LOCATION_NOISE = {
     "f",
     "u",
     "s",
     "ue",
+    "we",
     "fri",
     "mon",
     "tue",
@@ -37,6 +42,7 @@ IGNORE_WORDS = {
     "mon",
     "tue",
     "wed",
+    "we",
     "thu",
     "fri",
     "sat",
@@ -168,9 +174,29 @@ def normalize_ocr_date(raw: str) -> str | None:
     if len(parts) != 3:
         return None
     day, month, year = parts
-    if year == "2074":
-        year = "2024"
+    year = _repair_ocr_year(year)
+    if not _plausible_calendar_date(day, month, year):
+        return None
     return f"{day}-{month}-{year}"
+
+
+def _repair_ocr_year(year: str) -> str:
+    """Map common 2↔7 OSD substitutions (2074, 7074) back to 20xx."""
+    if len(year) == 4 and year.startswith("70"):
+        year = "20" + year[2:]
+    if year == "2074":
+        return "2024"
+    if len(year) == 4 and year[0] in "67" and year.endswith("074"):
+        return "2024"
+    return year
+
+
+def _plausible_calendar_date(day: str, month: str, year: str) -> bool:
+    try:
+        day_n, month_n, year_n = int(day), int(month), int(year)
+    except ValueError:
+        return False
+    return 1 <= day_n <= 31 and 1 <= month_n <= 12 and 2000 <= year_n <= 2039
 
 
 def is_valid_clock_time(value: str) -> bool:
@@ -185,13 +211,44 @@ def is_valid_clock_time(value: str) -> bool:
     return 0 <= hours <= 23 and 0 <= minutes <= 59 and 0 <= seconds <= 59
 
 
+def is_plausible_ocr_date(value: str | None) -> bool:
+    """True when ``value`` is DD-MM-YYYY with a 2000–2039 year."""
+    if not value:
+        return False
+    parts = value.split("-")
+    if len(parts) != 3:
+        return False
+    return _plausible_calendar_date(parts[0], parts[1], parts[2])
+
+
+def _four_digits_look_like_year(digits: str) -> bool:
+    """True when compact OCR digits are a calendar year, not MMSS."""
+    if len(digits) != 4 or not digits.isdigit():
+        return False
+    year = int(digits)
+    return year == 2074 or 1900 <= year <= 2099
+
+
+def _strip_date_tokens(text: str) -> str:
+    cleaned = DATE_PATTERN.sub(" ", text)
+    cleaned = DATE_LOOSE_PATTERN.sub(" ", cleaned)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 def extract_ocr_time(texts: list[str]) -> str | None:
     """Extract HH:MM:SS from OCR strings, including common spacing errors."""
     joined = " ".join(texts)
     match = TIME_PATTERN.search(joined)
     if match and is_valid_clock_time(match.group()):
         return match.group()
-    for pattern in (TIME_PARTIAL_PATTERN, TIME_DOT_PATTERN, TIME_SPACED_PATTERN):
+    for pattern in (
+        TIME_FLEX_PATTERN,
+        TIME_COLON_SPACE_PATTERN,
+        TIME_PARTIAL_PATTERN,
+        TIME_DOT_PATTERN,
+        TIME_SEP_PATTERN,
+        TIME_SPACED_PATTERN,
+    ):
         found = pattern.search(joined)
         if found is None:
             continue
@@ -200,21 +257,29 @@ def extract_ocr_time(texts: list[str]) -> str | None:
             return candidate
     for compact in TIME_COMPACT_PATTERN.finditer(joined):
         digits = compact.group(2)
+        if _four_digits_look_like_year(digits):
+            continue
         candidate = f"{compact.group(1)}:{digits[0:2]}:{digits[2:4]}"
+        if is_valid_clock_time(candidate):
+            return candidate
+    for glued in TIME_GLUED_PATTERN.finditer(joined):
+        digits = glued.group(1)
+        candidate = f"{digits[0:2]}:{digits[2:4]}:{digits[4:6]}"
         if is_valid_clock_time(candidate):
             return candidate
     return None
 
 
 def parse_metadata_texts(texts: list[str]) -> ParsedOcr:
-    """Parse date/time from the top metadata ROI."""
-    parsed_time = extract_ocr_time(texts)
+    """Parse date first, then time from the remainder so years are not clocks."""
     date_str: str | None = None
     for raw in texts:
         candidate = normalize_ocr_date(raw)
         if candidate is not None:
             date_str = candidate
             break
+    remainder = [_strip_date_tokens(raw) for raw in texts]
+    parsed_time = extract_ocr_time(remainder)
     return ParsedOcr(time=parsed_time, date=date_str, location=None)
 
 
@@ -229,9 +294,38 @@ def parse_location_texts(texts: list[str]) -> str | None:
         if lowered in IGNORE_WORDS or lowered in LOCATION_NOISE:
             continue
         loc_cleaned = re.sub(r"^[^\w]+|[^\w]+$", "", text_clean)
-        if loc_cleaned and loc_cleaned.lower() not in LOCATION_NOISE:
-            location_parts.append(loc_cleaned)
+        if not loc_cleaned or loc_cleaned.lower() in LOCATION_NOISE:
+            continue
+        if loc_cleaned.replace(" ", "").isdigit():
+            continue
+        if re.fullmatch(r"[A-Za-z]{1,3}\s+\d{4,}", loc_cleaned):
+            continue
+        if _mostly_numeric_osd(loc_cleaned):
+            continue
+        if loc_cleaned in location_parts:
+            continue
+        location_parts.append(loc_cleaned)
+    marked = [part for part in location_parts if "-" in part or "_" in part]
+    if marked:
+        return " ".join(marked)
+    landmark = [
+        part
+        for part in location_parts
+        if any(token in part.upper() for token in ("BANKI", "BARA", "BYPASS"))
+    ]
+    if landmark:
+        return max(landmark, key=len)
     return " ".join(location_parts) if location_parts else None
+
+
+def _mostly_numeric_osd(text: str) -> bool:
+    """Reject date/clock leftovers like 07-71576 that still contain a hyphen."""
+    compact = re.sub(r"[^\w]", "", text)
+    if not compact:
+        return True
+    digits = sum(ch.isdigit() for ch in compact)
+    letters = sum(ch.isalpha() for ch in compact)
+    return digits >= 4 and digits > letters
 
 
 def _strip_metadata_tokens(text: str) -> str:
@@ -239,6 +333,15 @@ def _strip_metadata_tokens(text: str) -> str:
     cleaned = TIME_PATTERN.sub("", text).strip()
     cleaned = DATE_PATTERN.sub("", cleaned).strip()
     cleaned = DATE_LOOSE_PATTERN.sub("", cleaned).strip()
+    cleaned = TIME_FLEX_PATTERN.sub("", cleaned).strip()
+    cleaned = TIME_COLON_SPACE_PATTERN.sub("", cleaned).strip()
+    cleaned = TIME_PARTIAL_PATTERN.sub("", cleaned).strip()
+    cleaned = TIME_DOT_PATTERN.sub("", cleaned).strip()
+    cleaned = TIME_SEP_PATTERN.sub("", cleaned).strip()
+    cleaned = TIME_SPACED_PATTERN.sub("", cleaned).strip()
+    cleaned = TIME_COMPACT_PATTERN.sub("", cleaned).strip()
+    cleaned = TIME_GLUED_PATTERN.sub("", cleaned).strip()
+    cleaned = re.sub(r"\b\d{2}[.:]\d{3,6}\b", "", cleaned).strip()
     for word in IGNORE_WORDS:
         cleaned = re.sub(rf"\b{word}\b", "", cleaned, flags=re.IGNORECASE).strip()
     return cleaned

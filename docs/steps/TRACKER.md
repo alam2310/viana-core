@@ -77,7 +77,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 13 fixed / 1 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) S01–S08, S10–S15 (S09 → 6.7) |
+| **4.stab** Stabilization path | 🔄 S21 fixed; S10 in_progress; S22–S23 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
 ### Stabilization execution path (follow in order)
 
@@ -88,7 +88,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S03 | F003 — Next.js source proxy | A | fixed |
 | S04 | F003 — prescan scrub via video seek (not prescan API) | A | fixed |
 | S05 | F003 — Re-scan OCR only + docs | A/B | fixed |
-| S06 | F005 — EasyOCR triage | C | open |
+| S06 | F005 — EasyOCR triage | C | fixed |
 | S07 | F001 — corner ROI OCR (**Step 5 blocker**) | C | fixed |
 | S08 | F002 — prescan latency | C | fixed |
 | S10 | F007 — horizon/counting line proposal | C | in_progress |
@@ -98,6 +98,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S14 | F011 — emit `MOVING_EVENT` without `telemetry_detail` gate + timestamp | C | fixed |
 | S15 | F012 — 15-min CSV: add `date`, HH:MM window columns | B/D | fixed |
 | S19 | F016 — queue video length / ETA inflation + MPEG-PS probe | A/B/C | fixed |
+| S21 | F017 — adaptive OSD OCR when text is outside corner ROIs | C | **fixed** |
 | S20 | F010 follow-on — browser live monitor play of in-progress MP4 (H.264) | A/B | **parked** → S24 |
 | S24 | Park live-monitor partial MP4 UI; crossings immediate | A | parked |
 | ~~S09~~ | F006 — intake path validation | B | **deferred → 6.7** |
@@ -134,6 +135,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-20 | S21 (F017) fixed — adaptive OSD bands + clock/date salvage (spaced/`"` colons, year `7074`→`2024`, mixed-polarity location); UI retest OK; no `hiv000001_inframe` S07/S08 regression |
 | 2026-08-20 | S19 (F016) fixed — MPEG-PS/DVR header duration corrected via ffprobe packet count; queue video length/ETA units documented |
 | 2026-08-20 | Step 6.1 follow-up: bake EasyOCR English weights into the image; prescan timeout fails the job instead of hanging |
 | 2026-08-20 | Step 6.1 complete: bake `numpy>=1.26,<2` and `trackers==2.6.0 --no-deps` into the image; compose starts uvicorn only |

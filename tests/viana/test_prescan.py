@@ -9,6 +9,7 @@ from viana.domain.geometry import scale_line
 from viana.io.profiles import CalibrationProfile, list_profiles, save_profile
 from viana.stages.lines import GEOMETRIC_CONFIDENCE, PROFILE_CONFIDENCE, propose_lines
 from viana.stages.ocr import (
+    OCR_BAND_SCALE,
     OCR_FALLBACK_SCALE,
     OCR_ROI_SCALE,
     parse_corner_osd_hits,
@@ -126,6 +127,61 @@ def test_parse_osd_hits_respects_min_confidence() -> None:
     assert mean == 0.9
 
 
+def test_parse_osd_hits_does_not_prefer_date_year_as_time() -> None:
+    """Corner allowlist can glue month+year; band clock with colons must win."""
+    parsed, _mean = parse_osd_hits(
+        [
+            ("29-07 2026 WE 0982713", 0.9),
+            ("Bangalorebypass_J2", 0.9),
+            ("29-07-2026 Wed 09:27:32", 0.9),
+        ],
+        min_confidence=0.6,
+    )
+    assert parsed.time == "09:27:32"
+    assert parsed.date == "29-07-2026"
+    assert parsed.location == "Bangalorebypass_J2"
+
+
+def test_parse_osd_hits_salvages_clock_appended_to_location() -> None:
+    """Date can parse while a spaced-colon clock is stuck on the location line."""
+    parsed, _mean = parse_osd_hits(
+        [("28-07-2026 Tue", 0.9), ("Bangalorebypassjz 06 :44:35", 0.9)],
+        min_confidence=0.6,
+    )
+    assert parsed.time == "06:44:35"
+    assert parsed.date == "28-07-2026"
+    assert parsed.location == "Bangalorebypassjz"
+
+
+def test_parse_osd_hits_prefers_barabanki_over_rararanki() -> None:
+    """Mixed-polarity location OCR can emit both a junk and a BANKI reading."""
+    parsed, _mean = parse_osd_hits(
+        [
+            ('19 10-2024 Sat 05:34"04', 0.9),
+            ("L3TORARARANKI", 0.8),
+            ("LZTBARABANKI", 0.8),
+        ],
+        min_confidence=0.6,
+    )
+    assert parsed.time == "05:34:04"
+    assert parsed.date == "19-10-2024"
+    assert parsed.location == "LZTBARABANKI"
+
+
+def test_crop_has_mixed_text_polarity_on_bicolor_osd() -> None:
+    """White-on-dark plus black-on-light strokes should trip the mixed-polarity gate."""
+    cv2 = __import__("pytest").importorskip("cv2")
+    np = __import__("pytest").importorskip("numpy")
+    from viana.stages.ocr import crop_has_mixed_text_polarity
+
+    crop = np.zeros((40, 160, 3), dtype=np.uint8)
+    crop[:, 80:] = 220
+    cv2.putText(crop, "AB", (8, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    cv2.putText(crop, "CD", (90, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+    assert crop_has_mixed_text_polarity(crop) is True
+    assert crop_has_mixed_text_polarity(np.zeros((40, 160, 3), dtype=np.uint8)) is False
+
+
 def test_parse_corner_osd_hits_splits_metadata_and_location() -> None:
     """Metadata and location ROIs are parsed independently."""
     parsed, mean = parse_corner_osd_hits(
@@ -208,6 +264,18 @@ def test_osd_band_score_is_high_on_striped_metadata_roi() -> None:
     assert osd_band_score(frame) > 20.0
 
 
+def test_osd_band_score_detects_bottom_left_osd() -> None:
+    """S21: OSD contrast in the bottom-left band is scored even if the top is blank."""
+    np = __import__("pytest").importorskip("numpy")
+    from viana.stages.prescan import osd_band_score
+
+    frame = np.zeros((240, 320, 3), dtype=np.uint8)
+    frame[:] = 40
+    frame[210:240, 0:150] = 20
+    frame[210:240, 0:150:4] = 255
+    assert osd_band_score(frame) > 20.0
+
+
 def test_sample_opening_frame_skips_dark_then_blank_osd(tmp_path: Path) -> None:
     """Opening scan waits for a bright frame with top-band OSD texture (G7/S08)."""
     cv2 = __import__("pytest").importorskip("cv2")
@@ -287,3 +355,105 @@ def test_parse_frame_corner_osd_retries_wide_roi_when_fast_path_misses() -> None
     assert parsed.location == "L11-BARABANKI"
     assert OCR_ROI_SCALE == 2.0
     assert OCR_FALLBACK_SCALE == 4.0
+    assert OCR_BAND_SCALE == 2.0
+
+
+def test_parse_frame_corner_osd_uses_bands_when_location_is_elsewhere() -> None:
+    """S21: missing location after a time/date hit skips 4× corners and scans bands."""
+
+    class LocationElsewhereReader:
+        def __init__(self) -> None:
+            self.shapes: list[tuple[int, int]] = []
+
+        def readtext(self, rgb: object, **kwargs: object) -> list[object]:
+            np = __import__("numpy")
+            height, width = np.asarray(rgb).shape[:2]
+            self.shapes.append((height, width))
+            if kwargs.get("allowlist"):
+                return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "xxx", 0.9]]
+            if self.shapes and len(self.shapes) == 1:
+                return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "18-10-2024 Fri 07 21 26", 0.9]]
+            return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "CAM-TOPCENTER", 0.9]]
+
+    np = __import__("pytest").importorskip("numpy")
+    frame = np.zeros((100, 200, 3), dtype=np.uint8)
+    reader = LocationElsewhereReader()
+    parsed, _mean = parse_frame_corner_osd(frame, reader, 0.6)
+    assert parsed.time == "07:21:26"
+    assert parsed.date == "18-10-2024"
+    assert parsed.location == "CAM-TOPCENTER"
+    assert (24, 464) not in reader.shapes
+    assert len(reader.shapes) == 4
+
+
+def test_parse_frame_corner_osd_layout_variant_bands() -> None:
+    """S21: timestamp bottom-left + location top-center are recovered from bands."""
+    np = __import__("pytest").importorskip("numpy")
+
+    class ColorBandReader:
+        def readtext(self, rgb: object, **kwargs: object) -> list[object]:
+            arr = np.asarray(rgb)
+            red_frac = float((arr[:, :, 0] > 200).mean()) if arr.size else 0.0
+            blue_frac = float((arr[:, :, 2] > 200).mean()) if arr.size else 0.0
+            if red_frac > 0.02:
+                return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "LITO-TOPCENTER", 0.92]]
+            if blue_frac > 0.02:
+                return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "18-10-2024 Fri 07 21 26", 0.91]]
+            return [[[[0, 0], [1, 0], [1, 1], [0, 1]], "xxx", 0.9]]
+
+    frame = np.zeros((360, 640, 3), dtype=np.uint8)
+    frame[8:40, 400:620] = (0, 0, 255)
+    frame[320:355, 20:300] = (255, 0, 0)
+    parsed, _mean = parse_frame_corner_osd(frame, ColorBandReader(), 0.6)
+    assert parsed.time == "07:21:26"
+    assert parsed.date == "18-10-2024"
+    assert parsed.location == "LITO-TOPCENTER"
+
+
+def _paint_layout_variant_frame(width: int = 640, height: int = 360) -> object:
+    cv2 = __import__("cv2")
+    np = __import__("numpy")
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        __import__("pytest").skip("Pillow is required to paint a readable OSD fixture")
+    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    try:
+        font = ImageFont.truetype(font_path, 32)
+    except OSError:
+        __import__("pytest").skip(f"OSD fixture font missing: {font_path}")
+    image = Image.new("RGB", (width, height), (30, 30, 30))
+    draw = ImageDraw.Draw(image)
+    draw.text((360, 8), "LITO-TOPCENTER", font=font, fill=(255, 255, 255))
+    draw.text((16, 300), "18-10-2024", font=font, fill=(255, 255, 255))
+    draw.text((16, 332), "07:21:26", font=font, fill=(255, 255, 255))
+    return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+
+def test_layout_variant_clip_easyocr_recovers_osd(tmp_path: Path) -> None:
+    """S21: EasyOCR on a clip with top-center location and bottom-left clock."""
+    pytest = __import__("pytest")
+    pytest.importorskip("easyocr")
+    cv2 = pytest.importorskip("cv2")
+    from viana.stages.ocr import CornerOsdReader
+
+    path = tmp_path / "osd_layout_variant.avi"
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (640, 360))
+    if not writer.isOpened():
+        pytest.skip("OpenCV VideoWriter MJPG unavailable")
+    try:
+        frame = _paint_layout_variant_frame()
+        for _ in range(8):
+            writer.write(frame)
+    finally:
+        writer.release()
+    assert path.is_file()
+    capture = cv2.VideoCapture(str(path))
+    ok, sampled = capture.read()
+    capture.release()
+    assert ok
+    parsed, _mean = CornerOsdReader(gpu=False).parse(sampled, 0.6)
+    assert parsed.time == "07:21:26"
+    assert parsed.date == "18-10-2024"
+    assert parsed.location is not None
+    assert "TOPCENTER" in parsed.location.replace(" ", "")

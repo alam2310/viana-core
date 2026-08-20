@@ -34,6 +34,7 @@ Mark each item ✅ in `TRACKER.md`. When all done or deferred, mark Step 6 ✅.
 
 | Date | Note |
 |------|------|
+| 2026-08-20 | Stabilization **S21 (F017)** — adaptive OSD OCR (bands, clock salvage, mixed-polarity crops); UI retest OK. |
 | 2026-08-20 | **6.1** follow-up — bake EasyOCR English CRAFT + `english_g2` at image build; `_run_prescan` marks `PRESCAN_FAILED` on `TimeoutExpired` instead of leaving the job running. |
 | 2026-08-20 | **6.1** complete — Dockerfile re-pins `numpy>=1.26,<2` and installs `trackers==2.6.0 --no-deps` after the editable package; `docker-compose.yml` starts uvicorn only. Rebuild: `docker compose build`. |
 | 2026-08-19 | Renumbered from Step 5; six-step plan |

@@ -33,6 +33,43 @@ def test_normalize_ocr_date_repairs_spaces_and_year() -> None:
     assert extract_ocr_time(["18-10 2074 Fri 07 21 26"]) == "07:21:26"
     assert extract_ocr_time(["18-10 2074 Fri 02 21.26"]) == "02:21:26"
     assert extract_ocr_time(["18-10 2074 Fri 02 2125"]) == "02:21:25"
+    assert extract_ocr_time(["18-10-2024 07.21.26"]) == "07:21:26"
+    assert extract_ocr_time(["Bangalorebypassjz 06 :44:35"]) == "06:44:35"
+    assert extract_ocr_time(["29-07 2026 WE 0982713"]) is None
+    assert extract_ocr_time(['19 10-2024 Sat 05:34"04']) == "05:34:04"
+    assert normalize_ocr_date("19-10-7074") == "19-10-2024"
+
+
+def test_parse_ocr_texts_night_quote_clock_and_7074_year() -> None:
+    """hiv00037: colon-as-quote clock and 2→7 year must still parse."""
+    parsed = parse_ocr_texts(
+        ['19 10-2024 Sat 05:34"04', "19-10-7074 Sat 05.34704", "L3TORARARANKI"]
+    )
+    assert parsed.time == "05:34:04"
+    assert parsed.date == "19-10-2024"
+    assert parsed.location == "L3TORARARANKI"
+
+
+def test_date_year_is_not_used_as_clock() -> None:
+    """hiv00058: '29-07 2026' must not become 07:20:26 and hide 09:27:32."""
+    parsed = parse_ocr_texts(
+        [
+            "29-07 2026 WE 0982713",
+            "29-07-2026 Wed 09:27:32",
+            "Bangalorebypass_J2",
+        ]
+    )
+    assert parsed.time == "09:27:32"
+    assert parsed.date == "29-07-2026"
+    assert parsed.location == "Bangalorebypass_J2"
+
+
+def test_parse_ocr_texts_splits_spaced_colon_clock_from_location() -> None:
+    """S21 shimoga: EasyOCR often inserts a space before the first clock colon."""
+    parsed = parse_ocr_texts(["28-07-2026 Tue", "Bangalorebypassjz 06 :44:35"])
+    assert parsed.time == "06:44:35"
+    assert parsed.date == "28-07-2026"
+    assert parsed.location == "Bangalorebypassjz"
 
 
 def test_user_fallback_when_no_ocr() -> None:

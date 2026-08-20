@@ -211,6 +211,7 @@ def run_moving_count(
     if resume and checkpoint is None:
         raise MissingCheckpointError(f"Checkpoint not found: {ckpt_path}")
 
+    supplied_frames = frames is not None
     try:
         meta, frame_iter = (
             frames if frames is not None else _default_frames(job.source_video_path, start_index)
@@ -342,6 +343,7 @@ def run_moving_count(
                     elapsed = max(time.perf_counter() - t0, 1e-6)
                     fps_val = round(processed / elapsed, 2)
                     remaining = max(0, total_frames - processed)
+                    # Wall-clock ETA: remaining *frames* / processing fps (not video fps).
                     eta_sec = round(remaining / fps_val, 1) if fps_val > 0 else None
                     emit(
                         TelemetryMessage(
@@ -368,7 +370,12 @@ def run_moving_count(
                         events_rows=events_rows,
                     )
             if last_index >= 0:
-                total_frames = max(total_frames, last_index + 1)
+                observed = last_index + 1
+                if supplied_frames:
+                    total_frames = max(total_frames, observed)
+                else:
+                    # Decoder EOF is the true length when MPEG-PS headers inflate nb_frames.
+                    total_frames = observed
             processed = max(processed, last_index + 1)
             _save_progress_checkpoint(
                 paths,

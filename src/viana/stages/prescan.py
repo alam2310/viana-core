@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from viana.config.defaults import load_engine_defaults
 from viana.config.job import PROJECT_ID_PATTERN
+from viana.io.media import apply_container_timing
 from viana.io.paths import prescan_dir
 from viana.io.profiles import CalibrationProfile, list_profiles
 from viana.stages.lines import ProposedLines, propose_lines
@@ -150,9 +151,12 @@ def _video_meta_from_capture(capture: Any, source: Path) -> VideoMeta:
 
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = float(capture.get(cv2.CAP_PROP_FPS)) or 25.0
+    fps = float(capture.get(cv2.CAP_PROP_FPS)) or 15.0
     frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     duration_sec = frame_count / fps if fps > 0 and frame_count > 0 else 0.0
+    fps, frame_count, duration_sec = apply_container_timing(
+        source, fps=fps, frame_count=frame_count, duration_sec=duration_sec
+    )
     if width < 1 or height < 1:
         raise ValueError(f"Invalid frame size {width}x{height} in {source}")
     return VideoMeta(

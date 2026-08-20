@@ -264,7 +264,7 @@ _Work items split: **Step 2** = contracts + intake/confirm APIs; **Step 3** = en
 | G12 auto-aggregate | Step 3 implements; orchestrator hooks aggregate on `COMPLETED` |
 | G1 proposed vs confirmed | Step 2 — persist both on job record |
 | Empty 15-min copy | _"Start time was not set — 15-minute report is unavailable."_ |
-| ETA formula | `(total_frames - current_frame) / processing_fps` when fps > 0 |
+| ETA formula | `(total_frames - current_frame) / processing_fps` when fps > 0 (`processing_fps` = wall-clock throughput, not source fps). Video length is `video_duration_sec` from prescan, not ETA. |
 
 ---
 

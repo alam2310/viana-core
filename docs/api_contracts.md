@@ -150,8 +150,12 @@ Response: full `JobStatus` with `confirmed_metadata` and `confirmed_task_paramet
 | Field | When set | Notes |
 |-------|----------|--------|
 | `created_at` | Intake or `POST /jobs` | Required ISO-8601 UTC (`…Z`). Sort key for submitted time. |
-| `video_duration_sec` | Prescan success | Copied from prescan `video_meta.duration_sec`. `null` until then. |
+| `video_duration_sec` | Prescan success | Copied from prescan `video_meta.duration_sec` (**seconds of source playback**, not frames). Engine corrects MPEG-PS/DVR headers via ffprobe when implied bitrate is implausible (`src/viana/io/media.py`). `null` until prescan succeeds. |
 | `processing_duration_sec` | First `PROCESSING` | Live elapsed GPU wall-clock while running; frozen on `COMPLETED` / `FAILED` / `CANCELLED` / `PAUSED`. `null` before the GPU run starts. |
+| `progress.eta_sec` | `PROCESSING` telemetry | Wall-clock remaining: `(total_frames - current_frame) / processing_fps`. `processing_fps` is decoded frames per wall-clock second, **not** `video_meta.fps`. |
+
+| Method | Path | Description |
+|--------|------|-------------|
 | POST | `/jobs/{id}/resume` | Explicit resume from checkpoint |
 | POST | `/jobs/{id}/start-fresh` | Delete checkpoint, restart |
 | DELETE | `/jobs/{id}` | Cancel worker |

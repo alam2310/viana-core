@@ -16,6 +16,7 @@ export function formatSubmittedAt(iso: string | null | undefined): string {
   }
 }
 
+/** Format a duration that is already in **seconds** (not frames or ms). */
 export function formatVideoLengthHms(
   sec: number | null | undefined,
 ): string {

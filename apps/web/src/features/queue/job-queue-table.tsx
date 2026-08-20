@@ -43,6 +43,7 @@ function progressPct(job: JobStatusResponse): number | null {
 }
 
 function timeRemaining(job: JobStatusResponse): string {
+  // API `eta_sec` = (total_frames - current_frame) / processing_fps (seconds).
   if (job.status !== "PROCESSING" || job.progress?.eta_sec === undefined) {
     return "—";
   }

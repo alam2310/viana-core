@@ -708,7 +708,11 @@ class WorkerPool:
 
 
 def _compute_eta_sec(current: int, total: int, fps: float | None) -> float | None:
-    """Return remaining seconds using DISCOVERY §8 ETA formula."""
+    """Wall-clock ETA: ``(total_frames - current_frame) / processing_fps``.
+
+    ``fps`` is engine *processing* throughput (frames per wall-clock second),
+    never source ``video_meta.fps``. Units: frames / (frames/sec) = seconds.
+    """
     if fps is None or fps <= 0:
         return None
     remaining = max(0, total - current)

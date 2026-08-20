@@ -97,6 +97,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S13 | F010 — streamable growing `_processed.mp4` during processing | B/C | fixed |
 | S14 | F011 — emit `MOVING_EVENT` without `telemetry_detail` gate + timestamp | C | fixed |
 | S15 | F012 — 15-min CSV: add `date`, HH:MM window columns | B/D | fixed |
+| S19 | F016 — queue video length / ETA inflation + MPEG-PS probe | A/B/C | fixed |
 | S20 | F010 follow-on — browser live monitor play of in-progress MP4 (H.264) | A/B | **parked** → S24 |
 | S24 | Park live-monitor partial MP4 UI; crossings immediate | A | parked |
 | ~~S09~~ | F006 — intake path validation | B | **deferred → 6.7** |
@@ -133,6 +134,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-20 | S19 (F016) fixed — MPEG-PS/DVR header duration corrected via ffprobe packet count; queue video length/ETA units documented |
 | 2026-08-20 | Step 6.1 follow-up: bake EasyOCR English weights into the image; prescan timeout fails the job instead of hanging |
 | 2026-08-20 | Step 6.1 complete: bake `numpy>=1.26,<2` and `trackers==2.6.0 --no-deps` into the image; compose starts uvicorn only |
 | 2026-08-19 | S10 moved to in_progress (partial): dominant-slope/parallel-band fallback refinement landed with tests, but sample-view placement still needs tuning before close |

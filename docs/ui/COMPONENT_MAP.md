@@ -62,3 +62,13 @@
 | `viana.telemetry_detail` | Default for next prescan confirm |
 
 Queue **Submitted**, **Video length**, and **Run time** use API `created_at`, `video_duration_sec`, and `processing_duration_sec` (not localStorage).
+
+**Queue timing units (S19 / F016):**
+
+| Column | Source | Unit |
+|--------|--------|------|
+| Video length | `JobStatus.video_duration_sec` | seconds → `HH:MM:SS` |
+| Run time | `JobStatus.processing_duration_sec` | seconds → `HH:MM:SS` |
+| Time remaining | `progress.eta_sec` | seconds; formula `(total_frames − current_frame) / processing_fps` |
+
+Do not derive video length from `total_frames / processing_fps` (that is GPU ETA, not clip length).

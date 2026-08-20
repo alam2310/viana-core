@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+from viana.io.media import apply_container_timing
 from viana.stages.prescan import VideoMeta
 
 
@@ -35,9 +36,12 @@ def iter_cv2_frames(
         raise ValueError(f"Could not open video: {source}")
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = float(capture.get(cv2.CAP_PROP_FPS)) or 25.0
+    fps = float(capture.get(cv2.CAP_PROP_FPS)) or 15.0
     frame_count = max(int(capture.get(cv2.CAP_PROP_FRAME_COUNT)), 0)
     duration_sec = frame_count / fps if fps > 0 and frame_count > 0 else 0.0
+    fps, frame_count, duration_sec = apply_container_timing(
+        source, fps=fps, frame_count=frame_count, duration_sec=duration_sec
+    )
     if width < 1 or height < 1:
         capture.release()
         raise ValueError(f"Invalid frame size {width}x{height} in {source}")

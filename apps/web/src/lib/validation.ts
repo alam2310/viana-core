@@ -29,6 +29,7 @@ export function validateMetadataFields(fields: {
   return issues;
 }
 
+/** Format wall-clock ETA already in seconds (`progress.eta_sec`). */
 export function formatEta(seconds: number | undefined): string {
   if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) {
     return "—";

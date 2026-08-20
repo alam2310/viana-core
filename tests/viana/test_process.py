@@ -109,6 +109,28 @@ def test_run_writes_events_checkpoint_and_run_result(tmp_path: Path) -> None:
     assert "MOVING_EVENT" in telemetry
 
 
+def test_supplied_frames_do_not_shrink_inflated_total(tmp_path: Path) -> None:
+    """Injected iterators (tests) keep header ``total_frames``; live decode may shrink."""
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"")
+    job = _job(tmp_path, video)
+    inflated = VideoMeta(
+        width=200, height=200, fps=25.0, duration_sec=40.0, frame_count=1000
+    )
+    run_moving_count(
+        job,
+        resume=False,
+        frames=(inflated, _frames()),
+        detector=_detect,
+        renderer=RecordingRenderer(),
+        emit=lambda _msg: None,
+        ocr_reader=lambda _frame: [],
+    )
+    checkpoint = load_checkpoint(artifact_paths(tmp_path, "clip")["checkpoint"])
+    assert checkpoint.total_frames == 1000
+    assert checkpoint.current_frame == 3
+
+
 def test_moving_event_emitted_without_telemetry_detail(tmp_path: Path) -> None:
     """Crossing events are emitted even when telemetry_detail is false (S14)."""
     video = tmp_path / "clip.mp4"

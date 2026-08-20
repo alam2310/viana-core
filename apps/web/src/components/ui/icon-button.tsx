@@ -37,7 +37,7 @@ export function RoundIconButton({
       aria-label={label}
       disabled={disabled}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40",
+        "inline-flex shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border",
         size === "sm" ? "h-8 w-8" : "h-9 w-9",
         VARIANT_CLASS[variant],
       )}

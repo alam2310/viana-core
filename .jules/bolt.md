@@ -1,0 +1,1 @@
+## 2026-08-20 - [React useMemo for array sorts] **Learning:** Sorting large arrays inside frequently re-rendering components blocks the main thread. In `JobQueueTable`, jobs are sorted on every render which happens on every telemetry event. **Action:** Memoize array sorts using `useMemo` with dependency on the array itself.

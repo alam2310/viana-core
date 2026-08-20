@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import type { JobStatusResponse } from "@viana/contracts";
 
 import {
@@ -89,7 +91,8 @@ export function JobQueueTable({
   onStop: (jobId: string) => void;
   onOpenOutput: (job: JobStatusResponse) => void;
 }) {
-  const sorted = sortJobsBySubmitted(jobs);
+  // ⚡ Bolt: Memoize expensive array sort to prevent blocking main thread on frequent telemetry re-renders
+  const sorted = useMemo(() => sortJobsBySubmitted(jobs), [jobs]);
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">

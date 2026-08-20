@@ -76,9 +76,8 @@ RUN pip3 install --no-cache-dir --default-timeout=100 \
     supervision \
     easyocr
 
-# [TRACKER FIX] Install pre-built lapx wheel to prevent C++ numpy build failures
-RUN pip3 install --no-cache-dir lapx>=0.5.5
-RUN pip3 install --no-cache-dir trackers
+# ByteTrack: lapx wheel first; pin NumPy <2 then trackers --no-deps (OpenCV 4.10).
+RUN pip3 install --no-cache-dir "lapx>=0.5.5"
 
 # 5. Copy Compiled OpenCV Artifacts
 COPY --from=builder /usr/local/lib /usr/local/lib
@@ -99,5 +98,13 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 COPY configs ./configs
 RUN pip3 install --no-cache-dir -e ".[dev]"
+
+# Re-pin after the editable install so Ultralytics/trackers cannot pull NumPy 2.
+RUN pip3 install --no-cache-dir --force-reinstall "numpy>=1.26.0,<2" \
+    && pip3 install --no-cache-dir "trackers==2.6.0" --no-deps
+
+# Prefetch EasyOCR English detector+recognizer (craft + english_g2).
+# A rebuilt image has an empty /root/.EasyOCR; first prescan otherwise blocks on GitHub.
+RUN python3 -c "import easyocr; easyocr.Reader(['en'], gpu=False, verbose=True)"
 
 CMD ["/bin/bash"]

@@ -9,10 +9,7 @@ docker compose build
 docker compose up -d
 docker compose exec dev bash
 
-# Inside container (live mount or fresh image)
-pip install -e ".[dev]"
-pip install -q "numpy>=1.26.0,<2"
-pip install -q "trackers==2.6.0" --no-deps
+# Inside container (live mount). Image already has numpy<2 + trackers --no-deps.
 make api-dev            # FastAPI on :8000 (compose already runs uvicorn)
 python -m viana --help
 ```

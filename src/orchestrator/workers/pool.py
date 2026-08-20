@@ -8,7 +8,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from subprocess import Popen  # nosec B404
+from subprocess import Popen, TimeoutExpired  # nosec B404
 from typing import Any, Literal
 
 from orchestrator.cli import run_viana, start_viana_process
@@ -534,6 +534,9 @@ class WorkerPool:
             _apply_prescan_payload(job, payload)
             job.status = "AWAITING_REVIEW"
             job.error_message = None
+        except TimeoutExpired:
+            job.status = "PRESCAN_FAILED"
+            job.error_message = "prescan timed out"
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             job.status = "PRESCAN_FAILED"
             job.error_message = str(exc)

@@ -1,7 +1,7 @@
 # Step tracker (living)
 
-**Last updated:** 2026-08-19  
-**Current Step:** **5** — E2E verification (`_15min.csv`)  
+**Last updated:** 2026-08-20  
+**Current Step:** **6** — Hardening backlog  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
 **Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)
 
@@ -18,7 +18,7 @@
 | **3** | Engine prescan & orchestrator | ✅ Complete | Engine + workers | 2026-08-19 | 2026-08-19 |
 | **4** | UI implementation | ✅ Complete | UI v2 | 2026-08-19 | 2026-08-19 |
 | **5** | E2E verification | ✅ Complete | UI v2 or QA | 2026-08-19 | 2026-08-19 |
-| **6** | Hardening backlog | ⬜ Not started | Per item | — | — |
+| **6** | Hardening backlog | 🔄 In progress | Per item | 2026-08-20 | — |
 
 **Status legend:** ⬜ Not started · 🔄 In progress · ✅ Complete · ⏸ Skipped · ❌ Cancelled
 
@@ -118,7 +118,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Item | Work | Status |
 |------|------|--------|
-| 6.1 | Docker image bake | ⬜ |
+| 6.1 | Docker image bake (`trackers==2.6.0 --no-deps` + `numpy<2`) | ✅ |
 | 6.2 | Pause / resume UX | ⬜ |
 | 6.3 | Faster cancel | ⬜ |
 | 6.4 | Playwright | ⬜ |
@@ -132,6 +132,8 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-20 | Step 6.1 follow-up: bake EasyOCR English weights into the image; prescan timeout fails the job instead of hanging |
+| 2026-08-20 | Step 6.1 complete: bake `numpy>=1.26,<2` and `trackers==2.6.0 --no-deps` into the image; compose starts uvicorn only |
 | 2026-08-19 | S10 moved to in_progress (partial): dominant-slope/parallel-band fallback refinement landed with tests, but sample-view placement still needs tuning before close |
 | 2026-08-19 | S10 fixed — frame-guided prescan line proposal now uses deterministic edge/line cues when no profile matches; bounds-safe fallback retained; tests added for confidence uplift, determinism, and invalid-frame fallback |
 | 2026-08-19 | S15 fixed — `_15min.csv` contract/output aligned (`date` + `HH:MM` windows), parser grouped by `date+window+class`, tests updated |

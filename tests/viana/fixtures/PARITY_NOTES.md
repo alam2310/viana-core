@@ -165,4 +165,4 @@ Prescan / UI proposed lines on `parity_golden` (HTTP/UI-equivalent run):
 
 - **ffmpeg:** present; processed MP4 is **HEVC NVENC cq 42** (fallback libx265 / libx264).
 - **ultralytics + CUDA:** live YOLO on `cuda:0`.
-- **numpy:** pin `numpy>=1.26,<2` after install (`docker-compose.yml`). `trackers==2.6.0` is installed `--no-deps` so ByteTrack works without NumPy 2 (OpenCV 4.10 breaks on NumPy 2).
+- **numpy:** pin `numpy>=1.26,<2` in the image (Step 6.1). `trackers==2.6.0` is installed `--no-deps` so ByteTrack works without NumPy 2 (OpenCV 4.10 breaks on NumPy 2).

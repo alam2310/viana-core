@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ⬜ Not started — see [`TRACKER.md`](TRACKER.md) |
+| **Status** | 🔄 In progress — see [`TRACKER.md`](TRACKER.md) |
 | **Chat** | Per item |
 | **Blocked by** | Steps 1–5 (recommended) |
 
@@ -14,7 +14,7 @@
 
 | Item | Work | Chat |
 |------|------|------|
-| **6.1** | Bake `trackers` + `numpy<2` in Docker image | API / DevOps |
+| **6.1** | Bake `trackers` + `numpy<2` in Docker image | ✅ API / DevOps |
 | **6.2** | Pause / resume / PAUSED UX | UI (+ API) |
 | **6.3** | Faster DELETE → CANCELLED | API |
 | **6.4** | Browser / Playwright click-through | UI / QA |
@@ -34,6 +34,8 @@ Mark each item ✅ in `TRACKER.md`. When all done or deferred, mark Step 6 ✅.
 
 | Date | Note |
 |------|------|
+| 2026-08-20 | **6.1** follow-up — bake EasyOCR English CRAFT + `english_g2` at image build; `_run_prescan` marks `PRESCAN_FAILED` on `TimeoutExpired` instead of leaving the job running. |
+| 2026-08-20 | **6.1** complete — Dockerfile re-pins `numpy>=1.26,<2` and installs `trackers==2.6.0 --no-deps` after the editable package; `docker-compose.yml` starts uvicorn only. Rebuild: `docker compose build`. |
 | 2026-08-19 | Renumbered from Step 5; six-step plan |
 | 2026-08-19 | **6.7** absorbs stabilization **S09** (F006 API intake path validation) |
 | 2026-08-19 | **6.7** from Step 1 discovery (G21) |

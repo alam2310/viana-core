@@ -197,12 +197,13 @@ Long jobs: see [`TMUX_README.md`](TMUX_README.md).
 
 | Symptom | Cause | Fix |
 |---------|--------|-----|
-| OpenCV import error after pip install | NumPy 2.x pulled in | `pip install "numpy>=1.26,<2"` |
-| Tracker install upgrades NumPy | `trackers` dependency | `pip install trackers==2.6.0 --no-deps` |
+| OpenCV import error after extra pip install | NumPy 2.x pulled in | Image already pins `numpy>=1.26,<2`; reinstall that pin if you add packages |
+| Tracker install upgrades NumPy | `trackers` deps | Image installs `trackers==2.6.0 --no-deps`; do not `pip install trackers` with deps |
+| Compose start still pip-installs | Stale image predating Step 6.1 | `docker compose build` then `up` |
 | No GPU in container | Toolkit not configured | Repeat Phase 1.3 |
 | Huge processed MP4 | Wrong encoder | v2 uses HEVC NVENC cq 42 (see `src/viana/stages/render.py`) |
 | Empty `_15min.csv` | No wall-clock on job | Set OCR / user start via prescan (corner ROI OCR in prescan) |
-| First prescan slow | EasyOCR model download on cold start | Models cached after first run; see Phase 4 verify below |
+| First prescan slow or stuck at PRESCAN_RUNNING | EasyOCR weights missing after image rebuild; `english_g2` download from GitHub can stall | Image bakes CRAFT + `english_g2` at build time; cached under `/root/.EasyOCR/model` |
 | Build fails on CUDA 13 / Ubuntu 24 base | Breaking toolchain | Stay on CUDA **12.4** + Ubuntu **22.04** in `Dockerfile` |
 | OpenCV `NVCUVID` link errors | Deprecated in CUDA 12 | Dockerfile builds with NVCUVID **off**; use FFmpeg for video I/O |
 
@@ -213,6 +214,8 @@ Long jobs: see [`TMUX_README.md`](TMUX_README.md).
 1. **Builder stage:** compile OpenCV 4.10 + contrib with CUDA, cuDNN, arch 8.6 (RTX 3060).  
 2. **Runtime stage:** CUDA 12.4 runtime, FFmpeg, PyTorch cu124, Ultralytics, EasyOCR.  
 3. **Symlink:** `/root/Work/ViAna` → `/app/ViAna` for older dataset paths.  
-4. **Editable install:** `pip install -e ".[dev]"` for `viana` and `orchestrator`.
+4. **Editable install:** `pip install -e ".[dev]"` for `viana` and `orchestrator`.  
+5. **NumPy / ByteTrack:** after the editable install, re-pin `numpy>=1.26,<2` and `trackers==2.6.0 --no-deps` (Step 6.1). Compose starts uvicorn only.  
+6. **EasyOCR weights:** English CRAFT + `english_g2` downloaded at build so first prescan does not hit GitHub.
 
 Full build recipe: [`../../Dockerfile`](../../Dockerfile).

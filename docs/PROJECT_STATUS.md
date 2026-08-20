@@ -76,6 +76,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-20 | **S24:** Live Monitor parks in-progress `_processed.mp4` preview (code retained, not mounted); Live Crossings show WS events immediately |
 | 2026-08-20 | Step 6.1 follow-up: bake EasyOCR English weights (CRAFT + `english_g2`) into the image so first prescan after rebuild does not stall on GitHub |
 | 2026-08-20 | Step 6.1: bake `numpy>=1.26,<2` and `trackers==2.6.0 --no-deps` into the Docker image; compose no longer pip-installs on start |
 | 2026-08-20 | Stabilization S20 fixed: live monitor blank was Chromium rejecting HEVC `_processed.mp4` (Range/proxy OK); encoder prefers H.264 for browser; S13 fragmented MP4 retained |

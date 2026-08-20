@@ -14,7 +14,7 @@ The **container** runs FastAPI on port `8000` (see `docker-compose.yml`).
 |-------|----------|----------|
 | `GET /api/proxy/preview?path=` | Orchestrator prescan JPEG | Calibration canvas initial frame |
 | `GET /api/proxy/source?path=` | `GET /artifacts/{id}/source.mp4` (forwards `Range`) | Prescan review frame scrub |
-| `GET /api/proxy/partial?path=` | `GET /artifacts/{id}/partial.mp4` (forwards `Range`; `Accept-Ranges` / `Content-Disposition: inline`) | Live monitor processed MP4 |
+| `GET /api/proxy/partial?path=` | `GET /artifacts/{id}/partial.mp4` (forwards `Range`; `Accept-Ranges` / `Content-Disposition: inline`) | **PARKED in UI** — endpoint remains; Live Monitor does not mount the player (S24) |
 
 ## 2. Job Ownership
 

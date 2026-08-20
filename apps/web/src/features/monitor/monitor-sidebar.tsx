@@ -4,13 +4,22 @@ import type { JobStatusResponse, TelemetryMessage } from "@viana/contracts";
 
 import { Button } from "@/components/ui/button";
 import { CrossingsTable } from "@/features/telemetry/crossings-table";
-import { LiveProcessedVideo } from "@/features/monitor/live-processed-video";
 import {
   crossingsFromTelemetry,
   formatProgressLine,
   progressFromTelemetry,
 } from "@/features/telemetry/telemetry-formatters";
 import { videoStem } from "@/lib/geometry";
+
+/*
+ * PARKED (2026-08-20): Live processed-MP4 preview is disabled in this view.
+ * Do not import or mount `LiveProcessedVideo` / `crossing-media-sync` until
+ * that work is un-parked — see docs/steps/STABILIZATION_BACKLOG.md (S20 / S24)
+ * and file headers on:
+ *   - apps/web/src/features/monitor/live-processed-video.tsx
+ *   - apps/web/src/features/monitor/crossing-media-sync.ts
+ * Live Crossings render WS telemetry immediately (no UI delay / frame gate).
+ */
 
 export function MonitorSidebar({
   job,
@@ -22,14 +31,11 @@ export function MonitorSidebar({
   onClose: () => void;
 }) {
   const progress = progressFromTelemetry(messages, job.job_id);
-  const fps = job.progress?.processing_fps ?? progress?.fps;
   const meta = job.confirmed_metadata ?? job.proposed_metadata;
-  const crossings = crossingsFromTelemetry(messages, job.job_id, fps, {
+  const crossings = crossingsFromTelemetry(messages, job.job_id, undefined, {
     startTime: meta?.user_start_time,
     startDate: meta?.user_start_date,
   });
-  const refreshKey =
-    progress?.current ?? job.progress?.current_frame ?? 0;
 
   return (
     <aside className="flex h-full flex-col rounded-lg border border-border bg-card">
@@ -40,20 +46,13 @@ export function MonitorSidebar({
             {videoStem(job.source_video_path)}
           </p>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={onClose}
-        >
+        <Button type="button" size="sm" variant="ghost" onClick={onClose}>
           Close
         </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <LiveProcessedVideo jobId={job.job_id} refreshKey={refreshKey} />
-
-        <p className="mt-3 text-sm font-medium">
+        <p className="text-sm font-medium">
           {progress
             ? formatProgressLine(progress)
             : job.progress
@@ -61,7 +60,7 @@ export function MonitorSidebar({
               : "Waiting for progress…"}
         </p>
 
-        <details className="mt-4 rounded border border-border">
+        <details className="mt-4 rounded border border-border" open>
           <summary className="cursor-pointer px-3 py-1.5 text-xs font-semibold tracking-wide text-muted">
             Live Crossings ({crossings.length})
           </summary>

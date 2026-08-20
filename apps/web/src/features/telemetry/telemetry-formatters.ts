@@ -89,6 +89,12 @@ export interface CrossingRow {
   direction: string;
   arrow: string;
   trackId: string;
+  /** Media timeline position from MOVING_EVENT `video_pts_ms` when present. */
+  videoPtsMs?: number;
+  /** From MOVING_EVENT `frame_index` — fallback sync key with `fps`. */
+  frameIndex?: number;
+  /** From MOVING_EVENT `fps` (or job hint) — pairs with `frameIndex`. */
+  fps?: number;
 }
 
 function directionArrow(direction: string): string {
@@ -266,6 +272,9 @@ export function crossingsFromTelemetry(
       direction,
       arrow: directionArrow(rawDirection),
       trackId: typeof data.track_id === "number" ? String(data.track_id) : "—",
+      videoPtsMs,
+      frameIndex: frame,
+      fps: typeof fps === "number" && fps > 0 ? fps : undefined,
     });
   }
   return rows.slice(-limit);

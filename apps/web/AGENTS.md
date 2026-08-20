@@ -93,6 +93,10 @@ Legacy Phase 8 localStorage draft flow replaced by Step 4 API-driven queue. See 
 
 **Post-v0.1 UI work:** Step 4 — stabilization active. Log defects in `docs/steps/STABILIZATION_BACKLOG.md` per `STABILIZATION.md`. Step 5 blocked until blockers clear.
 
+### Parked: live-monitor partial MP4 preview (S20 / S24)
+
+Do **not** mount `features/monitor/live-processed-video.tsx` or wire `crossing-media-sync.ts` into the Live Monitor until explicitly un-parked. Live Monitor shows progress + **Live Crossings** only (WS events immediately, no UI delay). See `docs/steps/STABILIZATION_BACKLOG.md` S24.
+
 ---
 
 ## 8. Verification

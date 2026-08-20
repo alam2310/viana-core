@@ -43,10 +43,11 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S17** | F014 | A | no | — | Remove duplicate `Recent crossing` table from job details widget | fixed |
 | **S18** | F015 | A/C | no | S14 | Normalize live monitor crossing title + `HH:MM:SS` actual-time formatter | fixed |
 | **S19** | F016 | A/B/C | no | S12 | Fix queue video length / ETA inflation and validate MP4 codec metadata in container | open |
-| **S20** | F010 | A/B | no | S13 | UI cannot render in-progress processed MP4 even when file is playable natively | fixed |
+| **S20** | F010 | A/B | no | S13 | UI cannot render in-progress processed MP4 even when file is playable natively | **parked** (see S24) |
 | **S21** | F017 | C | no | — | Prescan OCR misses time/location when OSD text appears in alternate screen regions | open |
 | **S22** | F018 | B/C | no | — | Intake/prescan triggers `[Errno 24] Too many open files`, followed by API 502 in UI refresh | open |
 | **S23** | F019 | C | no | — | Processing throughput regression: end-to-end run is much slower than earlier baseline | open |
+| **S24** | F010 | A | no | S20 | Park live-monitor partial MP4 preview; crossings immediate (no delay) | parked |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
@@ -75,13 +76,14 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S17** | 1. Open job details widget 2. Open live monitor for same job | **Expected:** crossings are shown in one canonical place (live monitor `Live Crossings` view), avoiding duplicate UI sections. **Actual (before):** job details also showed `Recent crossings`, duplicating information and adding noise. **After:** removed the `Recent crossings` section from job details; live monitor remains the canonical crossings surface. | `apps/web/src/features/telemetry/job-details-panel.tsx` | uncommitted | UI smoke check: job details widget |
 | **S18** | 1. Open live monitor while crossings stream 2. Inspect section header + crossing time column | **Expected:** title follows title case (`Live Crossings`) and displayed time is actual identified event time formatted strictly as `HH:MM:SS`. **Actual (before):** title/time formatting was inconsistent. **After:** normalized title usage to `Live Crossings`, constrained crossing column label to `Time (HH:MM:SS)`, and tightened timestamp formatter to return `HH:MM:SS` from canonical event timestamps (with bounded fallback behavior). | `apps/web/src/features/monitor/monitor-sidebar.tsx`, `apps/web/src/features/telemetry/telemetry-panel.tsx`, `apps/web/src/features/telemetry/crossings-table.tsx`, `apps/web/src/features/telemetry/telemetry-formatters.ts` | uncommitted | UI smoke checks: monitor dialog + job details widget |
 | **S19** | 1. Queue a known long clip (~3h) 2. Observe Job Queue `Video length` and `Time remaining` | **Expected:** video length and ETA are in the right order of magnitude (3h clip should not show 20h+ remaining without evidence). **Actual:** ETA/video-length logic appears inflated/incorrect for long MP4 inputs. Also need to confirm container can read MP4 duration/properties reliably for this codec profile. | Lane A/B/C: audit ETA formula and units in `apps/web/` + API status fields (`video_duration_sec`, `processing_duration_sec`, fps/progress source). Validate media probe path in container (OpenCV/ffprobe/codec support) and fix image/runtime setup if metadata extraction is wrong for MP4 variants. | — | Step 4 UI chat |
-| **S20** | 1. Start a job and wait for `_processed.mp4` to grow 2. Verify file plays via Ubuntu native player 3. Open same artifact in live monitor/UI | **Expected:** if file is already stream-playable on disk, the UI player should render it while processing. **Actual (before):** native apps play in-progress file; browser/UI fails. **Root cause:** Range/proxy headers were fine (`200`/`206`, `Accept-Ranges: bytes`, `video/mp4`, fragmented `ftyp+moov+moof`); Chromium cannot decode **HEVC/hev1** (`canPlayType` empty → `MEDIA_ELEMENT_ERROR: Format error`) while Totem/VLC can. API also sent `Content-Disposition: attachment`. **After:** encoder prefers `h264_nvenc`→`libx264` (HEVC remains fallback); keep S13 frag movflags; artifact + proxy serve `inline` + `no-store`; live monitor surfaces decode errors. | `src/viana/stages/render.py`, `src/orchestrator/routes/artifacts.py`, `apps/web/src/app/api/proxy/{partial,source}/route.ts`, `live-processed-video.tsx`, tests | `2e56532` | **Repro matrix:** (A) native player on disk HEVC ✅; (B) Chrome `<video>` on same HEVC via `/api/proxy/partial` ❌ code=4; (C) Chrome on fragmented H.264/`avc1` with same movflags ✅ `loadedmetadata`; (D) API/proxy Range `bytes=0-1` → 206 + `Content-Range`. Verify: rebuild/restart API → new PROCESSING job → `ffprobe` shows `h264`/`avc1` → live monitor plays. |
+| **S20** | Growing `_processed.mp4` in live monitor browser player | **Expected:** stable live preview synced with crossings. **Actual:** H.264 encode fixed decode, but live-edge/seek UX remained unstable (blackouts, Range/FD storms). **Parked 2026-08-20 → S24** (UI unmounted; code retained). | `live-processed-video.tsx`, `crossing-media-sync.ts` (unused), artifact/proxy H.264 path | `2e56532` + later UI; **parked** | Do not remount player without S24 revisit |
 | **S21** | 1. Run prescan on a video where OSD layout differs (location at top-center, timestamp at bottom-left) 2. Inspect `proposed_metadata` | **Expected:** prescan extracts time/date/location despite changed on-screen text positions. **Actual:** current corner-ROI logic misses fields when OSD is not in assumed regions. | Lane C (`src/viana/stages/ocr.py`, `prescan.py`): extend OCR region strategy beyond fixed corners (adaptive multi-region scan / fallback full-frame text pass), preserve confidence handling, and avoid regressions on existing clips. | — | Step 4 UI chat |
 | **S22** | 1. Select/add two videos to intake job 2. Observe prescan/job processing in container 3. Repeat with one file after failure | **Expected:** intake and prescan work repeatedly without process/file descriptor exhaustion. **Actual:** `[Errno 24] Too many open files`; afterwards UI refresh hits API 502 (`fetch failed`) until container restart. | Lane B/C: investigate FD leaks in orchestrator workers and engine prescan/process paths (open files, pipes, VideoCapture/ffmpeg handles, subprocess stdio). Add runtime diagnostics (`lsof`/fd counts) and ensure cleanup on success/failure/cancel. Confirm Next.js proxy 502 is downstream symptom, not root cause. | — | Step 4 UI chat |
 | **S23** | 1. Run the same clip/config used previously for benchmark 2. Compare time-to-COMPLETED and average processing FPS vs earlier runs | **Expected:** throughput should be within an acceptable range of prior baseline. **Actual:** processing now takes significantly longer than before (user-observed regression). | Lane C: capture before/after metrics (wall-clock, avg FPS, GPU utilization), identify regressions in detect/track/render/telemetry path, and isolate whether slowdown is model/runtime/container/config-related. Add reproducible benchmark command and clip in notes. | — | Step 4 UI chat |
+| **S24** | Live Monitor showed partial MP4 + delayed crossings | **Decision (2026-08-20):** Park in-progress video preview. Live Monitor keeps progress + **Live Crossings only**; crossings show WS events **immediately** (no frame/buffer delay). Retain unused modules with PARKED headers. | `monitor-sidebar.tsx` (no video mount); parked: `live-processed-video.tsx`, `crossing-media-sync.ts`; docs: COMPONENT_MAP, PROJECT_STATUS, apps/web/AGENTS.md | uncommitted | UI: Monitor has no `<video>`; crossings update on emit |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine prescan · `D` contract · `TBD`  
-**Status:** `open` · `in_progress` · `fixed` · `deferred` · `wontfix`  
+**Status:** `open` · `in_progress` · `fixed` · `deferred` · `parked` · `wontfix`  
 **Blocker:** `yes` = gates Step 5 · `no` = polish
 
 ---
@@ -205,10 +207,27 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 ---
 
+## F010 / S24 design note (live-monitor partial MP4 — PARKED)
+
+**Decision (2026-08-20):** Do not show in-progress `_processed.mp4` in the Live Monitor UI for now.
+
+**Why:** After S13 (fragmented MP4) and S20 (H.264 for Chromium), browser live-edge preview remained unstable — seek/reload blackouts, Range-request FD exhaustion (`Errno 24`), and unreliable picture↔crossing sync.
+
+**Current UI:** Live Monitor = progress line + **Live Crossings** only. Crossings render WS `MOVING_EVENT`s **immediately** (no frame-buffer delay).
+
+**Retained (unused) code:**
+- `apps/web/src/features/monitor/live-processed-video.tsx`
+- `apps/web/src/features/monitor/crossing-media-sync.ts`
+
+**Do not** import/mount those modules until this note is explicitly reversed. API `GET /artifacts/{id}/partial.mp4` and proxy remain available for a future revisit.
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
+| 2026-08-20 | **S24 parked:** Live Monitor hides partial-MP4 preview (code retained, not mounted); Live Crossings show telemetry immediately with no UI delay; S20 follow-on live-edge work parked
 | 2026-08-20 | S20 fixed: in-progress UI blank was HEVC-in-browser (headers/Range OK); prefer H.264 NVENC/libx264 for `_processed.mp4`, keep S13 fragmented flags; inline disposition on artifact/proxy; live monitor decode-error UX |
 | 2026-08-19 | S10 partial update: added dominant-slope + parallel-band fallback refinement for no-profile proposals and test coverage; result improved but not yet at desired line placement on all sample views, so S10 remains in_progress |
 | 2026-08-19 | S10 fixed (engine): deterministic frame-guided line proposal fallback for no-profile prescan, bounds-safe clamped outputs, confidence derived from cue support; tests added for confidence uplift/determinism/frame-shape fallback |

@@ -14,7 +14,7 @@
 | Prescan | `features/prescan/prescan-review-modal.tsx` | Review modal: side-by-side canvas, OCR, scrubber, summary step |
 | Calibration | `features/calibration/calibration-canvas.tsx` | HTML5 canvas, line drag |
 | Telemetry | `features/telemetry/telemetry-panel.tsx`, `telemetry-formatters.ts` | Structured progress, crossing feed, activity log |
-| Monitor | `features/monitor/monitor-sidebar.tsx` | Live sidebar: partial MP4 + telemetry stack |
+| Monitor | `features/monitor/monitor-sidebar.tsx` | Live sidebar: progress + Live Crossings (WS). **Partial MP4 preview PARKED** — see `live-processed-video.tsx` + STABILIZATION_BACKLOG S20/S24 |
 | Dashboard | `features/dashboard/dashboard.tsx` | Layout: project bar + intake + queue + monitor drawer |
 
 ## Removed (Phase 8)
@@ -49,7 +49,7 @@
 | `/api/proxy/source` | stab S03 | Same-origin proxy for source MP4 (`api-client.sourceVideoUrl`) |
 | `/api/proxy/preview` | 4 | `calibration-canvas.tsx` — prescan JPEG |
 | `GET /api/fs/browse` | 4 | `path-browser.tsx` (Next.js route) |
-| `GET /artifacts/.../partial.mp4` | 3 | `monitor-sidebar.tsx` |
+| `GET /artifacts/.../partial.mp4` | 3 | **PARKED** — code in `live-processed-video.tsx` (not mounted). Live Monitor shows crossings only (S24) |
 | `WS /ws/jobs` | 3 | `dashboard.tsx` → telemetry formatters |
 
 ## localStorage (UI prefs only)

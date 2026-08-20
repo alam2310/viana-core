@@ -114,9 +114,7 @@ def test_supplied_frames_do_not_shrink_inflated_total(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     video.write_bytes(b"")
     job = _job(tmp_path, video)
-    inflated = VideoMeta(
-        width=200, height=200, fps=25.0, duration_sec=40.0, frame_count=1000
-    )
+    inflated = VideoMeta(width=200, height=200, fps=25.0, duration_sec=40.0, frame_count=1000)
     run_moving_count(
         job,
         resume=False,

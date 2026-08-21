@@ -1,21 +1,21 @@
 # Stabilization backlog (living)
 
 **Rules:** [`STABILIZATION.md`](STABILIZATION.md)  
-**Step 5 blocked while any blocker row is `open` or `in_progress`.**
+**Step 5:** Complete (no open blockers). New defects during Step 6 are polish unless explicitly marked blocker.
 
 > **Follow [`Execution path`](#execution-path) in Seq order.** One row = one unit of work. Do not skip ahead unless a dependency is `fixed` / `deferred`.
 
-**Last updated:** 2026-08-21
+**Last updated:** 2026-08-22
 
 ---
 
 ## Summary
 
-| Blockers open | Blockers fixed | Polish open | Path steps done |
-|---------------|----------------|-------------|-----------------|
-| 0 | 1 | 5 | 26 / 31 active |
+| Blockers open | Blockers fixed | Polish open | Parked | Path done (fixed + parked) |
+|---------------|----------------|-------------|---------|----------------------------|
+| 0 | 1 (S07) | 5 (S29–S33) | 2 (S20, S24) | **27 / 32** active |
 
-**S09 (F006) closed in Step 6.7.** **Not counted** in path progress.
+**Counts:** Active Seq = S01–S08 + S10–S33 (**32**). **S09** closed in Step 6.7 — not counted. Step 5 is complete; remaining open rows are Step 6 polish.
 
 ---
 
@@ -59,7 +59,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S33** | F028 | C | no | — | Pedestrian crossings missing from `_15min.csv` aggregated counts | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **fixed → Step 6.7** |
 
-**After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
+**Step 5:** Complete (S07 fixed). Continue open Seq (**S29–S33**) as Step 6 polish; respect **Depends**.
 
 ---
 
@@ -406,6 +406,7 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | Summary counts corrected: **27/32** done (fixed+parked), **5** open (S29–S33); Step 5 complete note |
 | 2026-08-21 | Added **S33 (F028)** Pedestrian missing from `_15min.csv` (taxonomy `aggregate: false`) |
 | 2026-08-21 | **S09 (F006) fixed via Step 6.7** — intake/submit rewrite host paths onto `/data` and `/app/ViAna` or 400; extra mounts via `VIANA_INTAKE_ROOTS` + `VIANA_PATH_MAPS` |
 | 2026-08-21 | Added **S32 (F027)** relook raw events + 15-min CSV schemas — keep only necessary columns |

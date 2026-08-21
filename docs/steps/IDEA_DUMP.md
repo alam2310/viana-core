@@ -50,7 +50,7 @@ Human review of I001–I006. **Agents: implement only promoted Step 6 items** (`
 
 | ID | Date | Category | Idea | Impact | Comment | Status |
 |----|------|----------|------|--------|---------|--------|
-| I004 | 2026-08-21 | `ui` | Play processed video from job details; investigate in-progress (play bytes already written, not live-edge) vs complete-only | **low** | **Demoted** (aesthetics / later). Not in Step 6. Revisit after 6.8 job details exist. | open |
+| I004 | 2026-08-21 | `ui` | Play processed video from job details; investigate in-progress (play bytes already written, not live-edge) vs complete-only | **low** | **Demoted** (aesthetics / later). Not in Step 6. Job details exist (6.8); still do not start until re-promoted. | open |
 | I005 | 2026-08-21 | `engine` / `product` | Crossing events as soft subtitles muxed into `_processed.mp4` (post-process from `_events.csv`) | **medium** | **Direction set:** CSV → soft SRT/VTT → FFmpeg mux into a **single** deliverable file (`-c:v copy`). No burn-in; no GPU-loop change. See detail below. | open |
 
 ### Categories (use these labels)
@@ -115,6 +115,7 @@ Human review of I001–I006. **Agents: implement only promoted Step 6 items** (`
 | Date | Note |
 |------|------|
 | 2026-08-21 | **6.9 implemented** — process loop no longer OCR-rescans; clock/location locked to confirmed prescan/user metadata; S23 before/after documented. |
+| 2026-08-22 | I004 note: 6.8 job details exist; still demoted until re-promoted |
 | 2026-08-21 | File created. Manual-review parking lot; agents must not self-assign. |
 | 2026-08-21 | I001–I003 restored on `main` (were only in the idea-dump chat). I004 added — play `_processed.mp4` from job details; investigate in-progress VOD vs complete-only. |
 | 2026-08-21 | Review: **I001 → 6.8**, **I003 → 6.9**. I002 stays dump P3 (API availability check first). I004 demoted (aesthetics / later). |

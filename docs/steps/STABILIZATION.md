@@ -1,18 +1,20 @@
-# Stabilization workflow (Step 4 → Step 5 gate)
+# Stabilization workflow (Step 4 → Step 5 gate; Step 6 polish)
 
-**Purpose:** Record bugs and optimizations found during Step 4 acceptance **without** starting Step 5 or reopening full Steps 2–3.
+**Purpose:** Record bugs and optimizations found during Step 4 acceptance **without** starting Step 5 or reopening full Steps 2–3. After Step 5 completed, the same backlog continues for **Step 6 polish**.
 
-**Living backlog:** [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md)  
-**Execution path:** [`STABILIZATION_BACKLOG.md` § Execution path](STABILIZATION_BACKLOG.md#execution-path) — **S01–S08, S10** (S09 deferred to Step 6.7), single ordered sequence  
+**Living backlog (SoT for Seq status):** [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md)  
+**Execution path:** full table in backlog (S01–S08, S10–S33; S09 → Step 6.7)  
+**Tracker mirror:** [`TRACKER.md`](TRACKER.md) § 4.stab — keep in sync when closing Seq  
 **Triage owner:** Planning chat (human + coordinator agent) — assigns lane and kickoff prompt.
+
+**Status (2026-08-22):** Step 5 ✅. Open polish: **S29–S33**. Parked: S20/S24.
 
 ---
 
 ## When this applies
 
-- Step 4 UI is built (or nearly built) but prescan / queue / confirm flow is not ready for E2E.
-- Issues may touch `apps/web/`, `src/orchestrator/`, or `src/viana/stages/prescan.py`.
-- **Step 5 is blocked** until all **blocker** items in the backlog are ✅ or explicitly deferred.
+- **Historical:** Step 4 UI built but prescan / queue / confirm not ready for E2E; Step 5 blocked on backlog **blocker** rows.
+- **Now:** New defects during Step 6 still go on the backlog as polish (`Blocker: no`) unless they reopen a product gate.
 
 ---
 
@@ -59,11 +61,21 @@ When a fix lands:
 
 ### 5. Tracker state during stabilization
 
+**Historical (Step 4 → Step 5 gate):**
+
 | Field | Value |
 |-------|-------|
 | `TRACKER.md` **Current Step** | `4 (stabilization)` |
 | Step 4 | 🔄 In progress *or* ✅ with open blockers noted |
 | Step 5 | ⬜ Blocked — see `STABILIZATION_BACKLOG.md` |
+
+**Now (2026-08-22+):**
+
+| Field | Value |
+|-------|-------|
+| `TRACKER.md` **Current Step** | **6** |
+| Steps 1–5 | ✅ |
+| Open Seq | S29–S33 (polish) — SoT [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
 ---
 
@@ -85,22 +97,23 @@ Human returns here to:
 
 1. Review **Execution path** in `STABILIZATION_BACKLOG.md` (S01→SNN)
 2. Assign the next open **Seq** to a lane chat (respect **Depends**)
-3. Get copy-paste **patch prompt** for Step 3 / Step 4 / Step 2 chat
-4. Confirm **S07** (F001 blocker) `fixed` or `deferred` → unblock Step 5
+3. Get copy-paste **patch prompt** for UI / API / engine chat
+4. Keep `TRACKER.md` § 4.stab mirror in sync when closing Seq
+5. *(Historical)* Confirm **S07** fixed → unblock Step 5 — **done**
 
 Coordinator does **not** implement fixes; it triages and prompts.
 
 ---
 
-## Step 5 entry criteria (reminder)
+## Step 5 entry criteria (reminder — met)
 
-All rows with **Blocker** = `yes` must be `fixed` or `deferred` (with user approval).
+All rows with **Blocker** = `yes` must be `fixed` or `deferred` (with user approval). **S07 fixed; Step 5 complete.**
 
-Minimum flow that must work:
+Minimum flow that must work (verified):
 
 - Intake → prescan → `AWAITING_REVIEW` with usable `proposed_*`
 - Review → confirm → `READY`
-- Optional: short run to `PROCESSING` without prescan regressions
+- Run through `COMPLETED` + `_15min.csv` — see `verification/5_15min_results.md`
 
 ---
 

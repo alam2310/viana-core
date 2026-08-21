@@ -50,7 +50,7 @@ See **`docs/PROJECT_STATUS.md`** for the live matrix. **Phases 0–9 are complet
 | Component | Status |
 |-----------|--------|
 | Phases 0–9 (engine, API, UI, parity) | ✅ Complete |
-| **Post-v0.1 Steps 1–6** | Step 2 current — see `docs/steps/TRACKER.md` |
+| **Post-v0.1 Steps 1–6** | Step **6** current — see `docs/steps/TRACKER.md` |
 
 ## 6. Parallel development
 

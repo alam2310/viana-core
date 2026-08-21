@@ -1,10 +1,11 @@
 # Step tracker (living)
 
-**Last updated:** 2026-08-21  
+**Last updated:** 2026-08-22  
 **Current Step:** **6** — Hardening backlog  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
 **Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)  
-**Idea dump (manual review only):** [`IDEA_DUMP.md`](IDEA_DUMP.md)
+**Idea dump (manual review only):** [`IDEA_DUMP.md`](IDEA_DUMP.md)  
+**Stabilization SoT:** [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) (full Seq status; table below is a mirror)
 
 > Update this file when a Step changes status. Agents: do not rely on chat memory.
 
@@ -84,9 +85,9 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 S10/S21–S23 fixed; S25 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
+| **4.stab** Stabilization path | 🔄 Open: **S29–S33**; parked S20/S24 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
-### Stabilization execution path (follow in order)
+### Stabilization execution path (mirror — SoT is backlog)
 
 | Seq | Work | Lane | Status |
 |-----|------|------|--------|
@@ -98,24 +99,37 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S06 | F005 — EasyOCR triage | C | fixed |
 | S07 | F001 — corner ROI OCR (**Step 5 blocker**) | C | fixed |
 | S08 | F002 — prescan latency | C | fixed |
-| S10 | F007 — horizon/counting line proposal | C | **fixed** |
+| S10 | F007 — horizon/counting line proposal | C | fixed |
 | S11 | F008 — `created_at` + sortable submitted time in API | B/D | fixed |
 | S12 | F009 — `video_duration_sec` + `processing_duration_sec` in API | B/D | fixed |
 | S13 | F010 — streamable growing `_processed.mp4` during processing | B/C | fixed |
 | S14 | F011 — emit `MOVING_EVENT` without `telemetry_detail` gate + timestamp | C | fixed |
 | S15 | F012 — 15-min CSV: add `date`, HH:MM window columns | B/D | fixed |
+| S16 | F013 — theme toggle action-button regression | A | fixed |
+| S17 | F014 — dedupe Recent crossings (superseded by 6.8) | A | fixed |
+| S18 | F015 — Live Crossings title + `HH:MM:SS` formatter | A/C | fixed |
 | S19 | F016 — queue video length / ETA inflation + MPEG-PS probe | A/B/C | fixed |
-| S21 | F017 — adaptive OSD OCR when text is outside corner ROIs | C | **fixed** |
-| S28 | F023 — missed crossings when class flicker drops box across counting line | C | **fixed** |
-| S20 | F010 follow-on — browser live monitor play of in-progress MP4 (H.264) | A/B | **parked** → S24 |
-| S24 | Park live-monitor partial MP4 UI; crossings immediate | A | parked |
+| S20 | F010 follow-on — browser play of in-progress MP4 | A/B | **parked** → S24 |
+| S21 | F017 — adaptive OSD OCR outside corner ROIs | C | fixed |
+| S22 | F018 — EMFILE / too many open files → API 502 | B/C | fixed |
+| S23 | F019 — processing throughput regression | C | fixed |
+| S24 | Park in-progress MP4 UI; crossings immediate | A | parked |
+| S25 | F020 — queue status labels (Queued PS/GPU) | A | fixed |
+| S26 | F021 — queue action icon slots | A | fixed |
+| S27 | F022 — drain next READY after FAILED | B | fixed |
+| S28 | F023 — missed crossings on class flicker | C | fixed |
+| S29 | F024 — excess leftovers in output dir after COMPLETED | B/C | **open** |
+| S30 | F025 — API 502 on restart/resume from queue | A/B | **open** |
+| S31 | F026 — prescan Close vs Confirm | A | **open** |
+| S32 | F027 — trim raw events + 15-min CSV columns | C/D | **open** |
+| S33 | F028 — Pedestrian missing from `_15min.csv` | C | **open** |
 | ~~S09~~ | F006 — intake path validation | B | **fixed (6.7)** |
 
 ---
 
 ## Step 5 — E2E verification
 
-**Gate status:** Unblocked (`S07` fixed). Continue S10–S15 polish in parallel with Step 5.
+**Gate status:** ✅ Complete (`S07` fixed). Remaining Seq polish continues under Step 6 via the backlog.
 
 | Check | Status |
 |-------|--------|
@@ -147,6 +161,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | Doc sync: 4.stab + execution mirror match backlog (open **S29–S33**; S25–S28 fixed); Step 5 gate text no longer “in parallel polish” |
 | 2026-08-21 | Promoted **I006 → 6.11** — expose `render_video` in prescan review; existing API/engine field (expect perf win when false) |
 | 2026-08-21 | **6.7 complete (S09 / F006)** — intake (and `POST /jobs`) rewrites host paths onto compose mounts (`/data`, `/app/ViAna`) or **400**s unreadable paths; extra drive via `VIANA_INTAKE_ROOTS` + `VIANA_PATH_MAPS`. Tests: `tests/orchestrator/test_s67_intake_paths.py` |
 | 2026-08-21 | **6.3 complete** — DELETE sets `CANCELLED` immediately, releases the GPU slot, drains the next READY job; `_finalize` does not clobber user cancel (S27 fail-drain unchanged) |

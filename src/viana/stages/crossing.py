@@ -9,6 +9,10 @@ from viana.domain.geometry import crossing_direction
 from viana.io.csv_schema import CrossingDirection
 from viana.stages.track import TrackedDetection
 
+# Keep last bottom-center across brief detection dropouts (class flicker / conf dips)
+# so a track that jumps the counting line while missing still emits one event.
+DEFAULT_MAX_GAP_FRAMES = 15
+
 
 @dataclass(frozen=True, slots=True)
 class Crossing:
@@ -32,7 +36,9 @@ class CrossingState:
 
     counting_line: LineSegment
     counted_track_ids: set[int] = field(default_factory=set)
+    max_gap_frames: int = DEFAULT_MAX_GAP_FRAMES
     _previous: dict[int, tuple[float, float]] = field(default_factory=dict)
+    _missing_frames: dict[int, int] = field(default_factory=dict)
 
     def update(
         self,
@@ -47,18 +53,19 @@ class CrossingState:
         events: list[Crossing] = []
         live: set[int] = set()
         for item in tracked:
-            live.add(item.track_id)
+            track_id = int(item.track_id)
+            live.add(track_id)
             current = item.detection.bottom_center
-            previous = self._previous.get(item.track_id)
-            self._previous[item.track_id] = current
+            previous = self._previous.get(track_id)
+            self._previous[track_id] = current
+            self._missing_frames.pop(track_id, None)
             if previous is None:
                 continue
-            if int(item.track_id) in self.counted_track_ids:
+            if track_id in self.counted_track_ids:
                 continue
             direction = crossing_direction(self.counting_line, previous, current)
             if direction is None:
                 continue
-            track_id = int(item.track_id)
             self.counted_track_ids.add(track_id)
             events.append(
                 Crossing(
@@ -74,7 +81,13 @@ class CrossingState:
                     video_pts_ms=video_pts_ms,
                 )
             )
-        lost = [track_id for track_id in self._previous if track_id not in live]
-        for track_id in lost:
-            del self._previous[track_id]
+        for track_id in list(self._previous):
+            if track_id in live:
+                continue
+            missed = self._missing_frames.get(track_id, 0) + 1
+            if missed > self.max_gap_frames:
+                del self._previous[track_id]
+                self._missing_frames.pop(track_id, None)
+            else:
+                self._missing_frames[track_id] = missed
         return events

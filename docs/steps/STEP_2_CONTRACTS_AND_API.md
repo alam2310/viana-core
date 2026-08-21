@@ -38,7 +38,7 @@ Schema-first contract changes and **HTTP API surface** for the backend-owned pre
 
 **Step 4 (UI):** G18 filesystem browser, G22 telemetry formatters.
 
-**Step 6 (deferred):** G5, G10, G21 → **6.7**.
+**Step 6 (G21 closed in 6.7):** extra bind-mounts via compose + `VIANA_INTAKE_ROOTS` / `VIANA_PATH_MAPS`. G5, G10 remain later if still needed.
 
 ---
 

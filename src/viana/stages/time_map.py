@@ -20,9 +20,10 @@ TIME_SPACED_PATTERN = re.compile(r"\b(\d{2})\s+(\d{2})\s+(\d{2})\b")
 TIME_PARTIAL_PATTERN = re.compile(r"\b(\d{2})\s+(\d{2}):(\d{2})\b")
 TIME_DOT_PATTERN = re.compile(r"\b(\d{2})\s+(\d{2})[.:](\d{2})\b")
 TIME_SEP_PATTERN = re.compile(r"\b(\d{2})[.:](\d{2})[.:](\d{2})\b")
-TIME_FLEX_PATTERN = re.compile(r"\b(\d{2})\s*[:.\"'`*;]\s*(\d{2})\s*[:.\"'`*;]\s*(\d{2})\b")
+TIME_FLEX_PATTERN = re.compile(r"\b(\d{2})\s*[:.\"'`*;+]\s*(\d{2})\s*[:.\"'`*;+]\s*(\d{2})\b")
 TIME_COLON_SPACE_PATTERN = re.compile(r"\b(\d{2})[:.](\d{2})\s+(\d{2})\b")
 TIME_COMPACT_PATTERN = re.compile(r"\b(\d{2})\s+(\d{4})\b")
+TIME_DOT_GLUED_PATTERN = re.compile(r"\b(\d{2})[.:](\d{4})\b")
 TIME_GLUED_PATTERN = re.compile(r"\b(\d{6})\b")
 LOCATION_NOISE = {
     "f",
@@ -102,33 +103,51 @@ class TimeMap(BaseModel):
         wall = fallback + timedelta(milliseconds=video_pts_ms)
         return format_wall_time(wall), "user_fallback", None
 
+    _sorted_anchors: list[TimeAnchor] | None = None
+    _sorted_keys: list[float] | None = None
+
+    def _update_cache(self) -> None:
+        if self._sorted_anchors is None or len(self._sorted_anchors) != len(self.anchors):
+            self._sorted_anchors = sorted(self.anchors, key=lambda item: item.video_pts_ms)
+            self._sorted_keys = [a.video_pts_ms for a in self._sorted_anchors]
+
     def _from_anchors(self, video_pts_ms: float) -> tuple[str | None, WallTimeSource, float | None]:
-        ordered = sorted(self.anchors, key=lambda item: item.video_pts_ms)
+        import bisect
+
+        self._update_cache()
+        ordered = self._sorted_anchors
+        if ordered is None or not ordered:
+            return None, "unavailable", None
+
         if len(ordered) == 1:
             anchor = ordered[0]
             base = parse_wall_time(anchor.wall_time)
             wall = base + timedelta(milliseconds=video_pts_ms - anchor.video_pts_ms)
             return format_wall_time(wall), anchor.source, anchor.ocr_confidence
-        left = ordered[0]
-        right = ordered[-1]
-        for item in ordered:
-            if item.video_pts_ms <= video_pts_ms:
-                left = item
-            if item.video_pts_ms >= video_pts_ms:
-                right = item
-                break
+
+        keys = self._sorted_keys
+        if keys is None:
+            return None, "unavailable", None
+
+        idx = bisect.bisect_right(keys, video_pts_ms)
+
+        if idx == 0:
+            left = right = ordered[0]
+        elif idx == len(keys):
+            left = right = ordered[-1]
+        else:
+            left = ordered[idx - 1]
+            right = ordered[idx]
+
         if left.video_pts_ms == right.video_pts_ms:
             return left.wall_time, left.source, left.ocr_confidence
+
         span = right.video_pts_ms - left.video_pts_ms
         t = (video_pts_ms - left.video_pts_ms) / span
         left_dt = parse_wall_time(left.wall_time)
         right_dt = parse_wall_time(right.wall_time)
         wall = left_dt + (right_dt - left_dt) * t
-        source: WallTimeSource = left.source
-        if left.source in ("ocr_anchor", "ocr_recalibrated"):
-            source = "ocr_recalibrated"
-        conf = left.ocr_confidence
-        return format_wall_time(wall), source, conf
+        return format_wall_time(wall), left.source, left.ocr_confidence
 
 
 def format_wall_time(moment: datetime) -> str:
@@ -235,38 +254,63 @@ def _strip_date_tokens(text: str) -> str:
     return re.sub(r"\s+", " ", cleaned).strip()
 
 
-def extract_ocr_time(texts: list[str]) -> str | None:
-    """Extract HH:MM:SS from OCR strings, including common spacing errors."""
-    joined = " ".join(texts)
-    match = TIME_PATTERN.search(joined)
-    if match and is_valid_clock_time(match.group()):
-        return match.group()
-    for pattern in (
-        TIME_FLEX_PATTERN,
-        TIME_COLON_SPACE_PATTERN,
-        TIME_PARTIAL_PATTERN,
-        TIME_DOT_PATTERN,
-        TIME_SEP_PATTERN,
-        TIME_SPACED_PATTERN,
+def _best_clock_in_text(text: str) -> tuple[int, str] | None:
+    """Return ``(quality, HH:MM:SS)`` for the strongest clock in one OCR line."""
+    haystack = _strip_date_tokens(text) or text
+    best: tuple[int, str] | None = None
+
+    def consider(score: int, candidate: str) -> None:
+        nonlocal best
+        if not is_valid_clock_time(candidate):
+            return
+        if best is None or score > best[0]:
+            best = (score, candidate)
+
+    match = TIME_PATTERN.search(haystack)
+    if match:
+        consider(6, match.group())
+    for pattern, score in (
+        (TIME_FLEX_PATTERN, 5),
+        (TIME_SEP_PATTERN, 5),
+        (TIME_COLON_SPACE_PATTERN, 4),
+        (TIME_PARTIAL_PATTERN, 3),
+        (TIME_DOT_PATTERN, 3),
+        (TIME_SPACED_PATTERN, 2),
     ):
-        found = pattern.search(joined)
+        found = pattern.search(haystack)
         if found is None:
             continue
-        candidate = f"{found.group(1)}:{found.group(2)}:{found.group(3)}"
-        if is_valid_clock_time(candidate):
-            return candidate
-    for compact in TIME_COMPACT_PATTERN.finditer(joined):
+        consider(score, f"{found.group(1)}:{found.group(2)}:{found.group(3)}")
+    for compact in TIME_COMPACT_PATTERN.finditer(haystack):
         digits = compact.group(2)
         if _four_digits_look_like_year(digits):
             continue
-        candidate = f"{compact.group(1)}:{digits[0:2]}:{digits[2:4]}"
-        if is_valid_clock_time(candidate):
-            return candidate
-    for glued in TIME_GLUED_PATTERN.finditer(joined):
+        consider(1, f"{compact.group(1)}:{digits[0:2]}:{digits[2:4]}")
+    for glued_dot in TIME_DOT_GLUED_PATTERN.finditer(haystack):
+        digits = glued_dot.group(2)
+        if _four_digits_look_like_year(digits):
+            continue
+        consider(2, f"{glued_dot.group(1)}:{digits[0:2]}:{digits[2:4]}")
+    for glued in TIME_GLUED_PATTERN.finditer(haystack):
         digits = glued.group(1)
-        candidate = f"{digits[0:2]}:{digits[2:4]}:{digits[4:6]}"
-        if is_valid_clock_time(candidate):
-            return candidate
+        consider(1, f"{digits[0:2]}:{digits[2:4]}:{digits[4:6]}")
+    return best
+
+
+def extract_ocr_time(texts: list[str]) -> str | None:
+    """Extract HH:MM:SS from OCR strings, including common spacing errors."""
+    scored: list[tuple[int, str]] = []
+    for raw in texts:
+        found = _best_clock_in_text(raw)
+        if found is None:
+            continue
+        scored.append(found)
+    if not scored:
+        return None
+    best_score = max(item[0] for item in scored)
+    for score, clock in scored:
+        if score == best_score:
+            return clock
     return None
 
 
@@ -281,6 +325,28 @@ def parse_metadata_texts(texts: list[str]) -> ParsedOcr:
     remainder = [_strip_date_tokens(raw) for raw in texts]
     parsed_time = extract_ocr_time(remainder)
     return ParsedOcr(time=parsed_time, date=date_str, location=None)
+
+
+def _location_rank(part: str) -> tuple[int, ...]:
+    """Prefer a single camera-id/place reading over concatenated OCR guesses."""
+    upper = part.upper()
+    return (
+        0 if " " in part else 1,
+        1 if "BARA" in upper else 0,
+        1 if "BANKI" in upper else 0,
+        1 if "BYPASS" in upper else 0,
+        1 if upper.startswith("L") else 0,
+        1 if re.search(r"L\d", upper) else 0,
+        sum(ch.isalpha() for ch in part),
+        1 if "-" in part or "_" in part else 0,
+        1 if any(ch.isdigit() for ch in part) else 0,
+        len(part),
+    )
+
+
+def _is_camera_code(part: str) -> bool:
+    compact = re.sub(r"[^\w]", "", part)
+    return len(compact) >= 8
 
 
 def parse_location_texts(texts: list[str]) -> str | None:
@@ -302,12 +368,22 @@ def parse_location_texts(texts: list[str]) -> str | None:
             continue
         if _mostly_numeric_osd(loc_cleaned):
             continue
-        if loc_cleaned in location_parts:
-            continue
-        location_parts.append(loc_cleaned)
+        for token in loc_cleaned.split():
+            if len(token) < 3:
+                continue
+            if token in location_parts:
+                continue
+            if token.lower() in IGNORE_WORDS or token.lower() in LOCATION_NOISE:
+                continue
+            location_parts.append(token)
     marked = [part for part in location_parts if "-" in part or "_" in part]
-    if marked:
-        return " ".join(marked)
+    long_codes = [part for part in location_parts if _is_camera_code(part)]
+    if marked or len(long_codes) >= 2:
+        pool = list(marked)
+        for part in long_codes:
+            if part not in pool:
+                pool.append(part)
+        return max(pool, key=_location_rank)
     landmark = [
         part
         for part in location_parts
@@ -340,6 +416,7 @@ def _strip_metadata_tokens(text: str) -> str:
     cleaned = TIME_SEP_PATTERN.sub("", cleaned).strip()
     cleaned = TIME_SPACED_PATTERN.sub("", cleaned).strip()
     cleaned = TIME_COMPACT_PATTERN.sub("", cleaned).strip()
+    cleaned = TIME_DOT_GLUED_PATTERN.sub("", cleaned).strip()
     cleaned = TIME_GLUED_PATTERN.sub("", cleaned).strip()
     cleaned = re.sub(r"\b\d{2}[.:]\d{3,6}\b", "", cleaned).strip()
     for word in IGNORE_WORDS:

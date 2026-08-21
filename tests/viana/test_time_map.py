@@ -14,6 +14,7 @@ from viana.stages.time_map import (
     load_time_map,
     next_boundary_delta_ms,
     normalize_ocr_date,
+    parse_location_texts,
     parse_ocr_texts,
     time_map_from_metadata,
 )
@@ -37,6 +38,16 @@ def test_normalize_ocr_date_repairs_spaces_and_year() -> None:
     assert extract_ocr_time(["Bangalorebypassjz 06 :44:35"]) == "06:44:35"
     assert extract_ocr_time(["29-07 2026 WE 0982713"]) is None
     assert extract_ocr_time(['19 10-2024 Sat 05:34"04']) == "05:34:04"
+    assert (
+        extract_ocr_time(
+            ["18-10 2074 Frich? 21 33", "18-10-2024 Fri 03 21.33", "18-1u 2074 Fri 02.21 33"]
+        )
+        == "02:21:33"
+    )
+    assert extract_ocr_time(["18-10 2074 Fri 02 21.25", "18-10-2024 Fri 03 21.25"]) == "02:21:25"
+    assert extract_ocr_time(["18-10-2024 Fri 08:38+31"]) == "08:38:31"
+    assert extract_ocr_time(["18-10-2024 Fri 08.38:29"]) == "08:38:29"
+    assert extract_ocr_time(["18-10-2024 Fri 08.3831"]) == "08:38:31"
     assert normalize_ocr_date("19-10-7074") == "19-10-2024"
 
 
@@ -64,6 +75,18 @@ def test_date_year_is_not_used_as_clock() -> None:
     assert parsed.location == "Bangalorebypass_J2"
 
 
+def test_parse_location_texts_picks_one_hyphenated_label() -> None:
+    """Polarity variants of the same OSD must not be concatenated."""
+    assert (
+        parse_location_texts(["LITO-RARARANKI", "L1TO-RARARANKI", "LIT-BRBNKI"]) == "L1TO-RARARANKI"
+    )
+    assert (
+        parse_location_texts(["LITO-BARARANKI", "L1TO-RARARANKI", "LIT-RARABANKI"])
+        == "LITO-BARARANKI"
+    )
+    assert parse_location_texts(["I3TRARARANKT", "L3TRARARANKT", "I37NARARAN80"]) == "L3TRARARANKT"
+
+
 def test_parse_ocr_texts_splits_spaced_colon_clock_from_location() -> None:
     """S21 shimoga: EasyOCR often inserts a space before the first clock colon."""
     parsed = parse_ocr_texts(["28-07-2026 Tue", "Bangalorebypassjz 06 :44:35"])
@@ -84,8 +107,8 @@ def test_user_fallback_when_no_ocr() -> None:
     assert wall == "2026-03-15T09:01:00Z"
 
 
-def test_interpolate_between_ocr_anchors() -> None:
-    """PTS between two OCR anchors is linearly interpolated."""
+def test_interpolate_from_confirmed_clock() -> None:
+    """PTS after a confirmed clock is interpolated; source stays locked (I003)."""
     time_map = TimeMap(
         job_id="job_1",
         video_stem="clip",
@@ -96,17 +119,11 @@ def test_interpolate_between_ocr_anchors() -> None:
                 source="ocr_anchor",
                 ocr_confidence=0.9,
             ),
-            TimeAnchor(
-                video_pts_ms=60_000,
-                wall_time="2026-03-15T09:01:00Z",
-                source="ocr_recalibrated",
-                ocr_confidence=0.8,
-            ),
         ],
     )
     wall, source, _conf = time_map.resolve(30_000)
     assert wall == "2026-03-15T09:00:30Z"
-    assert source == "ocr_recalibrated"
+    assert source == "ocr_anchor"
 
 
 def test_load_time_map_fixture() -> None:

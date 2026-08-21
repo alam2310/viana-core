@@ -90,31 +90,9 @@ def nms_class_agnostic(detections: list[Detection], threshold: float) -> list[De
         if suppressed[index]:
             continue
         kept.append(candidate)
-        cx1, cy1, cx2, cy2, carea = (
-            candidate.x1,
-            candidate.y1,
-            candidate.x2,
-            candidate.y2,
-            candidate.area,
-        )
         for other_index in range(index + 1, len(ordered)):
             if suppressed[other_index]:
                 continue
-            other = ordered[other_index]
-            ox1, oy1, ox2, oy2 = other.x1, other.y1, other.x2, other.y2
-
-            # Fast AABB intersection check
-            if cx1 >= ox2 or cx2 <= ox1 or cy1 >= oy2 or cy2 <= oy1:
-                continue
-
-            ix1 = cx1 if cx1 > ox1 else ox1
-            iy1 = cy1 if cy1 > oy1 else oy1
-            ix2 = cx2 if cx2 < ox2 else ox2
-            iy2 = cy2 if cy2 < oy2 else oy2
-
-            inter = (ix2 - ix1) * (iy2 - iy1)
-            union = carea + other.area - inter
-
-            if (inter / union) >= threshold:
+            if iou(candidate, ordered[other_index]) >= threshold:
                 suppressed[other_index] = True
     return kept

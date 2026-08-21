@@ -114,6 +114,17 @@ Exact match: Jeep tot, Van tot, MiniBus, Bus. Remaining gaps: MTW (−12), Auto 
 
 v2 uses **ByteTrack** (`trackers.ByteTrackTracker`; vehicle vs person pools; IoU fallback if `trackers` is missing). Once-per-track counting. Prescan geometric lines pin **x=0** and **x=width-1**.
 
+### S10 no-profile proposal (2026-08-21, `hiv000001_inframe.mp4` t=2s)
+
+Opening-frame sample, no calibration profile. Road-band Hough clustering (not rooftop/gantry median).
+
+| Line | Proposed px | vs geometry C | vs geometry D |
+|------|-------------|----------------|----------------|
+| Horizon | `[0, 579]` → `[1919, 340]` | C `[0, 540]→[1919, 275]` | D `[0, 500]→[1919, 325]` |
+| Counting | `[0, 874]` → `[1919, 635]` | C `[0, 775]→[1919, 650]` | D `[0, 850]→[1919, 540]` |
+
+Endpoint \|Δy\| sum vs **C** = 218, vs **D** = 213 (previous global-median fit: 984 / 887). Confidence 0.725. Other clips probed: `parity_golden`, `hiv00053_EDIT`, `hiv00013_shimoga`, `hiv00037_night`, `test_video`.
+
 ## Clip B — `parity_golden.mp4` (earlier, unmatched geometry)
 
 - Golden clip path: `/data/raw/parity_golden.mp4` (host: `data/raw/parity_golden.mp4`)

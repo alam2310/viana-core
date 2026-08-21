@@ -1,15 +1,32 @@
 import type { JobStatus, JobStatusResponse } from "@viana/contracts";
 
+/**
+ * Operator-facing copy only. API `JobStatus` enum values are unchanged (S25 / F020).
+ * Waiting-for-capacity states share “Queued” and name the resource.
+ */
 export const STATUS_LABELS: Record<JobStatus, string> = {
-  PRESCAN_PENDING: "Queued",
-  PRESCAN_RUNNING: "Pre-scan",
-  PRESCAN_FAILED: "Pre-scan failed",
-  AWAITING_REVIEW: "Review",
-  READY: "Ready",
+  PRESCAN_PENDING: "Queued (PS)",
+  PRESCAN_RUNNING: "Pre-scanning",
+  PRESCAN_FAILED: "Prescan failed",
+  AWAITING_REVIEW: "Needs review",
+  READY: "Queued (GPU)",
   PROCESSING: "Processing",
   PAUSED: "Paused",
   COMPLETED: "Completed",
   FAILED: "Failed",
+  CANCELLED: "Cancelled",
+};
+
+export const STATUS_HINTS: Record<JobStatus, string> = {
+  PRESCAN_PENDING: "Waiting for a prescan worker",
+  PRESCAN_RUNNING: "Prescan is sampling the video",
+  PRESCAN_FAILED: "Prescan error — retry or inspect the message",
+  AWAITING_REVIEW: "Confirm geometry and metadata before processing",
+  READY: "Confirmed — waiting for a GPU slot",
+  PROCESSING: "Engine running on GPU",
+  PAUSED: "Processing paused",
+  COMPLETED: "Finished successfully",
+  FAILED: "Processing failed",
   CANCELLED: "Cancelled",
 };
 
@@ -39,6 +56,10 @@ export function statusLabel(status: JobStatus): string {
   return STATUS_LABELS[status] ?? status;
 }
 
+export function statusHint(status: JobStatus): string {
+  return STATUS_HINTS[status] ?? status;
+}
+
 export function statusBadgeClass(status: JobStatus): string {
   return STATUS_BADGE_CLASS[status] ?? "bg-accent text-foreground";
 }
@@ -47,8 +68,32 @@ export function isReviewable(status: JobStatus): boolean {
   return status === "AWAITING_REVIEW" || status === "READY" || status === "PRESCAN_FAILED";
 }
 
+export function canRetryPrescan(status: JobStatus): boolean {
+  return status === "PRESCAN_FAILED";
+}
+
+export function canStartFresh(status: JobStatus): boolean {
+  return status === "PAUSED" || status === "FAILED";
+}
+
+export function canOpenOutput(status: JobStatus): boolean {
+  return status === "COMPLETED";
+}
+
 export function isCancellable(status: JobStatus): boolean {
   return status !== "COMPLETED" && status !== "CANCELLED";
+}
+
+/** Pause from operator stop is resumable; engine failure parked as PAUSED is not. */
+export function isResumablePause(job: JobStatusResponse): boolean {
+  if (job.status !== "PAUSED") {
+    return false;
+  }
+  const message = job.error_message?.trim() ?? "";
+  if (!message) {
+    return true;
+  }
+  return /^(worker cancelled|interrupted)$/i.test(message);
 }
 
 export function isActiveStatus(status: JobStatus): boolean {

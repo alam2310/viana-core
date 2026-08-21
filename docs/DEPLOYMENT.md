@@ -29,6 +29,11 @@ Environment variables (`docker-compose.yml`):
 | `PYTHONPATH` | `/app/ViAna/src` | Import viana/orchestrator |
 | `VIANA_OUTPUT_PARENT` | `/data/viana-outputs` | Artifact output root |
 | `VIANA_DATA_ROOT` | `./data` (host) | Mount host data → `/data` |
+| `VIANA_HOST_REPO_ROOT` | compose project dir | Host repo path for intake rewrite |
+| `VIANA_HOST_DATA_ROOT` | `{repo}/data` | Host data path for intake rewrite |
+| `VIANA_INTAKE_ROOTS` | `/data:/app/ViAna` | Container prefixes `POST /jobs/intake` may read |
+| `VIANA_PATH_MAPS` | (empty) | Extra `host->container` pairs, `;`-separated |
+| `VIANA_EXTRA_INTAKE_ROOT` | (unset) | Appended to `VIANA_INTAKE_ROOTS` for an extra volume |
 
 ## UI (host)
 

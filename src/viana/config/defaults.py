@@ -45,7 +45,12 @@ class ClassificationDefaults(BaseModel):
 
 
 class OcrDefaults(BaseModel):
-    """On-screen clock OCR and time-map recalibration."""
+    """Prescan OSD OCR thresholds.
+
+    ``recalibration_interval_sec`` is unused in the process loop (I003 / Step 6.9);
+    wall-clock is locked to confirmed metadata and interpolated. Field is kept so
+    ``engine_defaults.yaml`` still validates against the existing schema.
+    """
 
     model_config = ConfigDict(extra="forbid")
 

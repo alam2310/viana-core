@@ -1,7 +1,7 @@
 # Idea dump (manual review only)
 
 **Status:** parking lot — **not** a work queue  
-**Last updated:** 2026-08-21 (I005 conclusion: mux soft subs)  
+**Last updated:** 2026-08-21 (I006 promoted → 6.11)  
 **Owner:** human (this chat / later review)
 
 > **Agents: do not implement, prioritize, or start a Step/Seq from this file.**  
@@ -33,14 +33,16 @@ This file exists so active coding sessions stay on the current Step. Come back h
 
 ### Review ranking (2026-08-21)
 
-Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`6.8`, `6.9`, `6.10`), not remaining dump rows.
+Human review of I001–I006. **Agents: implement only promoted Step 6 items** (`6.8`–`6.11`), not remaining dump rows.
 
 | Rank | ID | Decision |
 |------|----|----------|
 | 1 | **I001** | **Promoted** → Step **6.8** (UI) |
 | 2 | **I003** | **Promoted** → Step **6.9** (engine) |
 | 3 | **I002** | **Promoted** → Step **6.10** (UI) — `crossing_count` already on JobStatus and WS PROGRESS |
-| 4 | **I004** | **Demoted** — later / aesthetics. Do not start from this dump. |
+| 4 | **I006** | **Promoted** → Step **6.11** (UI) — prescan `render_video` toggle; existing API field |
+| 5 | **I005** | Stay in dump — mux soft event subs into `_processed.mp4` (direction set) |
+| 6 | **I004** | **Demoted** — later / aesthetics. Do not start from this dump. |
 
 ---
 
@@ -89,6 +91,12 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 
 **Conclusion (2026-08-21):** Prefer soft subtitles as an **event log**, not on-box burn-in or ASS spatial cues. After the job completes, **post-process** `_events.csv` → SRT/WebVTT cues (`video_pts_ms`, class, direction, wall time), then **mux** that track into `_processed.mp4` so operators get a **single file** (FFmpeg stream copy for video; no re-encode). Performance and size impact stay near zero. Skip mid-run mux on fragmented growing MP4. Burn-in / client overlay remain out of scope unless re-promoted later (I004 for in-app playback).
 
+### I006 — Render-video flag in prescan review (promoted → 6.11)
+
+**Dump:** Implement a video rendering flag in prescan review and pass it through the API on job submission. Expect performance to improve when output video file writing is disabled.
+
+**Suggested impact: high.** `_processed.mp4` encode/write is a major cost beside detect/track. Contract and engine already have `task_parameters.render_video` (default `true`; false → no-op renderer in `process`/`render`). Gap is **UI**: prescan confirm currently sends `render_video: true` fixed. Add a clear toggle in the review modal, include the value on `PATCH` confirm / submit, and surface the choice on job details. No new schema field. When false: no processed MP4 artifact (I004/I005 N/A for that job); CSV/events still produce. Optional: measure before/after wall time on a known clip (S23 style).
+
 ---
 
 ## Promoted / dropped
@@ -98,6 +106,7 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 | I001 | 2026-08-21 | **promoted** → **6.8** | Remove Live Monitor widget; Live Crossings in job details; row click opens details. |
 | I002 | 2026-08-21 | **promoted** → **6.10** | Bind UI count to existing `crossing_count` (JobStatus / WS PROGRESS). No new API field. |
 | I003 | 2026-08-21 | **promoted** → **6.9** | No in-process OSD OCR; lock clock/location to confirmed prescan. |
+| I006 | 2026-08-21 | **promoted** → **6.11** | Prescan-review `render_video` toggle; pass existing confirm/submit field (no new schema). |
 
 ---
 
@@ -112,3 +121,5 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 | 2026-08-21 | I002 promoted → **6.10** (`crossing_count` confirmed on JobStatus and WS PROGRESS). I004 still demoted. |
 | 2026-08-21 | I005 added — investigate crossing events as processed-video subtitles + performance. |
 | 2026-08-21 | I005 conclusion — post-process `_events.csv` → soft SRT/VTT → mux into a single `_processed.mp4` (no re-encode / no burn-in). |
+| 2026-08-21 | I006 added — prescan-review `render_video` toggle; pass through existing API (engine already supports false). |
+| 2026-08-21 | I006 promoted → **6.11** (high impact; UI toggle on existing `render_video`). |

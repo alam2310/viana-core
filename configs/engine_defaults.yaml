@@ -20,6 +20,7 @@ classification:
 
 ocr:
   min_confidence: 0.6
+  # Unused in `viana run` (I003): process interpolates confirmed prescan/user clock.
   recalibration_interval_sec: 300
   drift_threshold_sec: 90
 

@@ -107,8 +107,8 @@ def test_user_fallback_when_no_ocr() -> None:
     assert wall == "2026-03-15T09:01:00Z"
 
 
-def test_interpolate_between_ocr_anchors() -> None:
-    """PTS between two OCR anchors is linearly interpolated."""
+def test_interpolate_from_confirmed_clock() -> None:
+    """PTS after a confirmed clock is interpolated; source stays locked (I003)."""
     time_map = TimeMap(
         job_id="job_1",
         video_stem="clip",
@@ -119,17 +119,11 @@ def test_interpolate_between_ocr_anchors() -> None:
                 source="ocr_anchor",
                 ocr_confidence=0.9,
             ),
-            TimeAnchor(
-                video_pts_ms=60_000,
-                wall_time="2026-03-15T09:01:00Z",
-                source="ocr_recalibrated",
-                ocr_confidence=0.8,
-            ),
         ],
     )
     wall, source, _conf = time_map.resolve(30_000)
     assert wall == "2026-03-15T09:00:30Z"
-    assert source == "ocr_recalibrated"
+    assert source == "ocr_anchor"
 
 
 def test_load_time_map_fixture() -> None:

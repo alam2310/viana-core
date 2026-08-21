@@ -125,11 +125,7 @@ class TimeMap(BaseModel):
         left_dt = parse_wall_time(left.wall_time)
         right_dt = parse_wall_time(right.wall_time)
         wall = left_dt + (right_dt - left_dt) * t
-        source: WallTimeSource = left.source
-        if left.source in ("ocr_anchor", "ocr_recalibrated"):
-            source = "ocr_recalibrated"
-        conf = left.ocr_confidence
-        return format_wall_time(wall), source, conf
+        return format_wall_time(wall), left.source, left.ocr_confidence
 
 
 def format_wall_time(moment: datetime) -> str:

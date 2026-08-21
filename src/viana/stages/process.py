@@ -19,7 +19,6 @@ from viana.io.run_result import RunResult, RunResultArtifacts, completed_now, sa
 from viana.io.telemetry import TelemetryMessage, emit_telemetry_stderr
 from viana.stages.crossing import Crossing
 from viana.stages.cv_core import FrameCVEngine
-from viana.stages.ocr import OcrReader, optional_easyocr_reader, parse_osd_hits
 from viana.stages.prescan import VideoMeta
 from viana.stages.render import FfmpegRenderer, FrameRenderer, NullRenderer
 from viana.stages.time_map import TimeMap, save_time_map, time_map_from_metadata
@@ -162,11 +161,14 @@ def run_moving_count(
     detector: FrameDetector | None = None,
     renderer: FrameRenderer | None = None,
     emit: TelemetryEmit | None = None,
-    ocr_reader: OcrReader | None = None,
     taxonomy: ClassTaxonomy | None = None,
     defaults: EngineDefaults | None = None,
 ) -> RunResult:
-    """Process a video into events CSV + checkpoint/time map. No 15-min aggregation."""
+    """Process a video into events CSV + checkpoint/time map. No 15-min aggregation.
+
+    Wall-clock and location come from confirmed job metadata (prescan/user).
+    OSD OCR is prescan-only (S21); the process loop interpolates from that anchor.
+    """
     emit = emit or emit_telemetry_stderr
     defaults = (defaults or load_engine_defaults()).apply_task_overrides(job.task_parameters)
     taxonomy = taxonomy or load_class_taxonomy()
@@ -221,7 +223,6 @@ def run_moving_count(
         job.validate_geometry(meta.width, meta.height)
         total_frames = max(meta.frame_count, start_index + 1)
         detect = detector or _default_detector(job, defaults)
-        ocr = ocr_reader if ocr_reader is not None else optional_easyocr_reader()
         writer_renderer = (
             renderer
             if renderer is not None
@@ -249,10 +250,16 @@ def run_moving_count(
         time_map = time_map_from_metadata(job.job_id, video_stem, job.metadata)
         events_rows = checkpoint.events_rows_written if checkpoint is not None and resume else 0
         append_events = resume and paths["events"].is_file()
-        last_ocr_pts = 0.0
         t0 = time.perf_counter()
         processed = start_index
         last_index = start_index - 1
+        stage_sec = {
+            "detect": 0.0,
+            "track": 0.0,
+            "render": 0.0,
+            "telemetry": 0.0,
+            "io": 0.0,
+        }
 
         emit(
             TelemetryMessage(
@@ -271,52 +278,26 @@ def run_moving_count(
                     if frame.index < start_index:
                         continue
                     last_index = frame.index
-                    if frame.index == 0 or (
-                        resume and time_map.anchors == [] and frame.index == start_index
-                    ):
-                        if frame.image is not None:
-                            parsed, conf = parse_osd_hits(
-                                ocr(frame.image), defaults.ocr.min_confidence
-                            )
-                            time_map = time_map_from_metadata(
-                                job.job_id,
-                                video_stem,
-                                job.metadata,
-                                ocr=parsed,
-                                video_pts_ms=frame.pts_ms,
-                                ocr_confidence=conf,
-                            )
-                        last_ocr_pts = frame.pts_ms
-                    elif (
-                        frame.image is not None
-                        and (frame.pts_ms - last_ocr_pts)
-                        >= defaults.ocr.recalibration_interval_sec * 1000.0
-                    ):
-                        parsed, conf = parse_osd_hits(ocr(frame.image), defaults.ocr.min_confidence)
-                        extra = time_map_from_metadata(
-                            job.job_id,
-                            video_stem,
-                            job.metadata,
-                            ocr=parsed,
-                            video_pts_ms=frame.pts_ms,
-                            ocr_confidence=conf,
-                        )
-                        time_map.anchors.extend(extra.anchors)
-                        last_ocr_pts = frame.pts_ms
-
+                    t_detect = time.perf_counter()
                     vehicles, pedestrians = detect(frame)
+                    stage_sec["detect"] += time.perf_counter() - t_detect
+                    t_track = time.perf_counter()
                     cv_result = engine.process_models(
                         vehicles,
                         pedestrians,
                         frame_index=frame.index,
                         video_pts_ms=frame.pts_ms,
                     )
+                    stage_sec["track"] += time.perf_counter() - t_track
                     for crossing in cv_result.crossings:
                         row = crossing_to_event(
                             job, taxonomy, job.source_video_path.name, crossing, time_map
                         )
+                        t_io = time.perf_counter()
                         csv_writer.write_row(row)
+                        stage_sec["io"] += time.perf_counter() - t_io
                         events_rows += 1
+                        t_tel = time.perf_counter()
                         emit(
                             TelemetryMessage(
                                 job_id=job.job_id,
@@ -335,7 +316,10 @@ def run_moving_count(
                                 },
                             )
                         )
+                        stage_sec["telemetry"] += time.perf_counter() - t_tel
+                    t_render = time.perf_counter()
                     writer_renderer.write(frame, cv_result)
+                    stage_sec["render"] += time.perf_counter() - t_render
                     processed = frame.index + 1
                     progress_every = (
                         defaults.pipeline.telemetry_detail_progress_frames
@@ -348,6 +332,7 @@ def run_moving_count(
                         remaining = max(0, total_frames - processed)
                         # Wall-clock ETA: remaining *frames* / processing fps (not video fps).
                         eta_sec = round(remaining / fps_val, 1) if fps_val > 0 else None
+                        t_tel = time.perf_counter()
                         emit(
                             TelemetryMessage(
                                 job_id=job.job_id,
@@ -362,7 +347,9 @@ def run_moving_count(
                                 },
                             )
                         )
+                        stage_sec["telemetry"] += time.perf_counter() - t_tel
                     if processed % defaults.pipeline.checkpoint_interval_frames == 0:
+                        t_io = time.perf_counter()
                         _save_progress_checkpoint(
                             paths,
                             job,
@@ -372,6 +359,7 @@ def run_moving_count(
                             counted=engine.crossings.counted_track_ids,
                             events_rows=events_rows,
                         )
+                        stage_sec["io"] += time.perf_counter() - t_io
                 if last_index >= 0:
                     observed = last_index + 1
                     if supplied_frames:
@@ -389,7 +377,9 @@ def run_moving_count(
                     counted=engine.crossings.counted_track_ids,
                     events_rows=events_rows,
                 )
+            t_io = time.perf_counter()
             save_time_map(paths["time_map"], time_map)
+            stage_sec["io"] += time.perf_counter() - t_io
             writer_renderer.close()
             artifacts = RunResultArtifacts(
                 events=str(paths["events"]),
@@ -407,7 +397,11 @@ def run_moving_count(
                     job_id=job.job_id,
                     status="COMPLETED",
                     telemetry_type="LOG",
-                    data={"message": "process_complete", "events_rows": events_rows},
+                    data={
+                        "message": "process_complete",
+                        "events_rows": events_rows,
+                        "stage_sec": {key: round(value, 3) for key, value in stage_sec.items()},
+                    },
                 )
             )
             return result

@@ -96,6 +96,7 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 
 | Date | Note |
 |------|------|
+| 2026-08-21 | **6.9 implemented** — process loop no longer OCR-rescans; clock/location locked to confirmed prescan/user metadata; S23 before/after documented. |
 | 2026-08-21 | File created. Manual-review parking lot; agents must not self-assign. |
 | 2026-08-21 | I001–I003 restored on `main` (were only in the idea-dump chat). I004 added — play `_processed.mp4` from job details; investigate in-progress VOD vs complete-only. |
 | 2026-08-21 | Review: **I001 → 6.8**, **I003 → 6.9**. I002 stays dump P3 (API availability check first). I004 demoted (aesthetics / later). |

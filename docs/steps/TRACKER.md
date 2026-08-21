@@ -135,6 +135,8 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 6.5 | Extra camera clip | ⬜ |
 | 6.6 | GPU CI | ⬜ |
 | 6.7 | Container host path access + API intake path validation (S09 / F006) | ⬜ |
+| 6.8 | Job details: drop Live Monitor widget/action; Live Crossings in details; row click opens details (**I001**) | ⬜ |
+| 6.9 | Disable in-process OSD OCR; wall-clock/location from confirmed prescan only (**I003**) | ⬜ |
 
 ---
 
@@ -142,6 +144,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | Promoted idea dump **I001 → 6.8** (job details / drop Live Monitor) and **I003 → 6.9** (no process-loop OSD OCR). I002 stays dump (P3, API check). I004 demoted. |
 | 2026-08-21 | Added [`IDEA_DUMP.md`](IDEA_DUMP.md) — manual-review parking lot; agents must not self-assign from it |
 | 2026-08-21 | S21 follow-up: `test_video.mp4` plus-as-colon clock (`08:38+31`) and unhyphenated location join; prior inframe/shimoga/night reads unchanged |
 | 2026-08-20 | S21 (F017) fixed — adaptive OSD bands + clock/date salvage (spaced/`"` colons, year `7074`→`2024`, mixed-polarity location); UI retest OK; no `hiv000001_inframe` S07/S08 regression |

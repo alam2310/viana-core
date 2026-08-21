@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pathlib
 from uuid import uuid4
 
 import pytest
@@ -98,7 +99,8 @@ def test_aggregate_row_count_non_negative() -> None:
             partial=False,
         )
 
-def test_load_json_schema_not_dict(monkeypatch: pytest.MonkeyPatch, tmp_path: "pathlib.Path") -> None:
+
+def test_load_json_schema_not_dict(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     """Loading a JSON array raises ValueError instead of crashing on dict ops."""
     from pathlib import Path
 

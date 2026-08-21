@@ -107,23 +107,23 @@ class WorkerPool:
         self._running_prescans: int = 0
 
     def _set_job_status(self, job: JobRecord, new_status: JobStatusLiteral) -> None:
-        old_status = job.status
-        if old_status == new_status:
-            return
+        """Update status and occupancy caches under ``_lock`` (RLock-safe)."""
+        with self._lock:
+            old_status = job.status
+            if old_status == new_status:
+                return
 
-        # update running prescans
-        if old_status == "PRESCAN_RUNNING":
-            self._running_prescans -= 1
-        if new_status == "PRESCAN_RUNNING":
-            self._running_prescans += 1
+            if old_status == "PRESCAN_RUNNING":
+                self._running_prescans -= 1
+            if new_status == "PRESCAN_RUNNING":
+                self._running_prescans += 1
 
-        # update occupied gpus
-        if old_status == "PROCESSING" and job.gpu_device is not None:
-            self._occupied_gpus.discard(job.gpu_device)
-        if new_status == "PROCESSING" and job.gpu_device is not None:
-            self._occupied_gpus.add(job.gpu_device)
+            if old_status == "PROCESSING" and job.gpu_device is not None:
+                self._occupied_gpus.discard(job.gpu_device)
+            if new_status == "PROCESSING" and job.gpu_device is not None:
+                self._occupied_gpus.add(job.gpu_device)
 
-        job.status = new_status
+            job.status = new_status
 
     def occupied_gpus(self) -> set[str]:
         """Return GPU ids currently running a PROCESSING job."""
@@ -578,20 +578,21 @@ class WorkerPool:
 
     def _drain_prescan(self) -> None:
         """Start PRESCAN_PENDING jobs up to ``MAX_CONCURRENT_PRESCAN_JOBS``."""
-        while True:
-            with self._lock:
-                running = self._running_prescans
-                if running >= MAX_CONCURRENT_PRESCAN_JOBS:
-                    return
-                job_id: str | None = None
-                for queued_id in self._prescan_queue:
-                    queued = self._jobs.get(queued_id)
-                    if queued is not None and queued.status == "PRESCAN_PENDING":
-                        job_id = queued_id
-                        self._set_job_status(queued, "PRESCAN_RUNNING")
+        with self._lock:
+            available = MAX_CONCURRENT_PRESCAN_JOBS - self._running_prescans
+            if available <= 0:
+                return
+            jobs_to_start: list[str] = []
+            for queued_id in self._prescan_queue:
+                queued = self._jobs.get(queued_id)
+                if queued is not None and queued.status == "PRESCAN_PENDING":
+                    jobs_to_start.append(queued_id)
+                    self._set_job_status(queued, "PRESCAN_RUNNING")
+                    if len(jobs_to_start) >= available:
                         break
-                if job_id is None:
-                    return
+            if not jobs_to_start:
+                return
+        for job_id in jobs_to_start:
             thread = threading.Thread(target=self._run_prescan, args=(job_id,), daemon=True)
             thread.start()
             self._track_thread(thread)

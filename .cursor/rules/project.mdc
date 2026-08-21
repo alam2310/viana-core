@@ -16,5 +16,6 @@ alwaysApply: true
    - API → `src/orchestrator/AGENTS.md`
    - UI → `apps/web/AGENTS.md`
    - UVH retrain → `training/README.md`
+8. **`docs/steps/IDEA_DUMP.md` is manual review only** — do not pick, implement, or treat as current Step unless the user names an idea ID.
 
 Current plan: `docs/PROJECT_PLAN.md`. Status: `docs/PROJECT_STATUS.md`. Post-v0.1 Steps: `docs/steps/TRACKER.md` + `docs/steps/AGENT_PROGRESS.md`. Architecture: `docs/ARCHITECTURE.md`. Docs index: `docs/README.md`.

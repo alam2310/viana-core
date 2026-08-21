@@ -41,6 +41,7 @@ docs/               → plans, status, UI specs, governance, Steps, ADRs
 5. **Record decisions** in `docs/adr/` when architecture changes.
 6. **No inline 15-min aggregation in the GPU loop** — events CSV first, aggregate separately (ADR 001).
 7. **Geometry** — lines must be within frame bounds; mandatory on every run.
+8. **Idea dump is not work** — `docs/steps/IDEA_DUMP.md` is for **manual review only**. Do not implement or prioritize items from it unless the user **explicitly names an idea ID**.
 
 ## 5. What is implemented today
 

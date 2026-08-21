@@ -1,0 +1,3 @@
+## 2026-08-25 - [Performance] Combine loops and memoize datetime windowing in event aggregation
+**Learning:** In telemetry aggregation logic, running multiple list comprehensions or multi-pass iterations on a large dataset combined with redundant parsing functions (like `datetime` conversions inside O(N) loops) leads to heavy computational overhead.
+**Action:** When aggregating rows, combine logic into a single-pass loop whenever possible, and cache expensive parsed variables (e.g. `floor_window(parse_wall_time(event.wall_time))`) directly during the loop instead of iterating over the dataset again.

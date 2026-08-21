@@ -76,18 +76,28 @@ def build_aggregate_rows(
     """Zero-fill a class × direction grid for each 15-minute clock window."""
     aggregatable = taxonomy.aggregatable()
     allowed = {item.name for item in aggregatable}
-    timed: list[tuple[datetime, RawCrossingEventRow]] = []
+
+    starts: list[datetime] = []
+    counts: Counter[tuple[datetime, str, CrossingDirection]] = Counter()
+    meta: dict[datetime, tuple[str | None, str | None]] = {}
+
     for event in events:
         if event.class_name not in allowed:
             continue
         if not event.wall_time:
             continue
-        timed.append((parse_wall_time(event.wall_time), event))
 
-    if not timed:
+        moment = parse_wall_time(event.wall_time)
+        window = floor_window(moment)
+
+        starts.append(window)
+        counts[(window, event.class_name, event.direction)] += 1
+        if window not in meta:
+            meta[window] = (event.date, event.location)
+
+    if not starts:
         return []
 
-    starts = [floor_window(moment) for moment, _event in timed]
     first = min(starts)
     last = max(starts)
     windows: list[datetime] = []
@@ -95,14 +105,6 @@ def build_aggregate_rows(
     while cursor <= last:
         windows.append(cursor)
         cursor += WINDOW
-
-    counts: Counter[tuple[datetime, str, CrossingDirection]] = Counter()
-    meta: dict[datetime, tuple[str | None, str | None]] = {}
-    for moment, event in timed:
-        window = floor_window(moment)
-        counts[(window, event.class_name, event.direction)] += 1
-        if window not in meta:
-            meta[window] = (event.date, event.location)
 
     class_by_name = {item.name: item for item in aggregatable}
     rows: list[Aggregate15MinRow] = []

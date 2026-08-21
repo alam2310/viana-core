@@ -14,7 +14,7 @@ The **container** runs FastAPI on port `8000` (see `docker-compose.yml`).
 |-------|----------|----------|
 | `GET /api/proxy/preview?path=` | Orchestrator prescan JPEG | Calibration canvas initial frame |
 | `GET /api/proxy/source?path=` | `GET /artifacts/{id}/source.mp4` (forwards `Range`) | Prescan review frame scrub |
-| `GET /api/proxy/partial?path=` | `GET /artifacts/{id}/partial.mp4` (forwards `Range`; `Accept-Ranges` / `Content-Disposition: inline`) | **PARKED in UI** — endpoint remains; Live Monitor does not mount the player (S24) |
+| `GET /api/proxy/partial?path=` | `GET /artifacts/{id}/partial.mp4` (forwards `Range`; `Accept-Ranges` / `Content-Disposition: inline`) | **PARKED in UI** — endpoint remains; player is not mounted (S24) |
 
 ## 2. Job Ownership
 
@@ -103,6 +103,8 @@ Register one or more video paths for backend prescan. Creates jobs at `PRESCAN_P
 
 `output_dir` is optional (G20). Response: `job_intake_response.schema.json`, fixture `job_intake_response.json`.
 
+**Path validation (Step 6.7 / S09 / F006):** each `source_video_paths` entry must be readable inside the processing container. Host paths that match compose bind-mounts are rewritten (`./data` → `/data`, repo → `/app/ViAna`) and stored as the container path. Unmapped paths return **400** (the whole batch fails) instead of creating jobs that later `PRESCAN_FAILED` with `Video not found`. Allowed roots: `VIANA_INTAKE_ROOTS` (default `/data:/app/ViAna`). Extra drives: bind-mount the volume and set `VIANA_EXTRA_INTAKE_ROOT` + `VIANA_PATH_MAPS=host->container`. The UI already translates via `apps/web/src/lib/container-paths.ts`; this check defends curl and other API clients. Same rewrite/reject applies to `source_video_path` on `POST /jobs`.
+
 ## 5c. PATCH /jobs/{id}/prescan — JobPrescanConfirmRequest
 
 Operator confirms reviewed OCR + lines → job transitions to `READY` and enters the GPU FIFO queue.
@@ -136,7 +138,7 @@ Response: full `JobStatus` with `confirmed_metadata` and `confirmed_task_paramet
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/jobs/intake` | Register path(s) → `PRESCAN_PENDING` |
+| POST | `/jobs/intake` | Register path(s) → `PRESCAN_PENDING` (400 if path not in a container bind-mount) |
 | PATCH | `/jobs/{id}/prescan` | Confirm review → `READY` |
 | POST | `/jobs/{id}/prescan/retry` | `PRESCAN_FAILED` → `PRESCAN_PENDING` |
 | GET | `/jobs/{id}/prescan/preview` | Re-run prescan OCR at `frame_offset_sec` (**Re-scan OCR** button only; frame scrub uses `source.mp4`) |

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from viana.config.job import LineSegment
+from viana.io.proc import close_stdio, run_captured, terminate_process_tree
 from viana.stages.cv_core import FrameCVResult
 from viana.stages.video import VideoFrame
 
@@ -255,12 +256,7 @@ class FfmpegRenderer:
         if ffmpeg is None:
             raise RuntimeError("ffmpeg not found on PATH")
         path.parent.mkdir(parents=True, exist_ok=True)
-        listed = subprocess.run(  # noqa: S603  # nosec B603
-            [ffmpeg, "-hide_banner", "-encoders"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        listed = run_captured([ffmpeg, "-hide_banner", "-encoders"], timeout=30.0)
         self._proc = subprocess.Popen(  # noqa: S603  # nosec B603
             [
                 ffmpeg,
@@ -281,7 +277,11 @@ class FfmpegRenderer:
                 *ffmpeg_video_args(path, encoder_list=listed.stdout),
             ],
             stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
         )
+        self._closed = False
         self._horizon: LineSegment | None = None
         self._counting: LineSegment | None = None
         self._class_names: dict[int, str] = {}
@@ -311,10 +311,22 @@ class FfmpegRenderer:
         self._proc.stdin.write(image.tobytes())
 
     def close(self) -> None:
-        """Flush ffmpeg stdin and wait."""
-        if self._proc.stdin is not None:
-            self._proc.stdin.close()
-        self._proc.wait()
+        """Flush ffmpeg stdin, wait, and kill the process group if it hangs."""
+        if getattr(self, "_closed", False):
+            return
+        self._closed = True
+        proc = self._proc
+        try:
+            if proc.stdin is not None:
+                proc.stdin.close()
+        except OSError:
+            pass
+        try:
+            proc.wait(timeout=15.0)
+        except subprocess.TimeoutExpired:
+            terminate_process_tree(proc, close_pipes=True)
+            return
+        close_stdio(proc)
 
 
 class RecordingRenderer:

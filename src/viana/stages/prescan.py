@@ -209,6 +209,7 @@ def sample_opening_frame(
         raise FileNotFoundError(f"Video not found: {source}")
     capture = cv2.VideoCapture(str(source))
     if not capture.isOpened():
+        capture.release()
         raise ValueError(f"Could not open video: {source}")
     try:
         meta = _video_meta_from_capture(capture, source)
@@ -330,6 +331,7 @@ def sample_video_cv2(source: Path, frame_offset_sec: float) -> SampledVideo:
         raise RuntimeError("opencv-python is required to sample video") from exc
     capture = cv2.VideoCapture(str(source))
     if not capture.isOpened():
+        capture.release()
         raise ValueError(f"Could not open video: {source}")
     try:
         meta = _video_meta_from_capture(capture, source)

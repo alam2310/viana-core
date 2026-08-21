@@ -10,12 +10,12 @@
 | Container | `features/container/container-panel.tsx` | Docker health, start (compact in project bar) |
 | Project | `features/project/project-bar.tsx` | `project_id`, browsable `output_dir`, task type picker |
 | Intake | `features/intake/intake-panel.tsx`, `path-browser.tsx` | Host path browser, file/folder/multi-select |
-| Queue | `features/queue/job-queue-table.tsx`, `job-status.ts` | Job table, FIFO, row actions, status labels |
+| Queue | `features/queue/job-queue-table.tsx`, `job-status.ts` | Job table, FIFO, row click → details, status labels (S25), action slots Review → Restart (Overwrite) → Stop; Open output only on `COMPLETED` (S26); pagination (10/25/50/All) + sticky header + 10-row scroll viewport |
 | Prescan | `features/prescan/prescan-review-modal.tsx` | Review modal: side-by-side canvas, OCR, scrubber, summary step |
 | Calibration | `features/calibration/calibration-canvas.tsx` | HTML5 canvas, line drag |
-| Telemetry | `features/telemetry/telemetry-panel.tsx`, `telemetry-formatters.ts` | Structured progress, crossing feed, activity log |
-| Monitor | `features/monitor/monitor-sidebar.tsx` | Live sidebar: progress + Live Crossings (WS). **Partial MP4 preview PARKED** — see `live-processed-video.tsx` + STABILIZATION_BACKLOG S20/S24 |
-| Dashboard | `features/dashboard/dashboard.tsx` | Layout: project bar + intake + queue + monitor drawer |
+| Telemetry | `features/telemetry/job-details-panel.tsx`, `live-crossings.tsx`, `telemetry-formatters.ts` | Job details: metadata, progress, Live Crossings (WS rows + API `crossing_count`) |
+| Monitor (removed) | `features/monitor/` | Widget + action removed (I001 / 6.8). Parked player: `live-processed-video.tsx` (do not mount, S24). |
+| Dashboard | `features/dashboard/dashboard.tsx` | Layout: project bar + intake + queue + job details |
 
 ## Removed (Phase 8)
 
@@ -32,7 +32,7 @@
 | Table | Job queue, crossing feed |
 | Dialog (fixed overlay) | Prescan review (wide), path browser |
 | Progress | Row progress + ETA strip |
-| Button | Review, Monitor, Retry, Cancel |
+| Button | Review, Restart (Overwrite), Stop; Open output on completed |
 | Select | Task type |
 | Badge-like spans | Status operator labels |
 
@@ -49,7 +49,7 @@
 | `/api/proxy/source` | stab S03 | Same-origin proxy for source MP4 (`api-client.sourceVideoUrl`) |
 | `/api/proxy/preview` | 4 | `calibration-canvas.tsx` — prescan JPEG |
 | `GET /api/fs/browse` | 4 | `path-browser.tsx` (Next.js route) |
-| `GET /artifacts/.../partial.mp4` | 3 | **PARKED** — code in `live-processed-video.tsx` (not mounted). Live Monitor shows crossings only (S24) |
+| `GET /artifacts/.../partial.mp4` | 3 | **PARKED** — code in `live-processed-video.tsx` (not mounted). Live Crossings in job details (S24 / I001) |
 | `WS /ws/jobs` | 3 | `dashboard.tsx` → telemetry formatters |
 
 ## localStorage (UI prefs only)

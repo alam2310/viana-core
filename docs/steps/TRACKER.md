@@ -1,11 +1,18 @@
 # Step tracker (living)
 
-**Last updated:** 2026-08-20  
+**Last updated:** 2026-08-21
 **Current Step:** **6** — Hardening backlog  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
 **Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)
+**Idea dump (manual review only):** [`IDEA_DUMP.md`](IDEA_DUMP.md)
 
 > Update this file when a Step changes status. Agents: do not rely on chat memory.
+
+### Idea dump — not a work queue
+
+[`IDEA_DUMP.md`](IDEA_DUMP.md) is a **parking lot** for ideas captured outside active Steps. Use it for **human review after current work**, then promote chosen items into Step 6 / stabilization / a new Step.
+
+**Agents: do not pick work from `IDEA_DUMP.md` unless the user explicitly names an idea ID.** Do not treat it as the current Step, a blocker, or a source of Seq/F IDs.
 
 ---
 
@@ -77,7 +84,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 S21 fixed; S10 in_progress; S22–S23 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
+| **4.stab** Stabilization path | 🔄 S10/S21–S23 fixed; S25 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
 ### Stabilization execution path (follow in order)
 
@@ -91,7 +98,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S06 | F005 — EasyOCR triage | C | fixed |
 | S07 | F001 — corner ROI OCR (**Step 5 blocker**) | C | fixed |
 | S08 | F002 — prescan latency | C | fixed |
-| S10 | F007 — horizon/counting line proposal | C | in_progress |
+| S10 | F007 — horizon/counting line proposal | C | **fixed** |
 | S11 | F008 — `created_at` + sortable submitted time in API | B/D | fixed |
 | S12 | F009 — `video_duration_sec` + `processing_duration_sec` in API | B/D | fixed |
 | S13 | F010 — streamable growing `_processed.mp4` during processing | B/C | fixed |
@@ -99,9 +106,10 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S15 | F012 — 15-min CSV: add `date`, HH:MM window columns | B/D | fixed |
 | S19 | F016 — queue video length / ETA inflation + MPEG-PS probe | A/B/C | fixed |
 | S21 | F017 — adaptive OSD OCR when text is outside corner ROIs | C | **fixed** |
+| S28 | F023 — missed crossings when class flicker drops box across counting line | C | **fixed** |
 | S20 | F010 follow-on — browser live monitor play of in-progress MP4 (H.264) | A/B | **parked** → S24 |
 | S24 | Park live-monitor partial MP4 UI; crossings immediate | A | parked |
-| ~~S09~~ | F006 — intake path validation | B | **deferred → 6.7** |
+| ~~S09~~ | F006 — intake path validation | B | **fixed (6.7)** |
 
 ---
 
@@ -123,11 +131,14 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 |------|------|--------|
 | 6.1 | Docker image bake (`trackers==2.6.0 --no-deps` + `numpy<2`) | ✅ |
 | 6.2 | Pause / resume UX | ⬜ |
-| 6.3 | Faster cancel | ⬜ |
+| 6.3 | Faster cancel | ✅ |
 | 6.4 | Playwright | ⬜ |
 | 6.5 | Extra camera clip | ⬜ |
 | 6.6 | GPU CI | ⬜ |
-| 6.7 | Container host path access + API intake path validation (S09 / F006) | ⬜ |
+| 6.7 | Container host path access + API intake path validation (S09 / F006) | ✅ |
+| 6.8 | Job details: drop Live Monitor widget/action; Live Crossings in details; row click opens details (**I001**) | ✅ |
+| 6.9 | Disable in-process OSD OCR; wall-clock/location from confirmed prescan only (**I003**) | ✅ |
+| 6.10 | Bind live crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session WS list length (**I002**) | ✅ |
 
 ---
 
@@ -135,6 +146,15 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **6.7 complete (S09 / F006)** — intake (and `POST /jobs`) rewrites host paths onto compose mounts (`/data`, `/app/ViAna`) or **400**s unreadable paths; extra drive via `VIANA_INTAKE_ROOTS` + `VIANA_PATH_MAPS`. Tests: `tests/orchestrator/test_s67_intake_paths.py` |
+| 2026-08-21 | **6.3 complete** — DELETE sets `CANCELLED` immediately, releases the GPU slot, drains the next READY job; `_finalize` does not clobber user cancel (S27 fail-drain unchanged) |
+| 2026-08-21 | **S28 (F023) fixed** — counting-line anchors survive brief detection gaps (class flicker); `hiv00013_shimoga` Jeep ~06:44:50 recovered on replay |
+| 2026-08-21 | **6.9 / I003 complete** — no OSD OCR in `viana run`; clock locked to confirmed metadata; S23 `hiv000001_inframe` 203.2s/13.45 fps → 179.3s/15.26 fps |
+| 2026-08-21 | **S10 (F007) fixed** — road-band horizon/counting proposal on real clips; profile override kept; `test_prescan.py` 29 passed |
+| 2026-08-21 | **6.8 / 6.10 complete** — Live Monitor widget/action removed; Live Crossings in job details while processing; totals from `progress.crossing_count`; S24 player not remounted |
+| 2026-08-21 | Promoted idea dump **I001 → 6.8** (job details / drop Live Monitor) and **I003 → 6.9** (no process-loop OSD OCR). I002 stays dump (P3, API check). I004 demoted. |
+| 2026-08-21 | Added [`IDEA_DUMP.md`](IDEA_DUMP.md) — manual-review parking lot; agents must not self-assign from it |
+| 2026-08-21 | S21 follow-up: `test_video.mp4` plus-as-colon clock (`08:38+31`) and unhyphenated location join; prior inframe/shimoga/night reads unchanged |
 | 2026-08-20 | S21 (F017) fixed — adaptive OSD bands + clock/date salvage (spaced/`"` colons, year `7074`→`2024`, mixed-polarity location); UI retest OK; no `hiv000001_inframe` S07/S08 regression |
 | 2026-08-20 | S19 (F016) fixed — MPEG-PS/DVR header duration corrected via ffprobe packet count; queue video length/ETA units documented |
 | 2026-08-20 | Step 6.1 follow-up: bake EasyOCR English weights into the image; prescan timeout fails the job instead of hanging |

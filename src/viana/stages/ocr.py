@@ -142,6 +142,7 @@ def _preferred_location(*candidates: str | None) -> str | None:
         usable,
         key=lambda item: (
             extract_ocr_time([item]) is None,
+            " " not in item.strip(),
             any(token in item.upper() for token in ("BANKI", "BARA", "BYPASS", "NH")),
             "-" in item or "_" in item,
             sum(ch.isalpha() for ch in item),
@@ -232,7 +233,7 @@ def parse_frame_corner_osd(
     easyocr_reader: Any,
     min_confidence: float,
 ) -> tuple[ParsedOcr, float | None]:
-    """Fast 2× corners, wide 4× if time/date miss, then S21 band fallback."""
+    """Fast 2× corners, wide 4× if date misses, then S21 band fallback."""
     metadata_hits, location_hits = read_corner_osd_hits(
         frame,
         easyocr_reader,
@@ -243,7 +244,7 @@ def parse_frame_corner_osd(
     parsed = finalize_parsed_ocr(parsed)
     if _osd_fields_complete(parsed):
         return parsed, conf
-    if not (parsed.time and parsed.date):
+    if not parsed.date:
         wide_meta, wide_loc = read_corner_osd_hits(
             frame,
             easyocr_reader,
@@ -277,7 +278,7 @@ def read_corner_osd_hits_with_fallback(
     parsed, _conf = parse_corner_osd_hits(metadata_hits, location_hits, 0.0)
     if _osd_fields_complete(parsed):
         return metadata_hits, location_hits
-    if not (parsed.time and parsed.date):
+    if not parsed.date:
         wide_meta, wide_loc = read_corner_osd_hits(
             frame,
             easyocr_reader,
@@ -389,7 +390,9 @@ def _read_roi_hits(
         read_kwargs["allowlist"] = roi.allowlist
     hits = _collect_readtext_hits(easyocr_reader, rgb, read_kwargs)
     mixed = crop_has_mixed_text_polarity(crop)
-    if mixed:
+    # Invert only the location crop. Metadata invert commonly turns 02 into 03
+    # on this OSD font and then wins as a complete (wrong) clock.
+    if mixed and roi.name == "location":
         try:
             import cv2
 
@@ -397,9 +400,8 @@ def _read_roi_hits(
             hits.extend(_collect_readtext_hits(easyocr_reader, inverted, read_kwargs))
         except ImportError:
             pass
-        if roi.name == "location":
-            extra = polarity_invariant_rgb(rgb)
-            hits.extend(_collect_readtext_hits(easyocr_reader, extra, read_kwargs))
+        extra = polarity_invariant_rgb(rgb)
+        hits.extend(_collect_readtext_hits(easyocr_reader, extra, read_kwargs))
     return hits
 
 

@@ -43,7 +43,7 @@ export function TelemetryPanel({
 
       {!jobId ? (
         <p className="mt-3 text-sm text-muted">
-          Open Monitor on a processing job to view structured telemetry.
+          Select a job in the queue to view structured telemetry.
         </p>
       ) : (
         <div className="mt-3 space-y-3">

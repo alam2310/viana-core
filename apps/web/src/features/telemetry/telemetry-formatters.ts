@@ -176,35 +176,28 @@ function formatEventTimestamp(value: string): string {
 
 function eventTimeFromElapsedMs(
   elapsedMs: number,
-  startTime?: string,
-  startDate?: string,
+  baseDate?: Date | null,
 ): string | null {
   if (!Number.isFinite(elapsedMs) || elapsedMs < 0) {
     return null;
   }
-  if (!startTime?.trim() || !startDate?.trim()) {
+  if (!baseDate) {
     return null;
   }
-  const base = parseStartDateTime(startDate, startTime);
-  if (!base) {
-    return null;
-  }
-  return formatWallClockTime(new Date(base.getTime() + elapsedMs));
+  return formatWallClockTime(new Date(baseDate.getTime() + elapsedMs));
 }
 
 function eventTimeFromFrame(
   frame: number,
   fps: number,
-  startTime?: string,
-  startDate?: string,
+  baseDate?: Date | null,
 ): string {
   if (!fps || fps <= 0) {
     return "—";
   }
   const fromStart = eventTimeFromElapsedMs(
     (frame / fps) * 1000,
-    startTime,
-    startDate,
+    baseDate,
   );
   if (fromStart) {
     return fromStart;
@@ -224,6 +217,15 @@ export function crossingsFromTelemetry(
 ): CrossingRow[] {
   const limit = options?.limit ?? 500;
   const rows: CrossingRow[] = [];
+
+  // ⚡ Bolt: Cache base date calculation outside the loop
+  // Impact: Prevents O(N) regex matching and Date object instantiation for N telemetry events,
+  // significantly reducing main thread blocking during live monitoring.
+  const baseDate =
+    options?.startDate?.trim() && options?.startTime?.trim()
+      ? parseStartDateTime(options.startDate, options.startTime)
+      : null;
+
   for (const msg of messages) {
     if (msg.job_id !== jobId || msg.telemetry_type !== "MOVING_EVENT") {
       continue;
@@ -249,8 +251,7 @@ export function crossingsFromTelemetry(
       elapsedMs !== undefined
         ? eventTimeFromElapsedMs(
             elapsedMs,
-            options?.startTime,
-            options?.startDate,
+            baseDate,
           )
         : null;
     rows.push({
@@ -263,8 +264,7 @@ export function crossingsFromTelemetry(
             ? eventTimeFromFrame(
                 frame,
                 fps,
-                options?.startTime,
-                options?.startDate,
+                baseDate,
               )
             : "—",
       vehicle:

@@ -86,13 +86,39 @@ def nms_class_agnostic(detections: list[Detection], threshold: float) -> list[De
     ordered = sorted(detections, key=lambda item: item.confidence, reverse=True)
     kept: list[Detection] = []
     suppressed = [False] * len(ordered)
+
+    areas = [item.area for item in ordered]
+    x1s = [item.x1 for item in ordered]
+    y1s = [item.y1 for item in ordered]
+    x2s = [item.x2 for item in ordered]
+    y2s = [item.y2 for item in ordered]
+
     for index, candidate in enumerate(ordered):
         if suppressed[index]:
             continue
         kept.append(candidate)
+
+        cx1, cy1, cx2, cy2 = x1s[index], y1s[index], x2s[index], y2s[index]
+        carea = areas[index]
+
         for other_index in range(index + 1, len(ordered)):
             if suppressed[other_index]:
                 continue
-            if iou(candidate, ordered[other_index]) >= threshold:
+
+            # fast AABB bail-out
+            ox1, oy1 = x1s[other_index], y1s[other_index]
+            ox2, oy2 = x2s[other_index], y2s[other_index]
+            if cx2 <= ox1 or ox2 <= cx1 or cy2 <= oy1 or oy2 <= cy1:
+                continue
+
+            ix1 = cx1 if cx1 > ox1 else ox1
+            iy1 = cy1 if cy1 > oy1 else oy1
+            ix2 = cx2 if cx2 < ox2 else ox2
+            iy2 = cy2 if cy2 < oy2 else oy2
+
+            inter = (ix2 - ix1) * (iy2 - iy1)
+            union = carea + areas[other_index] - inter
+
+            if union > 0.0 and inter >= threshold * union:
                 suppressed[other_index] = True
     return kept

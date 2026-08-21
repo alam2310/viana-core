@@ -82,6 +82,8 @@ mkdir -p data/raw data/viana-outputs
 
 Put review/test videos under `data/raw/`. Job outputs land in `data/viana-outputs/{project_id}/`.
 
+**Intake paths (Step 6.7):** the API rewrites known host prefixes to these container paths and **400**s anything else. Compose passes `VIANA_HOST_REPO_ROOT` / `VIANA_HOST_DATA_ROOT` so a host path like `/home/…/ViAna/data/raw/clip.mp4` becomes `/data/raw/clip.mp4`. Extra disk or USB trees: bind-mount them, set `VIANA_EXTRA_INTAKE_ROOT` (container path), and `VIANA_PATH_MAPS=/host/videos->/mnt/extra`. Uncomment the extra volume in `docker-compose.yml`. The UI maps the same mounts in `apps/web/src/lib/container-paths.ts`.
+
 ---
 
 ## Phase 3 — Build and start the container

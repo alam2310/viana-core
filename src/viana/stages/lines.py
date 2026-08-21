@@ -15,6 +15,9 @@ _HORIZON_Y = (0.6, 0.0)
 _COUNTING_Y = (1.0, 0.0)
 GEOMETRIC_CONFIDENCE = 0.4
 PROFILE_CONFIDENCE = 0.85
+# Parallel gap used by human review geometry B/C/D on hiv000001 (~0.25–0.28 H).
+_COUNTING_OFFSET_RATIO = 0.26
+_MAX_SLOPE = 0.45
 
 
 class ProposedLines(BaseModel):
@@ -101,13 +104,129 @@ def propose_lines(
     return geometric_lines(width, height)
 
 
+def _weighted_quantile(values: list[float], weights: list[float], quantile: float) -> float:
+    ordered = sorted(zip(values, weights, strict=False), key=lambda item: item[0])
+    total = sum(weights)
+    if total <= 0:
+        return ordered[-1][0]
+    target = total * min(max(quantile, 0.0), 1.0)
+    running = 0.0
+    chosen = ordered[-1][0]
+    for value, weight in ordered:
+        running += weight
+        if running >= target:
+            chosen = value
+            break
+    return chosen
+
+
+def _span_line(width: int, height: int, y_left: float, y_right: float) -> LineSegment:
+    return LineSegment(
+        start=clamp_point(0, int(round(y_left)), width, height),
+        end=clamp_point(width - 1, int(round(y_right)), width, height),
+    )
+
+
+def _edge_candidates(
+    image: object,
+    width: int,
+    height: int,
+) -> list[tuple[float, float, float, float, float, float, float]]:
+    import cv2
+    import numpy as np
+
+    gray = cv2.cvtColor(np.asarray(image), cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(blur, 60, 170)
+    edges[: int(height * 0.10), :] = 0
+    edges[int(height * 0.94) :, : int(width * 0.42)] = 0
+    lines = cv2.HoughLinesP(
+        edges,
+        1,
+        np.pi / 180.0,
+        threshold=max(30, int(width * 0.02)),
+        minLineLength=max(50, int(width * 0.12)),
+        maxLineGap=max(20, int(width * 0.04)),
+    )
+    candidates: list[tuple[float, float, float, float, float, float, float]] = []
+    if lines is None:
+        return candidates
+    for raw in lines.reshape(-1, 4):
+        x1, y1, x2, y2 = [float(v) for v in raw]
+        dx = x2 - x1
+        if abs(dx) < 1.0:
+            continue
+        dy = y2 - y1
+        slope = dy / dx
+        if abs(slope) > 0.55:
+            continue
+        length = sqrt((dx * dx) + (dy * dy))
+        if length < max(30.0, width * 0.08):
+            continue
+        y_mid = (y1 + y2) * 0.5
+        if y_mid < height * 0.22 or y_mid > height * 0.94:
+            continue
+        candidates.append((x1, y1, x2, y2, slope, y_mid, length))
+    return candidates
+
+
+def _dominant_road_slope(
+    candidates: list[tuple[float, float, float, float, float, float, float]],
+    height: int,
+) -> float | None:
+    buckets: dict[str, list[tuple[float, float, float]]] = {"neg": [], "flat": [], "pos": []}
+    for _x1, _y1, _x2, _y2, slope, y_mid, length in candidates:
+        road_w = length * (0.35 + 0.65 * (y_mid / height))
+        if slope < -0.05:
+            buckets["neg"].append((slope, road_w, y_mid))
+        elif slope > 0.05:
+            buckets["pos"].append((slope, road_w, y_mid))
+        else:
+            buckets["flat"].append((slope, road_w, y_mid))
+    scored: list[tuple[float, list[tuple[float, float, float]]]] = []
+    for rows in buckets.values():
+        if len(rows) < 3:
+            continue
+        weight_sum = sum(item[1] for item in rows)
+        y_mean = sum(item[2] * item[1] for item in rows) / weight_sum
+        scored.append((weight_sum * (0.5 + y_mean / height), rows))
+    if not scored:
+        return None
+    _score, rows = max(scored, key=lambda item: item[0])
+    slope = _weighted_quantile([item[0] for item in rows], [item[1] for item in rows], 0.5)
+    return max(-_MAX_SLOPE, min(_MAX_SLOPE, slope))
+
+
+def _fit_intercept(
+    candidates: list[tuple[float, float, float, float, float, float, float]],
+    slope: float,
+    y_min: float,
+    y_max: float,
+    quantile: float,
+) -> tuple[float, float] | None:
+    intercepts: list[float] = []
+    weights: list[float] = []
+    for x1, y1, x2, y2, cand_slope, y_mid, length in candidates:
+        if abs(cand_slope - slope) > 0.18:
+            continue
+        if y_mid < y_min or y_mid > y_max:
+            continue
+        intercepts.extend((y1 - (slope * x1), y2 - (slope * x2)))
+        weights.extend((length, length))
+    if len(intercepts) < 4:
+        return None
+    intercept = _weighted_quantile(intercepts, weights, quantile)
+    support = min(1.0, len(intercepts) / 36.0)
+    return intercept, support
+
+
 def _frame_guided_lines(width: int, height: int, frame: object | None) -> ProposedLines | None:
-    """Use deterministic edge/line cues when a sampled BGR frame is available."""
+    """Use road-band edge cues when a sampled BGR frame is available."""
     if frame is None:
         return None
     try:
-        import cv2
-        import numpy as np
+        import cv2  # noqa: F401
+        import numpy as np  # noqa: F401
     except ImportError:
         return None
     image = frame
@@ -116,110 +235,73 @@ def _frame_guided_lines(width: int, height: int, frame: object | None) -> Propos
     shape = image.shape
     if len(shape) < 2 or int(shape[0]) != height or int(shape[1]) != width:
         return None
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blur, 60, 170)
-    lines = cv2.HoughLinesP(
-        edges,
-        1,
-        np.pi / 180.0,
-        threshold=max(30, int(width * 0.02)),
-        minLineLength=max(50, int(width * 0.14)),
-        maxLineGap=max(20, int(width * 0.04)),
-    )
-    candidates: list[tuple[float, float, float, float, float, float]] = []
-    if lines is not None:
-        for raw in lines.reshape(-1, 4):
-            x1, y1, x2, y2 = [float(v) for v in raw]
-            dx = x2 - x1
-            if abs(dx) < 1.0:
-                continue
-            dy = y2 - y1
-            slope = dy / dx
-            if abs(slope) > 0.55:
-                continue
-            length = sqrt((dx * dx) + (dy * dy))
-            if length < max(30.0, width * 0.08):
-                continue
-            y_mid = (y1 + y2) * 0.5
-            candidates.append((x1, y1, x2, y2, slope, y_mid))
-
-    slope_samples: list[float] = []
-    slope_weights: list[float] = []
-    for x1, y1, x2, y2, slope, _y_mid in candidates:
-        seg_len = sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2))
-        slope_samples.append(slope)
-        slope_weights.append(seg_len)
-    if not slope_samples:
+    candidates = _edge_candidates(image, width, height)
+    if len(candidates) < 6:
         return None
-    slope_order = sorted(range(len(slope_samples)), key=lambda idx: slope_samples[idx])
-    total_weight = sum(slope_weights)
-    running = 0.0
-    dominant_slope = slope_samples[slope_order[-1]]
-    for idx in slope_order:
-        running += slope_weights[idx]
-        if running >= total_weight * 0.5:
-            dominant_slope = slope_samples[idx]
-            break
-    dominant_slope = max(-0.45, min(0.45, dominant_slope))
+    dominant_slope = _dominant_road_slope(candidates, height)
+    if dominant_slope is None:
+        return None
 
-    def fit_band_line(
-        y_min_ratio: float,
-        y_max_ratio: float,
-        fallback_y: float,
-    ) -> tuple[LineSegment, float]:
-        y_min = height * y_min_ratio
-        y_max = height * y_max_ratio
-        intercepts: list[float] = []
-        weights: list[float] = []
-        for x1, y1, x2, y2, slope, y_mid in candidates:
-            if abs(slope - dominant_slope) > 0.22:
-                continue
-            if y_mid < y_min or y_mid > y_max:
-                continue
-            seg_len = sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2))
-            intercepts.append(y1 - (dominant_slope * x1))
-            intercepts.append(y2 - (dominant_slope * x2))
-            weights.extend((seg_len, seg_len))
-        if len(intercepts) < 4:
-            return (
-                LineSegment(
-                    start=clamp_point(0, int(fallback_y), width, height),
-                    end=clamp_point(width - 1, int(fallback_y), width, height),
-                ),
-                0.0,
-            )
-        ordered = sorted(zip(intercepts, weights, strict=False), key=lambda item: item[0])
-        cum = 0.0
-        total = sum(weights)
-        intercept = ordered[-1][0]
-        for value, weight in ordered:
-            cum += weight
-            if cum >= total * 0.5:
-                intercept = value
-                break
-        y_left = int(round(intercept))
-        y_right = int(round((dominant_slope * (width - 1)) + intercept))
-        support = min(1.0, len(intercepts) / 36.0)
-        return (
-            LineSegment(
-                start=clamp_point(0, y_left, width, height),
-                end=clamp_point(width - 1, y_right, width, height),
-            ),
-            support,
+    fitted = _fit_intercept(
+        candidates,
+        dominant_slope,
+        height * 0.26,
+        height * 0.58,
+        0.35,
+    )
+    if fitted is None:
+        intercept = height * 0.46 - (dominant_slope * (width - 1) * 0.5)
+        horizon_support = 0.15
+    else:
+        intercept, horizon_support = fitted
+
+    horizon = _span_line(
+        width,
+        height,
+        intercept,
+        (dominant_slope * (width - 1)) + intercept,
+    )
+    offset = max(24, int(height * _COUNTING_OFFSET_RATIO))
+    counting = _span_line(
+        width,
+        height,
+        horizon.start[1] + offset,
+        horizon.end[1] + offset,
+    )
+    snapped = _fit_intercept(
+        candidates,
+        dominant_slope,
+        height * 0.56,
+        height * 0.88,
+        0.45,
+    )
+    if snapped is not None:
+        snap_intercept, counting_support = snapped
+        blend = 0.35
+        mixed = ((1.0 - blend) * (intercept + offset)) + (blend * snap_intercept)
+        candidate = _span_line(
+            width,
+            height,
+            mixed,
+            (dominant_slope * (width - 1)) + mixed,
         )
-
-    horizon, horizon_support = fit_band_line(0.20, 0.72, height * 0.56)
-    counting, counting_support = fit_band_line(0.42, 0.97, height * 0.84)
+        mid_ok = ((candidate.start[1] + candidate.end[1]) * 0.5) >= (
+            (horizon.start[1] + horizon.end[1]) * 0.5 + height * 0.12
+        )
+        if mid_ok:
+            counting = candidate
+    else:
+        counting_support = 0.0
 
     if counting.start[1] <= horizon.start[1] and counting.end[1] <= horizon.end[1]:
-        offset = max(12, int(height * 0.08))
-        counting = LineSegment(
-            start=clamp_point(0, horizon.start[1] + offset, width, height),
-            end=clamp_point(width - 1, horizon.end[1] + offset, width, height),
+        counting = _span_line(
+            width,
+            height,
+            horizon.start[1] + offset,
+            horizon.end[1] + offset,
         )
 
-    support_mean = (horizon_support + counting_support) / 2.0
+    support_mean = (horizon_support + max(counting_support, 0.2)) / 2.0
     if support_mean <= 0.0:
         return None
     confidence = min(0.8, max(GEOMETRIC_CONFIDENCE + 0.05, 0.45 + (0.3 * support_mean)))

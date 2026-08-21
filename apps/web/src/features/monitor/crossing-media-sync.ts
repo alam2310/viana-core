@@ -1,8 +1,8 @@
 /**
  * PARKED 2026-08-20 — helpers for live-preview ↔ crossing frame sync.
  *
- * Used only by the parked `live-processed-video` path. Live Monitor no longer
- * delays crossings; do not wire these filters into `monitor-sidebar` until the
+ * Used only by the parked `live-processed-video` path. Job details no longer
+ * delays crossings; do not wire these filters into Live Crossings until the
  * video preview is un-parked. See docs/steps/STABILIZATION_BACKLOG.md § S20 / S24.
  */
 import type { CrossingRow } from "@/features/telemetry/telemetry-formatters";

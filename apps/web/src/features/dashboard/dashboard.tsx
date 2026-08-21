@@ -6,7 +6,6 @@ import type { JobStatusResponse, TelemetryMessage } from "@viana/contracts";
 import { EngineControls } from "@/features/container/engine-controls";
 import { IntakePanel } from "@/features/intake/intake-panel";
 import { PathBrowser } from "@/features/intake/path-browser";
-import { MonitorSidebar } from "@/features/monitor/monitor-sidebar";
 import { PrescanReviewModal } from "@/features/prescan/prescan-review-modal";
 import { ProjectBar } from "@/features/project/project-bar";
 import { shouldPollJobs } from "@/features/queue/job-status";
@@ -19,8 +18,6 @@ import {
   getHealth,
   intakeJobs,
   listJobs,
-  resumeJob,
-  retryPrescan,
   startFreshJob,
   subscribeJobTelemetry,
 } from "@/lib/api-client";
@@ -48,6 +45,58 @@ import {
   type UiTheme,
 } from "@/lib/prefs";
 
+function applyTelemetryToJob(
+  job: JobStatusResponse,
+  message: TelemetryMessage,
+): JobStatusResponse {
+  if (job.job_id !== message.job_id) {
+    return job;
+  }
+  if (message.telemetry_type !== "PROGRESS") {
+    return { ...job, status: message.status ?? job.status };
+  }
+  const data = message.data;
+  const current =
+    typeof data.current_frame === "number"
+      ? data.current_frame
+      : job.progress?.current_frame;
+  const total =
+    typeof data.total_frames === "number"
+      ? data.total_frames
+      : job.progress?.total_frames;
+  const crossingCount =
+    typeof data.crossing_count === "number"
+      ? data.crossing_count
+      : job.progress?.crossing_count;
+  if (current === undefined || total === undefined) {
+    return {
+      ...job,
+      status: message.status ?? job.status,
+      progress:
+        job.progress && crossingCount !== undefined
+          ? { ...job.progress, crossing_count: crossingCount }
+          : job.progress,
+    };
+  }
+  return {
+    ...job,
+    status: message.status ?? job.status,
+    progress: {
+      current_frame: current,
+      total_frames: total,
+      processing_fps:
+        typeof data.processing_fps === "number"
+          ? data.processing_fps
+          : job.progress?.processing_fps,
+      eta_sec:
+        typeof data.eta_sec === "number"
+          ? data.eta_sec
+          : job.progress?.eta_sec,
+      crossing_count: crossingCount,
+    },
+  };
+}
+
 export function Dashboard() {
   const [jobs, setJobs] = useState<JobStatusResponse[]>([]);
   const [telemetry, setTelemetry] = useState<TelemetryMessage[]>([]);
@@ -58,8 +107,7 @@ export function Dashboard() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [reviewJob, setReviewJob] = useState<JobStatusResponse | null>(null);
-  const [monitorJob, setMonitorJob] = useState<JobStatusResponse | null>(null);
-  const [selectedJob, setSelectedJob] = useState<JobStatusResponse | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [browseOutputDir, setBrowseOutputDir] = useState(false);
   const [mountConfig, setMountConfig] = useState<MountConfig | null>(null);
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
@@ -73,13 +121,25 @@ export function Dashboard() {
 
   const refreshJobs = useCallback(async (id = projectId) => {
     const list = await listJobs(id);
-    setJobs(list);
-    setSelectedJob((prev) => {
-      if (!prev) {
-        return prev;
-      }
-      return list.find((job) => job.job_id === prev.job_id) ?? prev;
-    });
+    setJobs((prev) =>
+      list.map((incoming) => {
+        const existing = prev.find((job) => job.job_id === incoming.job_id);
+        const prevCount = existing?.progress?.crossing_count;
+        const nextCount = incoming.progress?.crossing_count;
+        if (
+          typeof prevCount === "number" &&
+          (typeof nextCount !== "number" || prevCount > nextCount)
+        ) {
+          return {
+            ...incoming,
+            progress: incoming.progress
+              ? { ...incoming.progress, crossing_count: prevCount }
+              : existing?.progress,
+          };
+        }
+        return incoming;
+      }),
+    );
     return list;
   }, [projectId]);
 
@@ -150,42 +210,7 @@ export function Dashboard() {
     return subscribeJobTelemetry((message) => {
       setTelemetry((prev) => [...prev.slice(-499), message]);
       setJobs((prev) =>
-        prev.map((job) => {
-          if (job.job_id !== message.job_id) {
-            return job;
-          }
-          if (message.telemetry_type !== "PROGRESS") {
-            return { ...job, status: message.status ?? job.status };
-          }
-          const data = message.data;
-          const current =
-            typeof data.current_frame === "number" ? data.current_frame : undefined;
-          const total =
-            typeof data.total_frames === "number" ? data.total_frames : undefined;
-          return {
-            ...job,
-            status: message.status ?? job.status,
-            progress:
-              current !== undefined && total !== undefined
-                ? {
-                    current_frame: current,
-                    total_frames: total,
-                    processing_fps:
-                      typeof data.processing_fps === "number"
-                        ? data.processing_fps
-                        : job.progress?.processing_fps,
-                    eta_sec:
-                      typeof data.eta_sec === "number"
-                        ? data.eta_sec
-                        : job.progress?.eta_sec,
-                    crossing_count:
-                      typeof data.crossing_count === "number"
-                        ? data.crossing_count
-                        : job.progress?.crossing_count,
-                  }
-                : job.progress,
-          };
-        }),
+        prev.map((job) => applyTelemetryToJob(job, message)),
       );
     });
   }, []);
@@ -223,32 +248,6 @@ export function Dashboard() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIntakeBusy(false);
-    }
-  }
-
-  async function onRetryPrescan(jobId: string) {
-    setBusyId(jobId);
-    setError(null);
-    try {
-      await retryPrescan(jobId);
-      await refreshJobs();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function onResume(jobId: string) {
-    setBusyId(jobId);
-    setError(null);
-    try {
-      await resumeJob(jobId);
-      await refreshJobs();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyId(null);
     }
   }
 
@@ -297,7 +296,10 @@ export function Dashboard() {
     }
   }
 
-  const detailsJob = selectedJob;
+  const selectedJob =
+    selectedJobId === null
+      ? null
+      : (jobs.find((job) => job.job_id === selectedJobId) ?? null);
 
   return (
     <div className="mx-auto flex w-full max-w-[min(100%,96rem)] flex-col gap-6 p-4 sm:p-6">
@@ -377,17 +379,9 @@ export function Dashboard() {
         <JobQueueTable
           jobs={jobs}
           busyId={busyId}
-          selectedJobId={selectedJob?.job_id ?? null}
-          monitorJobId={monitorJob?.job_id ?? null}
-          onSelectJob={setSelectedJob}
+          selectedJobId={selectedJobId}
+          onSelectJob={(job) => setSelectedJobId(job.job_id)}
           onReview={setReviewJob}
-          onMonitor={(job) => {
-            setMonitorJob(job);
-            setSelectedJob(job);
-            setTelemetry([]);
-          }}
-          onRetryPrescan={(id) => void onRetryPrescan(id)}
-          onResume={(id) => void onResume(id)}
           onStartFresh={(id) => void onStartFresh(id)}
           onStop={(id) => void onStop(id)}
           onOpenOutput={(job) => {
@@ -401,18 +395,11 @@ export function Dashboard() {
             });
           }}
         />
-        {monitorJob ? (
-          <MonitorSidebar
-            job={monitorJob}
-            messages={telemetry}
-            onClose={() => setMonitorJob(null)}
-          />
-        ) : (
-          <JobDetailsPanel
-            job={detailsJob}
-            mountConfig={mountConfig}
-          />
-        )}
+        <JobDetailsPanel
+          job={selectedJob}
+          mountConfig={mountConfig}
+          messages={telemetry}
+        />
       </div>
 
       {reviewJob ? (

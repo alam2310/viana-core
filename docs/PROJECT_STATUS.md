@@ -1,6 +1,6 @@
 # Project Status (Living Document)
 
-**Last updated:** 2026-08-20  
+**Last updated:** 2026-08-21
 **Current focus:** **Step 6** — hardening backlog (see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 unblocked).  
@@ -42,6 +42,8 @@
 
 **Parked items** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md).
 
+**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. **2026-08-21:** I001 → **6.8**, I003 → **6.9**, I002 → **6.10**; I004 demoted.
+
 ---
 
 ## Next (legacy list — see Steps above)
@@ -58,7 +60,6 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 | Browser click-through | Manual/Playwright UI pass; HTTP E2E done |
 | Extra camera clip beyond `hiv000001` | Overlay go on D sufficient for v0.1 |
 | GPU tests in CI | No GPU in GitHub Actions |
-| Faster DELETE → CANCELLED | Cancel is eventual via poll |
 
 ---
 
@@ -76,6 +77,17 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **6.7 complete (S09 / F006)** — API normalizes host intake paths onto container mounts or 400s unreadable paths; compose passes `VIANA_HOST_*` maps; extra volume via `VIANA_EXTRA_INTAKE_ROOT` + `VIANA_PATH_MAPS` |
+| 2026-08-21 | **6.3 complete** — DELETE marks `CANCELLED` immediately and frees the GPU so the next READY job can drain (S27 fail path unchanged) |
+| 2026-08-21 | Stabilization **S27:** FAILED GPU jobs release the slot and auto-start the next FIFO READY job (`pool.py` drain) |
+| 2026-08-21 | Stabilization **S25/S26:** Job Queue labels `Queued (PS)` vs `Queued (GPU)`; actions Review → Restart (Overwrite) → Stop; Open output on completed only |
+| 2026-08-21 | Stabilization S28: missed crossings when Car↔Jeep flicker drops the box for 1–2 frames across the counting line; retain previous anchors up to 15 frames (`crossing.py`) |
+| 2026-08-21 | **S23 / 6.9 (I003):** process loop no longer runs EasyOCR; wall-clock interpolates confirmed prescan/user metadata; `hiv000001_inframe` 203.2s @ 13.45 fps → 179.3s @ 15.26 fps |
+| 2026-08-21 | **S10:** no-profile line proposal uses road-band slope clustering + parallel counting offset; `hiv000001_inframe` near geometry C/D; profile override unchanged |
+| 2026-08-21 | **6.8 / 6.10:** Live Monitor removed; Live Crossings in job details while processing; count from `progress.crossing_count` |
+| 2026-08-21 | Idea dump review: **I001 → Step 6.8**, **I003 → Step 6.9**; I002 stays dump (P3, check `crossing_count`); I004 demoted |
+| 2026-08-21 | **S22:** close worker/engine FDs (pipes, VideoCapture, ffmpeg process groups) so multi-file intake does not hit `[Errno 24]` / API 502 |
+| 2026-08-21 | Added `docs/steps/IDEA_DUMP.md` — parked ideas for later human review; not a work queue |
 | 2026-08-20 | **S21:** adaptive OSD OCR (bands, clock salvage, mixed-polarity location, `7074` year repair) — UI retest OK; `hiv000001_inframe` S07 fields unchanged |
 | 2026-08-20 | **S24:** Live Monitor parks in-progress `_processed.mp4` preview (code retained, not mounted); Live Crossings show WS events immediately |
 | 2026-08-20 | Step 6.1 follow-up: bake EasyOCR English weights (CRAFT + `english_g2`) into the image so first prescan after rebuild does not stall on GitHub |

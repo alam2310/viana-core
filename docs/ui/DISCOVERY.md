@@ -114,7 +114,7 @@ _All discovery blockers resolved. Remaining items deferred to REDESIGN defaults 
 | Prescan | Spinner / needs review / confirmed |
 | Time · Date · Location | From confirmed metadata (— if not reviewed) |
 | Progress · ETA | Only when `PROCESSING` |
-| Actions | Review · Monitor · Cancel · Artifacts (contextual) |
+| Actions | Review · Restart (Overwrite) · Stop (fixed slots); Open output only on `COMPLETED` |
 
 ---
 
@@ -126,11 +126,11 @@ _All discovery blockers resolved. Remaining items deferred to REDESIGN defaults 
 
 | Status | Operator label | Meaning | Worker may start? |
 |--------|----------------|---------|-----------------|
-| `PRESCAN_PENDING` | Waiting for prescan | Job registered; prescan not started | No |
-| `PRESCAN_RUNNING` | Pre-scanning video | Engine sampling frame + OCR + lines | No |
+| `PRESCAN_PENDING` | Queued (PS) | Job registered; waiting for a prescan worker | No |
+| `PRESCAN_RUNNING` | Pre-scanning | Engine sampling frame + OCR + lines | No |
 | `PRESCAN_FAILED` | Prescan failed | Prescan error (OCR, I/O, corrupt video, path inaccessible) | No |
 | `AWAITING_REVIEW` | Needs review | Prescan complete; user must confirm/edit | No |
-| `READY` | Ready | Prescan confirmed; in execution FIFO | No (queued) |
+| `READY` | Queued (GPU) | Prescan confirmed; waiting for a GPU slot (FIFO) | No (queued) |
 | `PROCESSING` | Processing | On GPU | Yes |
 | `PAUSED` | Paused | Checkpoint saved | No |
 | `COMPLETED` | Completed | Artifacts written | No |

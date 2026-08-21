@@ -50,7 +50,7 @@ def test_ffmpeg_prefers_h264_nvenc_for_browser() -> None:
         encoder_list="libx264\nhevc_nvenc\nlibx265\nh264_nvenc",
     )
     assert args[:2] == ["-c:v", "h264_nvenc"]
-    assert "-cq" in args and "28" in args
+    assert "-cq" in args and "32" in args
     assert "-movflags" in args
     assert "+frag_keyframe+empty_moov+default_base_moof" in args
     assert "-frag_duration" in args and "1000000" in args

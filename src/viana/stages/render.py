@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import queue
 import shutil
 import subprocess  # nosec B404
+import threading
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -54,13 +56,13 @@ _H264_NVENC_ARGS = [
     "-pix_fmt",
     "yuv420p",
     "-preset",
-    "p7",
+    "p4",
     "-tune",
     "hq",
     "-rc",
     "vbr",
     "-cq",
-    "28",
+    "32",
     "-b:v",
     "0",
     "-g",
@@ -78,13 +80,13 @@ _HEVC_NVENC_ARGS = [
     "-pix_fmt",
     "yuv420p",
     "-preset",
-    "p7",
+    "p4",
     "-tune",
     "hq",
     "-rc",
     "vbr",
     "-cq",
-    "42",
+    "44",
     "-b:v",
     "0",
     "-bf",
@@ -119,9 +121,9 @@ def ffmpeg_video_args(path: Path, *, encoder_list: str) -> list[str]:
             "-pix_fmt",
             "yuv420p",
             "-crf",
-            "30",
+            "23",
             "-preset",
-            "medium",
+            "veryfast",
             "-g",
             "30",
             "-keyint_min",
@@ -286,6 +288,10 @@ class FfmpegRenderer:
         self._counting: LineSegment | None = None
         self._class_names: dict[int, str] = {}
 
+        self._queue: queue.Queue[tuple[Any, Any]] = queue.Queue(maxsize=30)
+        self._thread = threading.Thread(target=self._writer_loop, daemon=True)
+        self._thread.start()
+
     def set_lines(self, horizon: LineSegment, counting_line: LineSegment) -> None:
         """Store overlay geometry."""
         self._horizon = horizon
@@ -295,26 +301,54 @@ class FfmpegRenderer:
         """YOLO id → display name for box labels."""
         self._class_names = dict(class_names)
 
+    def _writer_loop(self) -> None:
+        while True:
+            frame_image, result = self._queue.get()
+            if frame_image is None and result is None:
+                break
+            try:
+                if self._horizon is not None and self._counting is not None:
+                    frame_image = annotate_bgr(
+                        frame_image,
+                        result,
+                        self._horizon,
+                        self._counting,
+                        class_names=self._class_names,
+                    )
+                if self._proc.stdin is not None:
+                    self._proc.stdin.write(frame_image.tobytes())
+            except OSError:
+                break
+
     def write(self, frame: VideoFrame, result: FrameCVResult) -> None:
         """Encode one annotated frame."""
         if frame.image is None or self._proc.stdin is None:
             return
-        image: Any = frame.image
-        if self._horizon is not None and self._counting is not None:
-            image = annotate_bgr(
-                image,
-                result,
-                self._horizon,
-                self._counting,
-                class_names=self._class_names,
-            )
-        self._proc.stdin.write(image.tobytes())
+
+        while True:
+            if not self._thread.is_alive():
+                raise OSError("Background writer thread died unexpectedly")
+            try:
+                self._queue.put((frame.image, result), timeout=0.1)
+                break
+            except queue.Empty:
+                pass
+            except queue.Full:
+                pass
 
     def close(self) -> None:
         """Flush ffmpeg stdin, wait, and kill the process group if it hangs."""
         if getattr(self, "_closed", False):
             return
         self._closed = True
+
+        if self._thread.is_alive():
+            try:
+                self._queue.put((None, None), timeout=1.0)
+                self._thread.join(timeout=15.0)
+            except queue.Full:
+                pass
+
         proc = self._proc
         try:
             if proc.stdin is not None:

@@ -1,0 +1,1 @@
+## 2024-11-20 - [Performance] **Learning:** Repeated polling/web sockets triggering UI re-renders **Action:** In NextJS frontend, ensure components handling arrays like `messages` and derived sub-lists (`crossings`) utilize `useMemo` specifically targeting the sliced views or maps to avoid unnecessary O(N) evaluations in tight polling loops.

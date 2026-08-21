@@ -236,7 +236,7 @@ export function PathBrowser({
                 <button
                   type="button"
                   className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
+                    "flex w-full items-center gap-2 px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border focus-visible:ring-inset",
                     entry.type === "directory" || entry.isVideo
                       ? "hover:bg-accent"
                       : "opacity-40",

@@ -1,0 +1,3 @@
+## 2024-11-20 - Ensure focus-visible on all native interactive elements
+**Learning:** Some custom un-styled interactive elements like `RoundIconButton` and list items or inline links acting as buttons were missing keyboard focus indicators (`focus-visible`). Relying on Tailwind's defaults only covers standard buttons if implemented through the `Button` component. For arbitrary `<button>` elements, manual focus state management is critical for accessibility.
+**Action:** When creating or updating interactive elements and icon buttons without a pre-existing styling wrapper like `cva` in `button.tsx`, always ensure robust `focus-visible` styles (e.g., `focus-visible:ring-2 focus-visible:ring-border focus-visible:outline-none`) are included for keyboard accessibility.

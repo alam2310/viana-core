@@ -50,7 +50,7 @@ function OutputFilesList({
             {file.hostPath ? (
               <button
                 type="button"
-                className="cursor-pointer text-left text-primary underline hover:opacity-80"
+                className="cursor-pointer rounded-sm text-left text-primary underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
                 onClick={() => {
                   void openPathInFileManager(file.hostPath!).catch(() => undefined);
                 }}

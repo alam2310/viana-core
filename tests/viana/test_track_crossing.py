@@ -102,16 +102,14 @@ def test_crossing_survives_brief_detection_gap() -> None:
         raw_class_id=1,
     )
     assert (
-        state.update([before], class_ids={3: 0}, norm_areas={3: 10}, frame_index=10, video_pts_ms=400)
+        state.update(
+            [before], class_ids={3: 0}, norm_areas={3: 10}, frame_index=10, video_pts_ms=400
+        )
         == []
     )
     # Two empty frames while the jeep straddles / passes the line (shimoga ~06:44:50).
-    assert (
-        state.update([], class_ids={}, norm_areas={}, frame_index=11, video_pts_ms=440) == []
-    )
-    assert (
-        state.update([], class_ids={}, norm_areas={}, frame_index=12, video_pts_ms=480) == []
-    )
+    assert state.update([], class_ids={}, norm_areas={}, frame_index=11, video_pts_ms=440) == []
+    assert state.update([], class_ids={}, norm_areas={}, frame_index=12, video_pts_ms=480) == []
     recovered = state.update(
         [after], class_ids={3: 1}, norm_areas={3: 12}, frame_index=13, video_pts_ms=520
     )
@@ -121,7 +119,9 @@ def test_crossing_survives_brief_detection_gap() -> None:
     assert recovered[0].direction in ("in", "out")
     # Still once-per-track after recovery.
     assert (
-        state.update([after], class_ids={3: 1}, norm_areas={3: 12}, frame_index=14, video_pts_ms=560)
+        state.update(
+            [after], class_ids={3: 1}, norm_areas={3: 12}, frame_index=14, video_pts_ms=560
+        )
         == []
     )
 

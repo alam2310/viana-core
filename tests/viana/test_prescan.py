@@ -153,6 +153,40 @@ def test_parse_osd_hits_salvages_clock_appended_to_location() -> None:
     assert parsed.location == "Bangalorebypassjz"
 
 
+def test_parse_osd_hits_plus_separator_clock_and_unhyphenated_location() -> None:
+    """test_video.mp4: EasyOCR uses + as a colon and repeats the location code."""
+    parsed, _mean = parse_osd_hits(
+        [
+            ("18-10-2024 Fri 08:38+31", 0.9),
+            ("I3TRARARANKT", 0.8),
+            ("L3TRARARANKT", 0.8),
+            ("I37NARARAN80", 0.8),
+        ],
+        min_confidence=0.6,
+    )
+    assert parsed.time == "08:38:31"
+    assert parsed.date == "18-10-2024"
+    assert parsed.location == "L3TRARARANKT"
+    assert " " not in (parsed.location or "")
+
+
+def test_parse_osd_hits_does_not_join_hyphenated_locations() -> None:
+    """hiv000001: mixed-polarity location OCR must pick one label, not all of them."""
+    parsed, _mean = parse_osd_hits(
+        [
+            ("18-10 2074 Fri 02 21.25", 0.9),
+            ("LITO-RARARANKI", 0.8),
+            ("L1TO-RARARANKI", 0.8),
+            ("LIT-BRBNKI", 0.8),
+        ],
+        min_confidence=0.6,
+    )
+    assert parsed.time == "02:21:25"
+    assert parsed.date == "18-10-2024"
+    assert parsed.location == "L1TO-RARARANKI"
+    assert " " not in (parsed.location or "")
+
+
 def test_parse_osd_hits_prefers_barabanki_over_rararanki() -> None:
     """Mixed-polarity location OCR can emit both a junk and a BANKI reading."""
     parsed, _mean = parse_osd_hits(

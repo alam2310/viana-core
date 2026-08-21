@@ -66,9 +66,8 @@ def test_resolve_not_relative_to_output_parent(
 def test_resolve_fallback_search_success(tmp_path: Path) -> None:
     """Search and find a file not in registry but present in output_parent."""
     prescan_id = "test_id_4"
-    sub_dir = tmp_path / "some_project"
-    sub_dir.mkdir()
-    preview_file = sub_dir / "test_id_4_preview.jpg"
+    preview_file = tmp_path / "some_project" / "prescan" / "test_id_4_preview.jpg"
+    preview_file.parent.mkdir(parents=True)
     preview_file.write_bytes(b"image data")
 
     # Not registered yet
@@ -98,7 +97,8 @@ def test_resolve_fallback_search_symlink_outside(
     real_file = outside_dir / "test_id_6_preview.jpg"
     real_file.write_bytes(b"image data")
 
-    symlink_path = tmp_path / "test_id_6_preview.jpg"
+    symlink_path = tmp_path / "some_project" / "prescan" / "test_id_6_preview.jpg"
+    symlink_path.parent.mkdir(parents=True)
     os.symlink(real_file, symlink_path)
 
     resolved = resolve_preview_path(prescan_id)

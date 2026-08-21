@@ -158,8 +158,10 @@ def test_plausible_calendar_date() -> None:
     assert _plausible_calendar_date("01", "01", "2000") is True
     assert _plausible_calendar_date("31", "12", "2039") is True
     assert _plausible_calendar_date("29", "02", "2024") is True  # Leap year
-    assert _plausible_calendar_date("15", "03", "26") is True    # 2-digit year (parsed as 2026)
-    assert _plausible_calendar_date("15", "03", "99") is False   # 2-digit year (parsed as 1999, which is out of bounds)
+    # 2-digit year (parsed as 2026)
+    assert _plausible_calendar_date("15", "03", "26") is True
+    # 2-digit year (parsed as 1999, which is out of bounds)
+    assert _plausible_calendar_date("15", "03", "99") is False
 
     # Out of bounds cases (Invalid calendar dates)
     assert _plausible_calendar_date("00", "03", "2026") is False  # day < 1

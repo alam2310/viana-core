@@ -102,7 +102,7 @@ def test_completed_now_failed() -> None:
 def test_run_result_forbid_extra() -> None:
     """Test that extra fields are forbidden in Pydantic models."""
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
-        RunResultArtifacts(extra_field="not allowed") # type: ignore
+        RunResultArtifacts(extra_field="not allowed")  # type: ignore
 
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         RunResult(
@@ -112,5 +112,5 @@ def test_run_result_forbid_extra() -> None:
             video_stem="vid",
             artifacts=RunResultArtifacts(),
             completed_at="2023-10-10T10:10:10Z",
-            extra_field="not allowed", # type: ignore
+            extra_field="not allowed",  # type: ignore
         )

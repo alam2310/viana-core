@@ -190,10 +190,13 @@ def _repair_ocr_year(year: str) -> str:
 
 def _plausible_calendar_date(day: str, month: str, year: str) -> bool:
     try:
-        day_n, month_n, year_n = int(day), int(month), int(year)
+        # Let datetime parsing validate if it's a real date (e.g. not Feb 30)
+        # Note: year might be just '24', strptime %y handles that
+        year_format = "%Y" if len(year) == 4 else "%y"
+        dt = datetime.strptime(f"{year}-{month}-{day}", f"{year_format}-%m-%d")
+        return 2000 <= dt.year <= 2039
     except ValueError:
         return False
-    return 1 <= day_n <= 31 and 1 <= month_n <= 12 and 2000 <= year_n <= 2039
 
 
 def is_valid_clock_time(value: str) -> bool:

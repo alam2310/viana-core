@@ -10,6 +10,7 @@ from viana.config.job import JobMetadata
 from viana.stages.time_map import (
     TimeAnchor,
     TimeMap,
+    _plausible_calendar_date,
     extract_ocr_time,
     load_time_map,
     next_boundary_delta_ms,
@@ -148,3 +149,35 @@ def test_unavailable_without_anchors_or_user(tmp_path: Path) -> None:
     assert source == "unavailable"
     assert conf is None
     _ = tmp_path
+
+
+def test_plausible_calendar_date() -> None:
+    """Test boundary conditions and value errors for date parts."""
+    # Valid cases
+    assert _plausible_calendar_date("15", "03", "2026") is True
+    assert _plausible_calendar_date("01", "01", "2000") is True
+    assert _plausible_calendar_date("31", "12", "2039") is True
+    assert _plausible_calendar_date("29", "02", "2024") is True  # Leap year
+    assert _plausible_calendar_date("15", "03", "26") is True    # 2-digit year (parsed as 2026)
+    assert _plausible_calendar_date("15", "03", "99") is False   # 2-digit year (parsed as 1999, which is out of bounds)
+
+    # Out of bounds cases (Invalid calendar dates)
+    assert _plausible_calendar_date("00", "03", "2026") is False  # day < 1
+    assert _plausible_calendar_date("32", "03", "2026") is False  # day > 31
+    assert _plausible_calendar_date("15", "00", "2026") is False  # month < 1
+    assert _plausible_calendar_date("15", "13", "2026") is False  # month > 12
+    assert _plausible_calendar_date("31", "04", "2026") is False  # April has 30 days
+    assert _plausible_calendar_date("29", "02", "2025") is False  # 2025 is not a leap year
+    assert _plausible_calendar_date("30", "02", "2024") is False  # Feb 30 does not exist
+
+    # Business logic bounds cases
+    assert _plausible_calendar_date("15", "03", "1999") is False  # year < 2000
+    assert _plausible_calendar_date("15", "03", "2040") is False  # year > 2039
+
+    # Error cases (ValueError from non-integer strings)
+    assert _plausible_calendar_date("ab", "03", "2026") is False
+    assert _plausible_calendar_date("15", "cd", "2026") is False
+    assert _plausible_calendar_date("15", "03", "efgh") is False
+    assert _plausible_calendar_date("", "03", "2026") is False
+    assert _plausible_calendar_date("15", "", "2026") is False
+    assert _plausible_calendar_date("15", "03", "") is False

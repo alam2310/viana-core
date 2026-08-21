@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -272,3 +273,47 @@ def test_crossing_hierarchy_matches_classes_yaml(tmp_path: Path) -> None:
     assert row.class_type == "Heavy Fast"
     assert row.sub_class == "Bus"
     assert row.raw_class_name == "Heavy Truck"
+
+
+class _CloseableFeed:
+    def __init__(self) -> None:
+        self.closed = False
+
+    def __iter__(self) -> Iterator[VideoFrame]:
+        return iter(_frames())
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_invalid_geometry_releases_owned_frame_feed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """S22: VideoCapture iterator must close if geometry validation fails."""
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"")
+    feed = _CloseableFeed()
+    monkeypatch.setattr(
+        "viana.stages.process._default_frames",
+        lambda _source, start_index=0: (_meta(), feed),
+    )
+    job = _job(tmp_path, video)
+    job = job.model_copy(
+        update={
+            "task_parameters": job.task_parameters.model_copy(
+                update={
+                    "horizon_line": LineSegment(start=(0, 0), end=(10, 10_000)),
+                }
+            )
+        }
+    )
+    with pytest.raises(ValueError, match="outside"):
+        run_moving_count(
+            job,
+            resume=False,
+            detector=_detect,
+            renderer=RecordingRenderer(),
+            emit=lambda _msg: None,
+            ocr_reader=lambda _frame: [],
+        )
+    assert feed.closed

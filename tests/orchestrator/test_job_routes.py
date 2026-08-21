@@ -67,6 +67,7 @@ class InstantPopen:
     """Process that already finished with RunResult stdout and telemetry stderr."""
 
     def __init__(self, stdout: str, stderr: str, returncode: int = 0) -> None:
+        self.stdin = None
         self.stdout = io.StringIO(stdout)
         self.stderr = io.StringIO(stderr)
         self.returncode = returncode
@@ -90,6 +91,7 @@ class HoldPopen:
 
     def __init__(self) -> None:
         self._done = threading.Event()
+        self.stdin = None
         self.stdout = io.StringIO(_run_result_json("job_hold"))
         self.stderr = _HoldStderr(self._done)
         self.returncode: int | None = None
@@ -133,6 +135,9 @@ class _HoldStderr:
         self._done.wait()
         raise StopIteration
 
+    def close(self) -> None:
+        self._done.set()
+
 
 def _run_result_json(job_id: str) -> str:
     return json.dumps(
@@ -169,7 +174,9 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     """Isolated pool + output dir; default spawn finishes immediately."""
     monkeypatch.setenv("VIANA_OUTPUT_PARENT", str(tmp_path))
 
-    def fake_run_viana(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+    def fake_run_viana(
+        args: Any, timeout: float | None = None, **_kwargs: Any
+    ) -> CompletedProcess[str]:
         if args and args[0] == "prescan":
             return CompletedProcess(
                 args=list(args),
@@ -339,7 +346,7 @@ def test_prescan_rewrites_preview_url(
         }
     )
 
-    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+    def fake_run(args: Any, timeout: float | None = None, **_kwargs: Any) -> CompletedProcess[str]:
         return CompletedProcess(args=list(args), returncode=0, stdout=stdout, stderr="")
 
     monkeypatch.setattr("orchestrator.routes.prescan.run_viana", fake_run)
@@ -382,7 +389,7 @@ def test_prescan_preview_survives_registry_restart(
         }
     )
 
-    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+    def fake_run(args: Any, timeout: float | None = None, **_kwargs: Any) -> CompletedProcess[str]:
         return CompletedProcess(args=list(args), returncode=0, stdout=stdout, stderr="")
 
     monkeypatch.setattr("orchestrator.routes.prescan.run_viana", fake_run)
@@ -420,7 +427,7 @@ def test_aggregate_shells_cli(client: TestClient, monkeypatch: pytest.MonkeyPatc
     job_id = submitted.json()["job_id"]
     get_pool().wait_job(job_id)
 
-    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+    def fake_run(args: Any, timeout: float | None = None, **_kwargs: Any) -> CompletedProcess[str]:
         assert args[0] == "aggregate"
         return CompletedProcess(
             args=list(args),
@@ -613,7 +620,7 @@ def test_intake_prescan_worker_reaches_awaiting_review(
     preview.write_bytes(b"\xff\xd8\xff")
     stdout = _prescan_stdout(preview)
 
-    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+    def fake_run(args: Any, timeout: float | None = None, **_kwargs: Any) -> CompletedProcess[str]:
         if args and args[0] == "prescan":
             return CompletedProcess(args=list(args), returncode=0, stdout=stdout, stderr="")
         return CompletedProcess(args=list(args), returncode=0, stdout="{}", stderr="")
@@ -652,7 +659,7 @@ def test_retry_prescan_from_failed(
     stdout = _prescan_stdout(preview)
     calls = {"prescan": 0}
 
-    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+    def fake_run(args: Any, timeout: float | None = None, **_kwargs: Any) -> CompletedProcess[str]:
         if args and args[0] == "prescan":
             calls["prescan"] += 1
             if calls["prescan"] == 1:
@@ -686,7 +693,7 @@ def test_job_prescan_preview_at_offset(
     preview.write_bytes(b"\xff\xd8\xff")
     captured: dict[str, float] = {}
 
-    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+    def fake_run(args: Any, timeout: float | None = None, **_kwargs: Any) -> CompletedProcess[str]:
         if args and args[0] == "prescan":
             captured["frame_offset"] = float(args[args.index("--frame-offset") + 1])
             payload = json.loads(_prescan_stdout(preview))
@@ -777,7 +784,7 @@ def test_auto_aggregate_on_completed(client: TestClient, monkeypatch: pytest.Mon
     """COMPLETED job triggers background aggregate (G12)."""
     aggregate_calls: list[list[str]] = []
 
-    def fake_run(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+    def fake_run(args: Any, timeout: float | None = None, **_kwargs: Any) -> CompletedProcess[str]:
         if args and args[0] == "aggregate":
             aggregate_calls.append(list(args))
             return CompletedProcess(
@@ -889,7 +896,9 @@ def test_intake_list_includes_created_at_before_prescan(
 ) -> None:
     """S11: GET /jobs returns created_at as soon as intake registers the job."""
 
-    def fail_prescan(args: Any, timeout: float | None = None) -> CompletedProcess[str]:
+    def fail_prescan(
+        args: Any, timeout: float | None = None, **_kwargs: Any
+    ) -> CompletedProcess[str]:
         if args and args[0] == "prescan":
             return CompletedProcess(args=list(args), returncode=1, stdout="", stderr="held")
         return CompletedProcess(args=list(args), returncode=0, stdout="{}", stderr="")

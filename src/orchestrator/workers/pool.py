@@ -39,6 +39,7 @@ from viana.config.job import (
 )
 from viana.io.checkpoint import load_checkpoint, utc_now_iso
 from viana.io.paths import artifact_paths
+from viana.io.proc import close_stdio, open_fd_count, terminate_process_tree
 
 logger = get_logger(__name__)
 
@@ -119,13 +120,22 @@ class WorkerPool:
         return None
 
     def shutdown(self) -> None:
-        """Terminate running workers (app lifespan)."""
+        """Terminate running workers and join monitor threads (app lifespan)."""
         with self._lock:
             running = [job for job in self._jobs.values() if job.process is not None]
+            threads = list(self._threads)
         for job in running:
             proc = job.process
-            if proc is not None and proc.poll() is None:
-                proc.terminate()
+            if proc is not None:
+                terminate_process_tree(proc, close_pipes=False)
+        for thread in threads:
+            thread.join(timeout=2.0)
+        with self._lock:
+            for job in running:
+                if job.process is not None:
+                    close_stdio(job.process)
+                    job.process = None
+            self._prune_threads()
 
     def list_jobs(self, project_id: str | None = None) -> list[JobStatus]:
         """Return job status payloads, optionally filtered."""
@@ -405,6 +415,9 @@ class WorkerPool:
                     self._refresh_prescan_queue_positions()
                 job.status = "CANCELLED"
                 job.queue_position = 0
+                proc = job.process
+            if proc is not None:
+                terminate_process_tree(proc, close_pipes=False)
             return
         with self._lock:
             if job.job_id in self._queue:
@@ -415,7 +428,7 @@ class WorkerPool:
                 return
             proc = job.process
         if proc is not None and proc.poll() is None:
-            proc.terminate()
+            terminate_process_tree(proc, close_pipes=False)
             return
         job.status = "CANCELLED"
 
@@ -503,7 +516,9 @@ class WorkerPool:
                         break
                 if job_id is None:
                     return
-            threading.Thread(target=self._run_prescan, args=(job_id,), daemon=True).start()
+            thread = threading.Thread(target=self._run_prescan, args=(job_id,), daemon=True)
+            thread.start()
+            self._track_thread(thread)
 
     def _run_prescan(self, job_id: str) -> None:
         """Execute ``viana prescan`` for one intake job (CPU worker)."""
@@ -518,8 +533,18 @@ class WorkerPool:
                 "--output-dir",
                 str(job.output_dir),
             ]
-            logger.info("viana_prescan_worker", job_id=job_id)
-            result = run_viana(args, timeout=300.0)
+            logger.info(
+                "viana_prescan_worker",
+                job_id=job_id,
+                open_fds=open_fd_count(),
+            )
+            result = run_viana(
+                args,
+                timeout=300.0,
+                on_spawn=lambda proc: self._attach_process(job, proc),
+            )
+            if job.status != "PRESCAN_RUNNING":
+                return
             if result.returncode != 0:
                 job.status = "PRESCAN_FAILED"
                 job.error_message = (
@@ -535,16 +560,25 @@ class WorkerPool:
             job.status = "AWAITING_REVIEW"
             job.error_message = None
         except TimeoutExpired:
-            job.status = "PRESCAN_FAILED"
-            job.error_message = "prescan timed out"
+            if job.status == "PRESCAN_RUNNING":
+                job.status = "PRESCAN_FAILED"
+                job.error_message = "prescan timed out"
         except (OSError, ValueError, json.JSONDecodeError) as exc:
-            job.status = "PRESCAN_FAILED"
-            job.error_message = str(exc)
+            if job.status == "PRESCAN_RUNNING":
+                job.status = "PRESCAN_FAILED"
+                job.error_message = str(exc)
         finally:
             with self._lock:
+                job.process = None
                 if job.job_id in self._prescan_queue:
                     self._prescan_queue.remove(job.job_id)
                     self._refresh_prescan_queue_positions()
+            logger.info(
+                "viana_prescan_worker_done",
+                job_id=job_id,
+                status=job.status,
+                open_fds=open_fd_count(),
+            )
             self._drain_prescan()
 
     def _auto_aggregate(self, job: JobRecord) -> None:
@@ -563,7 +597,7 @@ class WorkerPool:
             logger.info("viana_auto_aggregate", job_id=job.job_id, args=args)
             try:
                 result = run_viana(args, timeout=120.0)
-            except OSError as exc:
+            except (OSError, TimeoutExpired) as exc:
                 logger.error("auto_aggregate_failed", job_id=job.job_id, error=str(exc))
                 return
             if result.returncode != 0:
@@ -573,7 +607,9 @@ class WorkerPool:
                     detail=result.stderr.strip() or result.stdout.strip(),
                 )
 
-        threading.Thread(target=run, daemon=True).start()
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+        self._track_thread(thread)
 
     def _write_job_config(self, job: JobRecord) -> Path:
         """Persist JobConfig JSON for the CLI."""
@@ -603,12 +639,36 @@ class WorkerPool:
         logger.info("viana_spawn", job_id=job.job_id, args=args, gpu_device=job.gpu_device)
         proc = start_viana_process(args)
         job.process = proc
-        thread = threading.Thread(target=self._monitor, args=(job.job_id, proc), daemon=True)
-        self._threads.append(thread)
+        thread = threading.Thread(target=self._monitor, args=(job.job_id,), daemon=True)
         thread.start()
+        self._track_thread(thread)
 
-    def _monitor(self, job_id: str, proc: Popen[str]) -> None:
+    def _attach_process(self, job: JobRecord, proc: Popen[str]) -> None:
+        """Remember a prescan Popen so cancel can kill the process group."""
+        with self._lock:
+            if job.status == "CANCELLED":
+                terminate_process_tree(proc, close_pipes=False)
+                return
+            job.process = proc
+
+    def _track_thread(self, thread: threading.Thread) -> None:
+        """Retain live worker threads only (avoid pinning Popen via Thread.args)."""
+        with self._lock:
+            self._prune_threads()
+            self._threads.append(thread)
+
+    def _prune_threads(self) -> None:
+        """Drop finished monitor/prescan threads."""
+        self._threads = [thread for thread in self._threads if thread.is_alive()]
+
+    def _monitor(self, job_id: str) -> None:
         """Pump stderr NDJSON to WebSocket; parse stdout RunResult on exit."""
+        with self._lock:
+            job = self._jobs.get(job_id)
+            proc = job.process if job is not None else None
+        if proc is None:
+            self._drain()
+            return
         try:
             if proc.stderr is not None:
                 for raw in proc.stderr:
@@ -622,13 +682,20 @@ class WorkerPool:
         except (OSError, ValueError) as exc:
             logger.error("worker_monitor_failed", job_id=job_id, error=str(exc))
             with self._lock:
-                job = self._jobs.get(job_id)
-                if job is not None:
-                    job.status = "FAILED"
-                    job.error_message = str(exc)
-                    job.process = None
-                    _mark_processing_ended(job)
+                current = self._jobs.get(job_id)
+                if current is not None:
+                    if current.status != "CANCELLED":
+                        current.status = "FAILED"
+                        current.error_message = str(exc)
+                    current.process = None
+                    _mark_processing_ended(current)
         finally:
+            close_stdio(proc)
+            with self._lock:
+                current = self._jobs.get(job_id)
+                if current is not None and current.process is proc:
+                    current.process = None
+                self._prune_threads()
             self._drain()
 
     def _handle_telemetry_line(self, job_id: str, line: str) -> None:

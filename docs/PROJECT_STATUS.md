@@ -78,6 +78,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **S22:** close worker/engine FDs (pipes, VideoCapture, ffmpeg process groups) so multi-file intake does not hit `[Errno 24]` / API 502 |
 | 2026-08-21 | Added `docs/steps/IDEA_DUMP.md` — parked ideas for later human review; not a work queue |
 | 2026-08-20 | **S21:** adaptive OSD OCR (bands, clock salvage, mixed-polarity location, `7074` year repair) — UI retest OK; `hiv000001_inframe` S07 fields unchanged |
 | 2026-08-20 | **S24:** Live Monitor parks in-progress `_processed.mp4` preview (code retained, not mounted); Live Crossings show WS events immediately |

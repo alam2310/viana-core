@@ -212,70 +212,88 @@ def run_moving_count(
         raise MissingCheckpointError(f"Checkpoint not found: {ckpt_path}")
 
     supplied_frames = frames is not None
+    frame_iter: Iterable[VideoFrame] | None = None
+    writer_renderer: FrameRenderer = NullRenderer()
     try:
         meta, frame_iter = (
             frames if frames is not None else _default_frames(job.source_video_path, start_index)
         )
-    except FileNotFoundError:
-        raise
-    job.validate_geometry(meta.width, meta.height)
-    total_frames = max(meta.frame_count, start_index + 1)
-    detect = detector or _default_detector(job, defaults)
-    ocr = ocr_reader if ocr_reader is not None else optional_easyocr_reader()
-    writer_renderer: FrameRenderer = (
-        renderer
-        if renderer is not None
-        else _open_renderer(
-            job,
-            paths,
-            meta,
-            resume=resume,
-            start_index=start_index,
-            class_names=taxonomy.id_to_name(),
+        job.validate_geometry(meta.width, meta.height)
+        total_frames = max(meta.frame_count, start_index + 1)
+        detect = detector or _default_detector(job, defaults)
+        ocr = ocr_reader if ocr_reader is not None else optional_easyocr_reader()
+        writer_renderer = (
+            renderer
+            if renderer is not None
+            else _open_renderer(
+                job,
+                paths,
+                meta,
+                resume=resume,
+                start_index=start_index,
+                class_names=taxonomy.id_to_name(),
+            )
         )
-    )
 
-    engine = FrameCVEngine(
-        horizon=job.task_parameters.horizon_line,
-        counting_line=job.task_parameters.counting_line,
-        frame_height=meta.height,
-        detection=defaults.detection,
-        classification=defaults.classification,
-        tracker=build_tracker(frame_rate=meta.fps),
-    )
-    if checkpoint is not None and resume:
-        engine.crossings.counted_track_ids = set(checkpoint.counted_track_ids)
-
-    time_map = time_map_from_metadata(job.job_id, video_stem, job.metadata)
-    events_rows = checkpoint.events_rows_written if checkpoint is not None and resume else 0
-    append_events = resume and paths["events"].is_file()
-    last_ocr_pts = 0.0
-    t0 = time.perf_counter()
-    processed = start_index
-    last_index = start_index - 1
-
-    emit(
-        TelemetryMessage(
-            job_id=job.job_id,
-            status="PROCESSING",
-            telemetry_type="LOG",
-            data={"message": "process_start", "resume": resume, "start_index": start_index},
+        engine = FrameCVEngine(
+            horizon=job.task_parameters.horizon_line,
+            counting_line=job.task_parameters.counting_line,
+            frame_height=meta.height,
+            detection=defaults.detection,
+            classification=defaults.classification,
+            tracker=build_tracker(frame_rate=meta.fps),
         )
-    )
+        if checkpoint is not None and resume:
+            engine.crossings.counted_track_ids = set(checkpoint.counted_track_ids)
 
-    try:
-        with EventsCsvWriter(paths["events"], append=append_events) as csv_writer:
-            iterator: Iterator[VideoFrame] = iter(frame_iter)
-            for frame in iterator:
-                if frame.index < start_index:
-                    continue
-                last_index = frame.index
-                if frame.index == 0 or (
-                    resume and time_map.anchors == [] and frame.index == start_index
-                ):
-                    if frame.image is not None:
+        time_map = time_map_from_metadata(job.job_id, video_stem, job.metadata)
+        events_rows = checkpoint.events_rows_written if checkpoint is not None and resume else 0
+        append_events = resume and paths["events"].is_file()
+        last_ocr_pts = 0.0
+        t0 = time.perf_counter()
+        processed = start_index
+        last_index = start_index - 1
+
+        emit(
+            TelemetryMessage(
+                job_id=job.job_id,
+                status="PROCESSING",
+                telemetry_type="LOG",
+                data={"message": "process_start", "resume": resume, "start_index": start_index},
+            )
+        )
+
+        try:
+            with EventsCsvWriter(paths["events"], append=append_events) as csv_writer:
+                assert frame_iter is not None
+                iterator: Iterator[VideoFrame] = iter(frame_iter)
+                for frame in iterator:
+                    if frame.index < start_index:
+                        continue
+                    last_index = frame.index
+                    if frame.index == 0 or (
+                        resume and time_map.anchors == [] and frame.index == start_index
+                    ):
+                        if frame.image is not None:
+                            parsed, conf = parse_osd_hits(
+                                ocr(frame.image), defaults.ocr.min_confidence
+                            )
+                            time_map = time_map_from_metadata(
+                                job.job_id,
+                                video_stem,
+                                job.metadata,
+                                ocr=parsed,
+                                video_pts_ms=frame.pts_ms,
+                                ocr_confidence=conf,
+                            )
+                        last_ocr_pts = frame.pts_ms
+                    elif (
+                        frame.image is not None
+                        and (frame.pts_ms - last_ocr_pts)
+                        >= defaults.ocr.recalibration_interval_sec * 1000.0
+                    ):
                         parsed, conf = parse_osd_hits(ocr(frame.image), defaults.ocr.min_confidence)
-                        time_map = time_map_from_metadata(
+                        extra = time_map_from_metadata(
                             job.job_id,
                             video_stem,
                             job.metadata,
@@ -283,192 +301,189 @@ def run_moving_count(
                             video_pts_ms=frame.pts_ms,
                             ocr_confidence=conf,
                         )
-                    last_ocr_pts = frame.pts_ms
-                elif (
-                    frame.image is not None
-                    and (frame.pts_ms - last_ocr_pts)
-                    >= defaults.ocr.recalibration_interval_sec * 1000.0
-                ):
-                    parsed, conf = parse_osd_hits(ocr(frame.image), defaults.ocr.min_confidence)
-                    extra = time_map_from_metadata(
-                        job.job_id,
-                        video_stem,
-                        job.metadata,
-                        ocr=parsed,
-                        video_pts_ms=frame.pts_ms,
-                        ocr_confidence=conf,
-                    )
-                    time_map.anchors.extend(extra.anchors)
-                    last_ocr_pts = frame.pts_ms
+                        time_map.anchors.extend(extra.anchors)
+                        last_ocr_pts = frame.pts_ms
 
-                vehicles, pedestrians = detect(frame)
-                cv_result = engine.process_models(
-                    vehicles,
-                    pedestrians,
-                    frame_index=frame.index,
-                    video_pts_ms=frame.pts_ms,
-                )
-                for crossing in cv_result.crossings:
-                    row = crossing_to_event(
-                        job, taxonomy, job.source_video_path.name, crossing, time_map
+                    vehicles, pedestrians = detect(frame)
+                    cv_result = engine.process_models(
+                        vehicles,
+                        pedestrians,
+                        frame_index=frame.index,
+                        video_pts_ms=frame.pts_ms,
                     )
-                    csv_writer.write_row(row)
-                    events_rows += 1
-                    emit(
-                        TelemetryMessage(
-                            job_id=job.job_id,
-                            status="PROCESSING",
-                            telemetry_type="MOVING_EVENT",
-                            data={
-                                "track_id": crossing.track_id,
-                                "class_name": row.class_name,
-                                "direction": crossing.direction,
-                                "frame_index": crossing.frame_index,
-                                "fps": meta.fps,
-                                "video_pts_ms": crossing.video_pts_ms,
-                                "event_timestamp": row.wall_time,
-                                "event_timestamp_source": row.wall_time_source,
-                                "event_timestamp_confidence": row.ocr_confidence,
-                            },
+                    for crossing in cv_result.crossings:
+                        row = crossing_to_event(
+                            job, taxonomy, job.source_video_path.name, crossing, time_map
                         )
-                    )
-                writer_renderer.write(frame, cv_result)
-                processed = frame.index + 1
-                progress_every = (
-                    defaults.pipeline.telemetry_detail_progress_frames
-                    if job.task_parameters.telemetry_detail
-                    else defaults.pipeline.telemetry_progress_frames
-                )
-                if processed % progress_every == 0 or processed == total_frames:
-                    elapsed = max(time.perf_counter() - t0, 1e-6)
-                    fps_val = round(processed / elapsed, 2)
-                    remaining = max(0, total_frames - processed)
-                    # Wall-clock ETA: remaining *frames* / processing fps (not video fps).
-                    eta_sec = round(remaining / fps_val, 1) if fps_val > 0 else None
-                    emit(
-                        TelemetryMessage(
-                            job_id=job.job_id,
-                            status="PROCESSING",
-                            telemetry_type="PROGRESS",
-                            data={
-                                "current_frame": processed,
-                                "total_frames": total_frames,
-                                "processing_fps": fps_val,
-                                "crossing_count": events_rows,
-                                **({"eta_sec": eta_sec} if eta_sec is not None else {}),
-                            },
+                        csv_writer.write_row(row)
+                        events_rows += 1
+                        emit(
+                            TelemetryMessage(
+                                job_id=job.job_id,
+                                status="PROCESSING",
+                                telemetry_type="MOVING_EVENT",
+                                data={
+                                    "track_id": crossing.track_id,
+                                    "class_name": row.class_name,
+                                    "direction": crossing.direction,
+                                    "frame_index": crossing.frame_index,
+                                    "fps": meta.fps,
+                                    "video_pts_ms": crossing.video_pts_ms,
+                                    "event_timestamp": row.wall_time,
+                                    "event_timestamp_source": row.wall_time_source,
+                                    "event_timestamp_confidence": row.ocr_confidence,
+                                },
+                            )
                         )
+                    writer_renderer.write(frame, cv_result)
+                    processed = frame.index + 1
+                    progress_every = (
+                        defaults.pipeline.telemetry_detail_progress_frames
+                        if job.task_parameters.telemetry_detail
+                        else defaults.pipeline.telemetry_progress_frames
                     )
-                if processed % defaults.pipeline.checkpoint_interval_frames == 0:
-                    _save_progress_checkpoint(
-                        paths,
-                        job,
-                        video_stem,
-                        current_frame=processed,
-                        total_frames=total_frames,
-                        counted=engine.crossings.counted_track_ids,
-                        events_rows=events_rows,
-                    )
-            if last_index >= 0:
-                observed = last_index + 1
-                if supplied_frames:
-                    total_frames = max(total_frames, observed)
-                else:
-                    # Decoder EOF is the true length when MPEG-PS headers inflate nb_frames.
-                    total_frames = observed
-            processed = max(processed, last_index + 1)
+                    if processed % progress_every == 0 or processed == total_frames:
+                        elapsed = max(time.perf_counter() - t0, 1e-6)
+                        fps_val = round(processed / elapsed, 2)
+                        remaining = max(0, total_frames - processed)
+                        # Wall-clock ETA: remaining *frames* / processing fps (not video fps).
+                        eta_sec = round(remaining / fps_val, 1) if fps_val > 0 else None
+                        emit(
+                            TelemetryMessage(
+                                job_id=job.job_id,
+                                status="PROCESSING",
+                                telemetry_type="PROGRESS",
+                                data={
+                                    "current_frame": processed,
+                                    "total_frames": total_frames,
+                                    "processing_fps": fps_val,
+                                    "crossing_count": events_rows,
+                                    **({"eta_sec": eta_sec} if eta_sec is not None else {}),
+                                },
+                            )
+                        )
+                    if processed % defaults.pipeline.checkpoint_interval_frames == 0:
+                        _save_progress_checkpoint(
+                            paths,
+                            job,
+                            video_stem,
+                            current_frame=processed,
+                            total_frames=total_frames,
+                            counted=engine.crossings.counted_track_ids,
+                            events_rows=events_rows,
+                        )
+                if last_index >= 0:
+                    observed = last_index + 1
+                    if supplied_frames:
+                        total_frames = max(total_frames, observed)
+                    else:
+                        # Decoder EOF is the true length when MPEG-PS headers inflate nb_frames.
+                        total_frames = observed
+                processed = max(processed, last_index + 1)
+                _save_progress_checkpoint(
+                    paths,
+                    job,
+                    video_stem,
+                    current_frame=processed,
+                    total_frames=max(total_frames, processed, 1),
+                    counted=engine.crossings.counted_track_ids,
+                    events_rows=events_rows,
+                )
+            save_time_map(paths["time_map"], time_map)
+            writer_renderer.close()
+            artifacts = RunResultArtifacts(
+                events=str(paths["events"]),
+                time_map=str(paths["time_map"]),
+                processed_video=(
+                    str(paths["processed_video"])
+                    if job.task_parameters.render_video and paths["processed_video"].is_file()
+                    else None
+                ),
+            )
+            result = completed_now(job.job_id, job.source_video_path, video_stem, artifacts)
+            save_run_result(paths["run_result"], result)
+            emit(
+                TelemetryMessage(
+                    job_id=job.job_id,
+                    status="COMPLETED",
+                    telemetry_type="LOG",
+                    data={"message": "process_complete", "events_rows": events_rows},
+                )
+            )
+            return result
+        except KeyboardInterrupt:
+            writer_renderer.close()
             _save_progress_checkpoint(
                 paths,
                 job,
                 video_stem,
                 current_frame=processed,
-                total_frames=max(total_frames, processed, 1),
+                total_frames=max(total_frames, 1),
                 counted=engine.crossings.counted_track_ids,
                 events_rows=events_rows,
             )
-        save_time_map(paths["time_map"], time_map)
-        writer_renderer.close()
-        artifacts = RunResultArtifacts(
-            events=str(paths["events"]),
-            time_map=str(paths["time_map"]),
-            processed_video=(
-                str(paths["processed_video"])
-                if job.task_parameters.render_video and paths["processed_video"].is_file()
-                else None
-            ),
-        )
-        result = completed_now(job.job_id, job.source_video_path, video_stem, artifacts)
-        save_run_result(paths["run_result"], result)
-        emit(
-            TelemetryMessage(
-                job_id=job.job_id,
-                status="COMPLETED",
-                telemetry_type="LOG",
-                data={"message": "process_complete", "events_rows": events_rows},
+            artifacts = RunResultArtifacts(
+                events=str(paths["events"]) if paths["events"].is_file() else None
             )
-        )
-        return result
-    except KeyboardInterrupt:
-        writer_renderer.close()
-        _save_progress_checkpoint(
-            paths,
-            job,
-            video_stem,
-            current_frame=processed,
-            total_frames=max(total_frames, 1),
-            counted=engine.crossings.counted_track_ids,
-            events_rows=events_rows,
-        )
-        artifacts = RunResultArtifacts(
-            events=str(paths["events"]) if paths["events"].is_file() else None
-        )
-        result = completed_now(
-            job.job_id,
-            job.source_video_path,
-            video_stem,
-            artifacts,
-            status="CANCELLED",
-            error_message="interrupted",
-        )
-        save_run_result(paths["run_result"], result)
-        emit(
-            TelemetryMessage(
-                job_id=job.job_id,
+            result = completed_now(
+                job.job_id,
+                job.source_video_path,
+                video_stem,
+                artifacts,
                 status="CANCELLED",
-                telemetry_type="LOG",
-                data={"message": "interrupted"},
+                error_message="interrupted",
             )
-        )
-        return result
-    except Exception as exc:
-        writer_renderer.close()
-        _save_progress_checkpoint(
-            paths,
-            job,
-            video_stem,
-            current_frame=processed,
-            total_frames=max(total_frames, 1),
-            counted=engine.crossings.counted_track_ids,
-            events_rows=events_rows,
-        )
-        artifacts = RunResultArtifacts(
-            events=str(paths["events"]) if paths["events"].is_file() else None
-        )
-        result = completed_now(
-            job.job_id,
-            job.source_video_path,
-            video_stem,
-            artifacts,
-            status="FAILED",
-            error_message=str(exc),
-        )
-        save_run_result(paths["run_result"], result)
-        emit(
-            TelemetryMessage(
-                job_id=job.job_id,
+            save_run_result(paths["run_result"], result)
+            emit(
+                TelemetryMessage(
+                    job_id=job.job_id,
+                    status="CANCELLED",
+                    telemetry_type="LOG",
+                    data={"message": "interrupted"},
+                )
+            )
+            return result
+        except Exception as exc:
+            writer_renderer.close()
+            _save_progress_checkpoint(
+                paths,
+                job,
+                video_stem,
+                current_frame=processed,
+                total_frames=max(total_frames, 1),
+                counted=engine.crossings.counted_track_ids,
+                events_rows=events_rows,
+            )
+            artifacts = RunResultArtifacts(
+                events=str(paths["events"]) if paths["events"].is_file() else None
+            )
+            result = completed_now(
+                job.job_id,
+                job.source_video_path,
+                video_stem,
+                artifacts,
                 status="FAILED",
-                telemetry_type="LOG",
-                data={"message": str(exc)},
+                error_message=str(exc),
             )
-        )
-        return result
+            save_run_result(paths["run_result"], result)
+            emit(
+                TelemetryMessage(
+                    job_id=job.job_id,
+                    status="FAILED",
+                    telemetry_type="LOG",
+                    data={"message": str(exc)},
+                )
+            )
+            return result
+    finally:
+        if not supplied_frames:
+            closer = getattr(frame_iter, "close", None)
+            if callable(closer):
+                try:
+                    closer()
+                except OSError:
+                    pass
+        try:
+            writer_renderer.close()
+        except OSError:
+            pass

@@ -21,6 +21,8 @@ import subprocess  # nosec B404
 from pathlib import Path
 from typing import Any
 
+from viana.io.proc import run_captured
+
 # 1080p DVR clips at ~1 Mbps are common; header durations that imply tens of
 # kbps (256 MiB / 21 h) are not real playback length.
 MIN_PLAUSIBLE_BITRATE_BPS = 80_000.0
@@ -177,13 +179,7 @@ def _ffprobe_packet_count(source: Path) -> int | None:
 
 def _run_ffprobe_json(args: list[str]) -> dict[str, Any] | None:
     try:
-        listed = subprocess.run(  # noqa: S603  # nosec B603
-            args,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=_FFPROBE_TIMEOUT_SEC,
-        )
+        listed = run_captured(args, timeout=_FFPROBE_TIMEOUT_SEC)
     except (OSError, subprocess.TimeoutExpired):
         return None
     if listed.returncode != 0 or not listed.stdout.strip():

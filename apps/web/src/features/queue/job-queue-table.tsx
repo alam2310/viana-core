@@ -33,8 +33,8 @@ import { cn } from "@/lib/utils";
 
 /** Visible body rows before the table body scrolls (header stays sticky). */
 const VIEWPORT_ROWS = 10;
-/** Matches dense ~2rem rows + sticky header; short pages keep this height locked. */
-const VIEWPORT_HEIGHT = `calc(${VIEWPORT_ROWS} * 2rem + 1.75rem)`;
+/** Dense rows + sticky header, with a small buffer so 10 rows do not force a scrollbar. */
+const VIEWPORT_HEIGHT = `calc(${VIEWPORT_ROWS} * 2rem + 1.75rem + 0.5rem)`;
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, "all"] as const;
 type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
@@ -347,8 +347,8 @@ export function JobQueueTable({
 
         <p className="tabular-nums" aria-live="polite">
           {sorted.length === 0
-            ? "0 of 0"
-            : `${rangeStart}–${rangeEnd} of ${sorted.length}`}
+            ? "0 of 0 jobs"
+            : `${rangeStart}–${rangeEnd} of ${sorted.length} jobs`}
         </p>
 
         <nav className="inline-flex items-center gap-1" aria-label="Job queue pages">

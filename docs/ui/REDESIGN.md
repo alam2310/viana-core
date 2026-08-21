@@ -136,6 +136,7 @@ Legacy `PENDING` removed.
 | Crossing count | `PROCESSING` (from WS `MOVING_EVENT` count) |
 | GPU | `PROCESSING` / `READY` |
 | Actions | Always — three fixed slots; `COMPLETED` shows Open output only |
+| Pagination | Footer: rows per page 10 / 25 / 50 / All (default 10); page nav; sticky header; body scrolls after 10 visible rows (`scrollbar-gutter: stable`) |
 
 ### Row actions
 

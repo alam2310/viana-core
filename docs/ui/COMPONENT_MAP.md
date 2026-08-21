@@ -10,7 +10,7 @@
 | Container | `features/container/container-panel.tsx` | Docker health, start (compact in project bar) |
 | Project | `features/project/project-bar.tsx` | `project_id`, browsable `output_dir`, task type picker |
 | Intake | `features/intake/intake-panel.tsx`, `path-browser.tsx` | Host path browser, file/folder/multi-select |
-| Queue | `features/queue/job-queue-table.tsx`, `job-status.ts` | Job table, FIFO, row click → details, status labels (S25), action slots Review → Restart (Overwrite) → Stop; Open output only on `COMPLETED` (S26) |
+| Queue | `features/queue/job-queue-table.tsx`, `job-status.ts` | Job table, FIFO, row click → details, status labels (S25), action slots Review → Restart (Overwrite) → Stop; Open output only on `COMPLETED` (S26); pagination (10/25/50/All) + sticky header + 10-row scroll viewport |
 | Prescan | `features/prescan/prescan-review-modal.tsx` | Review modal: side-by-side canvas, OCR, scrubber, summary step |
 | Calibration | `features/calibration/calibration-canvas.tsx` | HTML5 canvas, line drag |
 | Telemetry | `features/telemetry/job-details-panel.tsx`, `live-crossings.tsx`, `telemetry-formatters.ts` | Job details: metadata, progress, Live Crossings (WS rows + API `crossing_count`) |

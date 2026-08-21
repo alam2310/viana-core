@@ -1,7 +1,7 @@
 # Idea dump (manual review only)
 
 **Status:** parking lot — **not** a work queue  
-**Last updated:** 2026-08-21 (I001, I002, I003 promoted)  
+**Last updated:** 2026-08-21 (I005 added)  
 **Owner:** human (this chat / later review)
 
 > **Agents: do not implement, prioritize, or start a Step/Seq from this file.**  
@@ -49,6 +49,7 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 | ID | Date | Category | Idea | Impact | Comment | Status |
 |----|------|----------|------|--------|---------|--------|
 | I004 | 2026-08-21 | `ui` | Play processed video from job details; investigate in-progress (play bytes already written, not live-edge) vs complete-only | **low** | **Demoted** (aesthetics / later). Not in Step 6. Revisit after 6.8 job details exist. | open |
+| I005 | 2026-08-21 | `engine` / `product` | Investigate video subtitles; optionally mux crossing events onto `_processed.mp4`; assess performance | **medium** | Investigation first. Soft subs (sidecar SRT/WebVTT or a text track) after events CSV should be cheap. Burn-in on the encode path would hit FPS (S23). Browser players often ignore unknown tracks — pair with I004 later. | open |
 
 ### Categories (use these labels)
 
@@ -80,6 +81,12 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 
 **Suggested impact: low (demoted).** Completed-job playback is a details-page nicety and fits 6.8 later. In-progress playback is an open product/tech call: S13 already writes fragmented `_processed.mp4`; S20/S24 parked **live-edge** preview because browser Range/seek was unstable. Not Step 6 until re-promoted.
 
+### I005 — Crossing events as video subtitles
+
+**Dump:** Investigate how subtitles work in a video and whether crossing events can be added as subtitles on the processed video. Assess the performance impact.
+
+**Suggested impact: medium.** This is a research item, not a Step 6 patch. Crossing rows already have video timestamps in `_events.csv`, so a **post-process sidecar** (SRT / WebVTT) or an optional muxed text track is the low-cost path: no extra GPU work in the detect/track loop. **Burned-in** captions (FFmpeg `subtitles`/`drawtext` on every frame) would compete with the current `_processed.mp4` encode and likely regress FPS (see S23). Investigation should cover: (1) soft vs hard subs, (2) cue text (class, direction, wall time), (3) player support in VLC vs browser, (4) mux-at-end vs grow-during-job (fragmented MP4 + timed text is harder). Do not implement until promoted.
+
 ---
 
 ## Promoted / dropped
@@ -101,3 +108,4 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 | 2026-08-21 | I001–I003 restored on `main` (were only in the idea-dump chat). I004 added — play `_processed.mp4` from job details; investigate in-progress VOD vs complete-only. |
 | 2026-08-21 | Review: **I001 → 6.8**, **I003 → 6.9**. I002 stays dump P3 (API availability check first). I004 demoted (aesthetics / later). |
 | 2026-08-21 | I002 promoted → **6.10** (`crossing_count` confirmed on JobStatus and WS PROGRESS). I004 still demoted. |
+| 2026-08-21 | I005 added — investigate crossing events as processed-video subtitles + performance. |

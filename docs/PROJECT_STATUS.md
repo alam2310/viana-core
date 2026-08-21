@@ -82,6 +82,7 @@
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | Experiment branch **`perf/concurrent-dual-detect`**: overlap vehicle+pedestrian YOLO via thread pool; A/B with `VIANA_DUAL_DETECT_CONCURRENT=0` |
 | 2026-08-22 | Doc sync: Next/focus → Step 6 + open Seq S29–S33; removed stale “Next: Step 5” |
 | 2026-08-21 | Idea dump: **I006 → Step 6.11** — prescan-review `render_video` toggle (existing API/engine field) |
 | 2026-08-21 | **Render perf/size:** async FFmpeg writer (copy-on-enqueue + drain on close); H.264 NVENC cq 32 / p4; libx264 CRF 34 / veryfast (replaces cq 28 / p7) |

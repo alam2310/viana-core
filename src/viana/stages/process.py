@@ -96,14 +96,16 @@ def _wipe_run_artifacts(paths: dict[str, Path]) -> None:
             target.unlink()
 
 
-def _default_detector(job: JobConfig, defaults: EngineDefaults) -> FrameDetector:
+def _default_detector(
+    job: JobConfig, defaults: EngineDefaults
+) -> tuple[FrameDetector, UltralyticsDualDetector]:
     model = UltralyticsDualDetector(
         defaults.models.vehicle,
         defaults.models.pedestrian,
         device=job.gpu_device,
         detection=defaults.detection,
     )
-    return model.detect
+    return model.detect, model
 
 
 def _default_frames(source: Path, start_index: int) -> FrameFeed:
@@ -216,13 +218,17 @@ def run_moving_count(
     supplied_frames = frames is not None
     frame_iter: Iterable[VideoFrame] | None = None
     writer_renderer: FrameRenderer = NullRenderer()
+    live_detector: UltralyticsDualDetector | None = None
     try:
         meta, frame_iter = (
             frames if frames is not None else _default_frames(job.source_video_path, start_index)
         )
         job.validate_geometry(meta.width, meta.height)
         total_frames = max(meta.frame_count, start_index + 1)
-        detect = detector or _default_detector(job, defaults)
+        if detector is None:
+            detect, live_detector = _default_detector(job, defaults)
+        else:
+            detect = detector
         writer_renderer = (
             renderer
             if renderer is not None
@@ -483,3 +489,5 @@ def run_moving_count(
             writer_renderer.close()
         except OSError:
             pass
+        if live_detector is not None:
+            live_detector.close()

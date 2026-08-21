@@ -47,7 +47,9 @@ def test_resolve_registry_file_missing(tmp_path: Path) -> None:
     assert resolved is None
 
 
-def test_resolve_not_relative_to_output_parent(tmp_path: Path, tmp_path_factory: pytest.TempPathFactory) -> None:
+def test_resolve_not_relative_to_output_parent(
+    tmp_path: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
     """Reject a file outside of the output_parent directory."""
     prescan_id = "test_id_3"
     outside_dir = tmp_path_factory.mktemp("outside_dir")
@@ -87,7 +89,9 @@ def test_resolve_fallback_search_not_found(tmp_path: Path) -> None:
     assert resolved is None
 
 
-def test_resolve_fallback_search_symlink_outside(tmp_path: Path, tmp_path_factory: pytest.TempPathFactory) -> None:
+def test_resolve_fallback_search_symlink_outside(
+    tmp_path: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
     """Reject a symlinked file found in search if it points outside output_parent."""
     prescan_id = "test_id_6"
     outside_dir = tmp_path_factory.mktemp("outside_dir_symlink")

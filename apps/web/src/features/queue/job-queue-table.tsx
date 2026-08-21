@@ -6,7 +6,6 @@ import type { JobStatusResponse } from "@viana/contracts";
 import {
   IconCancel,
   IconFolder,
-  IconMonitor,
   IconResume,
   IconRestart,
   IconRetry,
@@ -67,10 +66,8 @@ export function JobQueueTable({
   jobs,
   busyId,
   selectedJobId,
-  monitorJobId,
   onSelectJob,
   onReview,
-  onMonitor,
   onRetryPrescan,
   onResume,
   onStartFresh,
@@ -80,10 +77,8 @@ export function JobQueueTable({
   jobs: JobStatusResponse[];
   busyId: string | null;
   selectedJobId: string | null;
-  monitorJobId: string | null;
   onSelectJob: (job: JobStatusResponse) => void;
   onReview: (job: JobStatusResponse) => void;
-  onMonitor: (job: JobStatusResponse) => void;
   onRetryPrescan: (jobId: string) => void;
   onResume: (jobId: string) => void;
   onStartFresh: (jobId: string) => void;
@@ -139,7 +134,6 @@ export function JobQueueTable({
                     "cursor-pointer border-b border-border align-middle hover:bg-card-hover",
                     paused && "bg-row-paused",
                     selectedJobId === job.job_id && "bg-row-selected",
-                    monitorJobId === job.job_id && "bg-row-monitor",
                   )}
                   onClick={() => onSelectJob(job)}
                 >
@@ -224,16 +218,6 @@ export function JobQueueTable({
                           onClick={() => onRetryPrescan(job.job_id)}
                         >
                           <IconRetry size={16} />
-                        </RoundIconButton>
-                      ) : null}
-                      {job.status === "PROCESSING" ? (
-                        <RoundIconButton
-                          label="Monitor Live"
-                          variant="success"
-                          size="sm"
-                          onClick={() => onMonitor(job)}
-                        >
-                          <IconMonitor size={16} />
                         </RoundIconButton>
                       ) : null}
                       {isResumablePause(job) ? (

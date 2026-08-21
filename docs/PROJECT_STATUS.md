@@ -78,8 +78,9 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **S23 / 6.9 (I003):** process loop no longer runs EasyOCR; wall-clock interpolates confirmed prescan/user metadata; `hiv000001_inframe` 203.2s @ 13.45 fps → 179.3s @ 15.26 fps |
 | 2026-08-21 | **S10:** no-profile line proposal uses road-band slope clustering + parallel counting offset; `hiv000001_inframe` near geometry C/D; profile override unchanged |
-| 2026-08-21 | Idea dump: **I002 → Step 6.10** (`crossing_count` on JobStatus / WS PROGRESS; bind UI, no new field). I004 still demoted |
+| 2026-08-21 | **6.8 / 6.10:** Live Monitor removed; Live Crossings in job details while processing; count from `progress.crossing_count` |
 | 2026-08-21 | Idea dump review: **I001 → Step 6.8**, **I003 → Step 6.9**; I002 stays dump (P3, check `crossing_count`); I004 demoted |
 | 2026-08-21 | **S22:** close worker/engine FDs (pipes, VideoCapture, ffmpeg process groups) so multi-file intake does not hit `[Errno 24]` / API 502 |
 | 2026-08-21 | Added `docs/steps/IDEA_DUMP.md` — parked ideas for later human review; not a work queue |

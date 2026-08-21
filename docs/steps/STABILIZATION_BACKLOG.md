@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 0 | 1 | 1 | 21 / 22 active |
+| 0 | 1 | 3 | 22 / 25 active |
 
 **Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
@@ -40,14 +40,17 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S14** | F011 | C | no | — | Emit `MOVING_EVENT` without `telemetry_detail` gate; include crossing timestamp | fixed |
 | **S15** | F012 | B/D | no | — | 15-min CSV schema: add `date` column; change `window_start`/`window_end` to HH:MM | fixed |
 | **S16** | F013 | A | no | — | Theme toggle regression: action buttons keep dark styling after returning to light mode | fixed |
-| **S17** | F014 | A | no | — | Remove duplicate `Recent crossing` table from job details widget | fixed |
+| **S17** | F014 | A | no | — | Remove duplicate `Recent crossing` table from job details widget (superseded: I001 put Live Crossings in details) | fixed |
 | **S18** | F015 | A/C | no | S14 | Normalize live monitor crossing title + `HH:MM:SS` actual-time formatter | fixed |
 | **S19** | F016 | A/B/C | no | S12 | Fix queue video length / ETA inflation and validate MP4 codec metadata in container | fixed |
 | **S20** | F010 | A/B | no | S13 | UI cannot render in-progress processed MP4 even when file is playable natively | **parked** (see S24) |
 | **S21** | F017 | C | no | — | Prescan OCR misses time/location when OSD text appears in alternate screen regions | **fixed** |
 | **S22** | F018 | B/C | no | — | Intake/prescan triggers `[Errno 24] Too many open files`, followed by API 502 in UI refresh | **fixed** |
-| **S23** | F019 | C | no | — | Processing throughput regression: end-to-end run is much slower than earlier baseline | open |
-| **S24** | F010 | A | no | S20 | Park live-monitor partial MP4 preview; crossings immediate (no delay) | parked |
+| **S23** | F019 | C | no | — | Processing throughput regression: end-to-end run is much slower than earlier baseline | **fixed** |
+| **S24** | F010 | A | no | S20 | Park in-progress `_processed.mp4` preview; crossings immediate (no delay). Player stays unmounted after I001. | parked |
+| **S25** | F020 | A | no | — | Review job status UI labels vs lifecycle (Queued vs Ready inconsistency) | open |
+| **S26** | F021 | A | no | — | Standardize Job Queue action icons (stable slots; enable/disable by status) | open |
+| **S27** | F022 | B | no | — | After a job FAILED, next READY job did not start despite free GPU | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
@@ -73,14 +76,17 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S14** | 1. Confirm prescan with `telemetry_detail: true/false` 2. Monitor during `PROCESSING` | **Expected:** `MOVING_EVENT` on WS for every crossing with wall-clock or video timestamp. **Actual (before):** events gated on `telemetry_detail`; no timestamp in payload (frame_index only). **After:** emission is unconditional and payload carries `event_timestamp`, `event_timestamp_source`, `event_timestamp_confidence`, `video_pts_ms` (plus existing frame/fps fields). | `src/viana/stages/process.py`, `tests/viana/test_process.py`, `tests/orchestrator/test_job_routes.py` | uncommitted | `pytest tests/viana/test_process.py tests/orchestrator/test_job_routes.py -q` |
 | **S15** | 1. Generate `_15min.csv` 2. Inspect header/rows | **Expected:** `date` plus `window_start`/`window_end` as `HH:MM` with strict schema header order. **Actual (before):** UI parser grouped by window/class only and could merge multi-day rows. **After:** contract/schema + aggregate writer emit `date` and `HH:MM`; parser requires `date` column and keys by `date+window+class` while remaining backward-compatible with ISO window values. | `packages/contracts/schemas/events_15min.schema.json`, `src/viana/io/csv_schema.py`, `src/viana/stages/aggregate.py`, `apps/web/src/lib/parse-15min-csv.ts`, `tests/viana/test_cli_aggregate.py` | uncommitted | `npm --prefix apps/web run typecheck`; python `pytest` unavailable in this environment |
 | **S16** | 1. Switch to dark theme 2. Return to light theme 3. Visit intake, prescan dialogs, and live monitor | **Expected:** button colors and variants re-compute on every theme change. **Actual (before):** several buttons remained in dark-style colors after switching back to light. **After:** removed one-way dark-only button class overrides and standardized affected controls on shared `Button` variants so dark↔light toggles resolve symmetrically. | `apps/web/src/features/project/project-bar.tsx`, `apps/web/src/features/intake/path-browser.tsx`, `apps/web/src/features/prescan/prescan-review-modal.tsx`, `apps/web/src/features/monitor/monitor-sidebar.tsx` | uncommitted | UI smoke checks: intake dialog, prescan modal, monitor dialog |
-| **S17** | 1. Open job details widget 2. Open live monitor for same job | **Expected:** crossings are shown in one canonical place (live monitor `Live Crossings` view), avoiding duplicate UI sections. **Actual (before):** job details also showed `Recent crossings`, duplicating information and adding noise. **After:** removed the `Recent crossings` section from job details; live monitor remains the canonical crossings surface. | `apps/web/src/features/telemetry/job-details-panel.tsx` | uncommitted | UI smoke check: job details widget |
+| **S17** | 1. Open job details widget 2. Open live monitor for same job | **Expected (original):** one canonical crossings surface. **After S17:** `Recent crossings` removed from details; live monitor was canonical. **Superseded 2026-08-21 (I001 / 6.8):** Live Monitor widget removed; **Live Crossings** live in job details (S18 `HH:MM:SS` formatter kept). | `apps/web/src/features/telemetry/job-details-panel.tsx`, `live-crossings.tsx` | uncommitted | UI: details has Live Crossings; no monitor widget |
 | **S18** | 1. Open live monitor while crossings stream 2. Inspect section header + crossing time column | **Expected:** title follows title case (`Live Crossings`) and displayed time is actual identified event time formatted strictly as `HH:MM:SS`. **Actual (before):** title/time formatting was inconsistent. **After:** normalized title usage to `Live Crossings`, constrained crossing column label to `Time (HH:MM:SS)`, and tightened timestamp formatter to return `HH:MM:SS` from canonical event timestamps (with bounded fallback behavior). | `apps/web/src/features/monitor/monitor-sidebar.tsx`, `apps/web/src/features/telemetry/telemetry-panel.tsx`, `apps/web/src/features/telemetry/crossings-table.tsx`, `apps/web/src/features/telemetry/telemetry-formatters.ts` | uncommitted | UI smoke checks: monitor dialog + job details widget |
 | **S19** | 1. Queue a known long clip (~3h) 2. Observe Job Queue `Video length` and `Time remaining` | **Expected:** video length and ETA are in the right order of magnitude (3h clip should not show 20h+ remaining without evidence). **Actual (before):** Hikvision `.mp4` is MPEG-PS; OpenCV/ffprobe **header** duration on `hiv00013_shimoga.mp4` was **76240s (21.2h)** / **1,143,606 frames** @ 15 fps (implied **28 kbps**). True demux: **34,197 packets → 2279.8s (00:37:59.8)**. Queue showed ~21h length and 20h+ ETA because `eta_sec = remaining_frames / processing_fps` used the inflated count. **After:** `apply_container_timing` recounts packets when bitrate &lt; 80 kbps; video length **00:37:59.8**; ETA uses ~34k frames. Formula: see F016 note. | `src/viana/io/media.py`, `prescan.py`, `video.py`, `process.py`, queue formatters, `api_contracts.md` | uncommitted | container probe + `pytest tests/viana/test_media.py tests/viana/test_process.py` |
 | **S20** | Growing `_processed.mp4` in live monitor browser player | **Expected:** stable live preview synced with crossings. **Actual:** H.264 encode fixed decode, but live-edge/seek UX remained unstable (blackouts, Range/FD storms). **Parked 2026-08-20 → S24** (UI unmounted; code retained). | `live-processed-video.tsx`, `crossing-media-sync.ts` (unused), artifact/proxy H.264 path | `2e56532` + later UI; **parked** | Do not remount player without S24 revisit |
 | **S21** | 1. Run prescan on a video where OSD layout differs (location at top-center, timestamp at bottom-left) 2. Inspect `proposed_metadata` | **Expected:** prescan extracts time/date/location despite changed on-screen text positions. **Actual (before):** corner ROIs missed fields. **After (2026-08-20):** 2× corners still first (S08); if time/date miss, 4× wide corners (S07); if any required field still empty, full-width top/bottom bands at 2×. Layout-variant MJPG clip recovered `07:21:26`, `18-10-2024`, `LITO-TOPCENTER`. `hiv000001_inframe.mp4` unchanged: `02:21:25`, `18-10-2024`, `LITO-RARARANKI` in **4.00s** `run_prescan` (S08 CLI was 4.60s). **Follow-up:** `hiv00013_shimoga.mp4` opening frame (t=2s) OCR'd `06 :44:35` (space before colon); time was appended to location. Parser now accepts spaced separators and peels the clock out of location → `06:44:35` / `28-07-2026` / `Bangalorebypassjz`. **hiv00037 night:** mixed white/black location glyphs; clock OCR'd as `05:34"04` and wide ROI year `7074` overwrote `2024`. Quote-as-colon + year repair + stroke (gradient) pass on mixed-polarity location crops → `05:34:04` / `19-10-2024` / `LZTBARABANKI`. **hiv000001 follow-up (2026-08-21):** mixed-polarity location joined `LITO-RARARANKI L1TO-RARARANKI LIT-BRBNKI`; metadata invert turned `02` into `03` at t=10s. Parser now picks one hyphenated label; metadata ROI is not inverted; missing time with a known date goes to bands (not 4× wide). Intake location becomes `L1TO-RARARANKI` (still EasyOCR-limited vs `L1TO-BARABANKI`). **test_video.mp4 (2026-08-21):** opening OSD clock OCR'd as `08:38+31` (plus-as-colon) so time was empty; unhyphenated polarity variants were joined. Parser accepts `+` / `HH.MMSS` clocks and picks one long camera code (`08:38:31` / `L3TRARARANKT`). Prior clips rechecked: inframe t=2/t=10, shimoga, night. | `src/viana/stages/ocr.py`, `prescan.py` (`osd_band_score` multi-band), `time_map.py` (`07.21.26` + spaced-colon clock parse); `tests/viana/test_prescan.py` | uncommitted | `pytest tests/viana/test_prescan.py tests/viana/test_time_map.py` (37 passed in container) + inframe / shimoga / hiv00058 / night / test_video |
 | **S22** | 1. Select/add two videos to intake job 2. Observe prescan/job processing in container 3. Repeat with one file after failure | **Expected:** intake and prescan work repeatedly without process/file descriptor exhaustion. **Actual (before):** `[Errno 24] Too many open files`; afterwards UI refresh hits API 502 (`fetch failed`) until container restart. **After (2026-08-21):** Root cause was leaked stdio pipes and orphaned process groups (prescan `run_viana` / GPU `Popen` kept by `Thread.args`, timeout/cancel not killing OpenCV/ffprobe/ffmpeg grandchildren, VideoCapture not released if the frame iterator was abandoned, ffmpeg stdin left open on hang). Engine+orchestrator now close pipes, kill the session, release captures, and join worker threads on success/fail/cancel. Next.js 502 remains a downstream symptom of EMFILE, not a UI bug. S24 live-monitor MP4 player stays unmounted. | `src/viana/io/proc.py`, `src/orchestrator/cli.py`, `src/orchestrator/workers/pool.py`, `src/viana/stages/{video,prescan,process,render}.py`, `src/viana/io/media.py` | uncommitted | `pytest tests/viana/test_proc.py tests/viana/test_process.py tests/orchestrator/test_s22_resources.py tests/orchestrator/test_job_routes.py` + FD loop (`/proc/self/fd`) |
-| **S23** | 1. Run the same clip/config used previously for benchmark 2. Compare time-to-COMPLETED and average processing FPS vs earlier runs | **Expected:** throughput should be within an acceptable range of prior baseline. **Actual:** processing now takes significantly longer than before (user-observed regression). | Lane C: capture before/after metrics (wall-clock, avg FPS, GPU utilization), identify regressions in detect/track/render/telemetry path, and isolate whether slowdown is model/runtime/container/config-related. Add reproducible benchmark command and clip in notes. | — | Step 4 UI chat |
-| **S24** | Live Monitor showed partial MP4 + delayed crossings | **Decision (2026-08-20):** Park in-progress video preview. Live Monitor keeps progress + **Live Crossings only**; crossings show WS events **immediately** (no frame/buffer delay). Retain unused modules with PARKED headers. | `monitor-sidebar.tsx` (no video mount); parked: `live-processed-video.tsx`, `crossing-media-sync.ts`; docs: COMPONENT_MAP, PROJECT_STATUS, apps/web/AGENTS.md | uncommitted | UI: Monitor has no `<video>`; crossings update on emit |
+| **S23** | 1. Run the same clip/config used previously for benchmark 2. Compare time-to-COMPLETED and average processing FPS vs earlier runs | **Expected:** throughput should be within an acceptable range of prior baseline. **Actual:** processing now takes significantly longer than before (user-observed regression). **After (2026-08-21, I003 / 6.9):** removed in-process OSD OCR (EasyOCR init + frame-0 parse + `recalibration_interval_sec` mid-run). Prescan OCR (S21) unchanged. Confirmed job metadata is the only clock; CSV/`time_map` interpolate `user_fallback`/`ocr_anchor` and never write `ocr_recalibrated` during `viana run`. **Benchmark** (same clip/config/GPU): `hiv000001_inframe.mp4` (2701 frames, 180s, 1920×1088 detect), geometry B, conf 0.75, `render_video=true`, `cuda:0` RTX 3060, container `viana_core`. Command: `python3 -m viana run -c <job.json>` (`start_fresh=true`). **Before (process-loop EasyOCR):** wall **203.2s**, avg FPS **13.45**, FPS@300 **6.43**. **After:** wall **179.3s**, avg FPS **15.26**, FPS@300 **14.43**. Stage split after: detect **161.7s**, track **2.7s**, render **9.1s**, telemetry **0.01s**, I/O **0.01s** (remainder ≈ decode + model/ffmpeg setup). GPU during after: ~84% util, ~1261 MiB. Dominant leftover cost is YOLO detect, not telemetry/I/O. On clips longer than 300s this also drops extra EasyOCR passes every 5 min. | uncommitted | `pytest tests/viana/test_process.py tests/viana/test_time_map.py tests/viana/test_prescan.py` + before/after `viana run` on `hiv000001_inframe.mp4` |
+| **S24** | Live Monitor showed partial MP4 + delayed crossings | **Decision (2026-08-20):** Park in-progress video preview. **2026-08-21 (I001):** Live Monitor widget removed; job details shows progress + **Live Crossings** immediately (no frame delay). Do not remount the player. | parked: `live-processed-video.tsx`, `crossing-media-sync.ts`; Live Crossings: `live-crossings.tsx` | uncommitted | UI: no `<video>` in details; crossings update on emit |
+| **S25** | 1. Submit job → wait for GPU while still in prescan queue 2. Confirm review → wait for GPU before `PROCESSING` 3. Scan Job Queue badges for all statuses | **Expected:** waiting-for-resource states read consistently; every lifecycle status has a clear operator-facing name. **Actual:** `PRESCAN_PENDING` shows **Queued** while post-review `READY` (also waiting for the GPU pool) shows **Ready** — naming is inconsistent for the same “waiting for resources” situation. Need a full label review (see F020). | `apps/web/src/features/queue/job-status.ts` (`STATUS_LABELS`); queue + job-details badges; contracts `JobStatus` enum | — | Step 4 UI chat |
+| **S26** | 1. Queue a non-reviewable job (e.g. `PRESCAN_PENDING` / `PROCESSING`) — only Stop shows 2. Move same job to `AWAITING_REVIEW` / `READY` — Review appears left of Stop 3. Compare Actions column across rows | **Expected:** action icons stay in fixed positions so muscle memory and scanability work across statuses. **Actual:** Actions render conditionally (`null` when N/A), so the red Stop (`IconCancel`) sits alone on the left when it is the only button, then jumps right when Review (or Retry/Resume/etc.) mounts to its left. Proposed easy win: keep a stable icon set and enable/disable by status — but confirm against UI standards first (see F021). | `apps/web/src/features/queue/job-queue-table.tsx` Actions cell; `RoundIconButton` / icons; `docs/ui/` patterns | — | Step 4 / hardening UI chat |
+| **S27** | 1. Confirm ≥2 jobs so one is `PROCESSING` and the next is `READY` 2. Let the first job fail (engine/worker error → `FAILED`) 3. Observe GPU free and next job status | **Expected:** when a GPU slot frees on terminal `FAILED` (or equivalent), `_drain` starts the next FIFO `READY` job without operator intervention. **Actual:** previous job failed; GPU appeared free; next job stayed waiting and did not enter `PROCESSING` (see F022). | `src/orchestrator/workers/pool.py` (`_drain`, `_monitor`/`_finalize`, GPU occupancy); orchestrator tests for fail→next | — | Step 4 / hardening UI chat |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine prescan · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `parked` · `wontfix`  
@@ -131,7 +137,9 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 **Observed:** crossing data appears in both job details (`Recent crossing`) and live monitor (`Live crossing`), creating redundant surfaces.
 
-**Target:** remove the `Recent crossing` table from job details and keep live crossing visualization in monitor as the single source in UI.
+**Target (S17):** remove the `Recent crossing` table from job details and keep live crossing visualization in one place.
+
+**Superseded (I001 / 6.8):** Live Monitor widget is gone; the single surface is **Live Crossings** in job details. Count uses API `progress.crossing_count` (I002 / 6.10), not session list length.
 
 **Scope:** UI-only (Lane A), no API or telemetry contract changes.
 
@@ -207,23 +215,91 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 - break down time across decode, inference, tracking, rendering, telemetry, and disk I/O,
 - and lock a repeatable performance check to catch regressions.
 
+**Fix (2026-08-21):** In-process OSD OCR (EasyOCR loaded on every `viana run`, first-frame parse, recalibration every `ocr.recalibration_interval_sec`) was the recoverable regression vs confirmed-prescan clock. Removed from `process.py` (I003 / Step 6.9). Remaining time on `hiv000001_inframe.mp4` is almost all detect (161.7s / 179.3s wall); track/render/telemetry/I/O are small. Repeat: same job JSON, `start_fresh=true`, `python3 -m viana run -c …` in `viana_core`.
+
 **Scope:** engine/runtime performance path (Lane C), with container/runtime config verification as needed.
 
 ---
 
 ## F010 / S24 design note (live-monitor partial MP4 — PARKED)
 
-**Decision (2026-08-20):** Do not show in-progress `_processed.mp4` in the Live Monitor UI for now.
+**Decision (2026-08-20):** Do not show in-progress `_processed.mp4` in the UI for now. Still in force after I001 (job details; widget gone).
 
 **Why:** After S13 (fragmented MP4) and S20 (H.264 for Chromium), browser live-edge preview remained unstable — seek/reload blackouts, Range-request FD exhaustion (`Errno 24`), and unreliable picture↔crossing sync.
 
-**Current UI:** Live Monitor = progress line + **Live Crossings** only. Crossings render WS `MOVING_EVENT`s **immediately** (no frame-buffer delay).
+**Current UI:** Job details = progress line + **Live Crossings**. Crossings render WS `MOVING_EVENT`s **immediately** (no frame-buffer delay). Header total is `progress.crossing_count` (GET /jobs + WS PROGRESS).
 
 **Retained (unused) code:**
 - `apps/web/src/features/monitor/live-processed-video.tsx`
 - `apps/web/src/features/monitor/crossing-media-sync.ts`
 
-**Do not** import/mount those modules until this note is explicitly reversed. API `GET /artifacts/{id}/partial.mp4` and proxy remain available for a future revisit.
+**Do not** import/mount those modules until this note is explicitly reversed. API `GET /artifacts/{id}/partial.mp4` and proxy remain available for a future revisit. Live Monitor widget was removed (I001); do not bring it back with the player.
+
+---
+
+## F020 design note (job status UI labels)
+
+**Issue:** Operators see different waiting labels for similar “blocked on resources” situations:
+- `PRESCAN_PENDING` → UI **Queued** (waiting for a prescan worker / slot)
+- `READY` → UI **Ready** (confirmed; waiting for GPU processing pool)
+
+API enum values stay as-is (`JobStatusLiteral` / contracts). This item is **UI copy + badge clarity** only unless review decides a contract rename is warranted.
+
+**Current mapping** (`apps/web/src/features/queue/job-status.ts`):
+
+| API status | Current UI label | Lifecycle meaning (review target) |
+|------------|------------------|-----------------------------------|
+| `PRESCAN_PENDING` | Queued | Submitted; waiting for prescan capacity |
+| `PRESCAN_RUNNING` | Pre-scan | Prescan worker active |
+| `PRESCAN_FAILED` | Pre-scan failed | Prescan error; may retry / fail path |
+| `AWAITING_REVIEW` | Review | Prescan done; operator must confirm geometry/metadata |
+| `READY` | Ready | Confirmed; waiting for GPU / process pool |
+| `PROCESSING` | Processing | Engine running |
+| `PAUSED` | Paused | Processing paused |
+| `COMPLETED` | Completed | Success terminal |
+| `FAILED` | Failed | Error terminal |
+| `CANCELLED` | Cancelled | Cancelled terminal |
+
+**Review asks:**
+1. Enumerate every status operators can see in Job Queue + job details.
+2. Decide whether waiting-for-prescan vs waiting-for-GPU should share wording (e.g. both “Queued”, or “Queued (prescan)” / “Queued (process)”, or keep distinct but clearer names).
+3. Confirm remaining labels are accurate and consistent (especially `Review` vs `Ready`).
+4. Apply agreed labels in `STATUS_LABELS` (and any tooltips) without inventing new API statuses unless a contract change is approved.
+
+**Scope:** Lane A (UI). No Step 5 blocker.
+
+---
+
+## F021 design note (Job Queue action icon layout)
+
+**Issue:** The Actions column mounts buttons only when applicable. That makes the Stop (red cross) icon shift horizontally depending on which other actions are present — e.g. alone on the left vs to the right of Review when the job is under review.
+
+**Candidate fix (easy win):** Always render the primary action icons in a fixed order; `disabled` (+ muted styling / `aria-disabled`) when the action is not valid for the current `JobStatus`. Tooltips still explain why (label unchanged or “Unavailable: …”).
+
+**Before coding — check UI standards:**
+1. Read `docs/ui/DISCOVERY.md` / `REDESIGN.md` / `COMPONENT_MAP.md` for queue action expectations.
+2. Confirm `RoundIconButton` disabled affordance is clear in light + dark (related history: F013 theme).
+3. Decide the stable slot set and order (at minimum Review + Stop; also Retry / Resume / Start Fresh / Open Output — keep all slots always, or only the high-frequency pair).
+4. Prefer disabled-visible over hide unless discovery explicitly wants terminal rows sparse (e.g. `COMPLETED` only folder).
+5. Accessibility: disabled controls remain focusable or are skipped consistently; don’t remove hit targets mid-poll.
+
+**Scope:** Lane A (UI). No Step 5 blocker. No API change.
+
+---
+
+## F022 design note (drain after FAILED)
+
+**Observed:** After a processing job entered `FAILED`, a subsequent `READY` job did not start even though a GPU was free.
+
+**Expected behavior:** FIFO execution — when a GPU worker finishes (success or failure), `JobPool._drain()` should assign a free device to the head `READY` job and spawn it.
+
+**Likely investigation points** (`src/orchestrator/workers/pool.py`):
+1. Does `_monitor` / `_finalize` always call `_drain()` on every terminal path (`FAILED`, crash, cancelled-as-failed)?
+2. Does `_drain` bail early when `_queue[0]` is not `READY` (`if job.status != "READY": return`) instead of skipping stale heads?
+3. Is GPU occupancy stuck (job still counted as `PROCESSING`, or `gpu_device` / process handle not cleared) so `assign_gpu` returns `None` while nvidia-smi looks idle?
+4. Add a regression test: job A fails → job B auto-starts on the freed device.
+
+**Scope:** Lane B (orchestrator). No Step 5 blocker (ops reliability; triage may promote if reproducible).
 
 ---
 
@@ -231,7 +307,12 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | Added **S27 (F022)** next READY job did not start after prior job FAILED despite free GPU |
+| 2026-08-21 | Added **S26 (F021)** standardize Job Queue action icons (Stop jumps left/right when Review mounts; prefer stable slots + enable/disable after UI standards check) |
 | 2026-08-21 | **S10 fixed:** road-band slope clustering + parallel counting offset; `hiv000001_inframe` proposal near geometry C/D (endpoint \|dy\| 218/213 vs 984/887); profile override unchanged; `test_prescan.py` 29 passed |
+| 2026-08-21 | **S23 fixed (I003 / 6.9):** no process-loop EasyOCR; confirmed prescan/user clock interpolated; `hiv000001_inframe` 203.2s/13.45 fps → 179.3s/15.26 fps (detect still ~90% of loop) |
+| 2026-08-21 | **I001 / I002:** removed Live Monitor widget and action; Live Crossings in job details; count bound to `progress.crossing_count`; S24 player still unmounted |
+| 2026-08-21 | Added **S25 (F020)** review job status UI labels (`Queued` vs `Ready` waiting inconsistency; full lifecycle naming pass) |
 | 2026-08-21 | **S22 fixed:** close subprocess pipes / process groups, VideoCapture, and ffmpeg on success/fail/cancel; multi-file intake FD loop stable; UI 502 treated as EMFILE symptom (S24 player not remounted) |
 | 2026-08-20 | **S19 fixed:** MPEG-PS/DVR header duration inflated video length/ETA; ffprobe packet recount when implied bitrate &lt; 80 kbps; units documented (sec vs frames vs processing_fps)
 | 2026-08-20 | **S24 parked:** Live Monitor hides partial-MP4 preview (code retained, not mounted); Live Crossings show telemetry immediately with no UI delay; S20 follow-on live-edge work parked

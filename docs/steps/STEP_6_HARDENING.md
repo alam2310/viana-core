@@ -39,7 +39,8 @@ Mark each item ✅ in `TRACKER.md`. When all done or deferred, mark Step 6 ✅.
 
 | Date | Note |
 |------|------|
-| 2026-08-21 | Promoted **I002 → 6.10** (`crossing_count` already on JobStatus / WS PROGRESS). |
+| 2026-08-21 | **6.9 complete (I003 / S23):** removed in-process OSD OCR; CSV uses confirmed clock; before/after on `hiv000001_inframe.mp4` 203.2s/13.45 fps → 179.3s/15.26 fps (detect remains the bulk). |
+| 2026-08-21 | **6.8 + 6.10** complete — Live Monitor removed; Live Crossings in details while processing; count from `progress.crossing_count`. |
 | 2026-08-21 | Promoted **I001 → 6.8**, **I003 → 6.9**. I002/I004 stay in idea dump. |
 | 2026-08-20 | Stabilization **S21 (F017)** — adaptive OSD OCR (bands, clock salvage, mixed-polarity crops); UI retest OK. |
 | 2026-08-20 | **6.1** follow-up — bake EasyOCR English CRAFT + `english_g2` at image build; `_run_prescan` marks `PRESCAN_FAILED` on `TimeoutExpired` instead of leaving the job running. |

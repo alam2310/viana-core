@@ -84,7 +84,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 S10/S21 fixed; S22–S23 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
+| **4.stab** Stabilization path | 🔄 S10/S21–S23 fixed; S25 open | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
 ### Stabilization execution path (follow in order)
 
@@ -135,9 +135,9 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 6.5 | Extra camera clip | ⬜ |
 | 6.6 | GPU CI | ⬜ |
 | 6.7 | Container host path access + API intake path validation (S09 / F006) | ⬜ |
-| 6.8 | Job details: drop Live Monitor widget/action; Live Crossings in details; row click opens details (**I001**) | ⬜ |
-| 6.9 | Disable in-process OSD OCR; wall-clock/location from confirmed prescan only (**I003**) | ⬜ |
-| 6.10 | Bind live crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session WS list length (**I002**) | ⬜ |
+| 6.8 | Job details: drop Live Monitor widget/action; Live Crossings in details; row click opens details (**I001**) | ✅ |
+| 6.9 | Disable in-process OSD OCR; wall-clock/location from confirmed prescan only (**I003**) | ✅ |
+| 6.10 | Bind live crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session WS list length (**I002**) | ✅ |
 
 ---
 
@@ -145,8 +145,9 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **6.9 / I003 complete** — no OSD OCR in `viana run`; clock locked to confirmed metadata; S23 `hiv000001_inframe` 203.2s/13.45 fps → 179.3s/15.26 fps |
 | 2026-08-21 | **S10 (F007) fixed** — road-band horizon/counting proposal on real clips; profile override kept; `test_prescan.py` 29 passed |
-| 2026-08-21 | Promoted **I002 → 6.10** — UI uses existing `crossing_count` (confirmed on JobStatus / WS PROGRESS). I004 remains demoted. |
+| 2026-08-21 | **6.8 / 6.10 complete** — Live Monitor widget/action removed; Live Crossings in job details while processing; totals from `progress.crossing_count`; S24 player not remounted |
 | 2026-08-21 | Promoted idea dump **I001 → 6.8** (job details / drop Live Monitor) and **I003 → 6.9** (no process-loop OSD OCR). I002 stays dump (P3, API check). I004 demoted. |
 | 2026-08-21 | Added [`IDEA_DUMP.md`](IDEA_DUMP.md) — manual-review parking lot; agents must not self-assign from it |
 | 2026-08-21 | S21 follow-up: `test_video.mp4` plus-as-colon clock (`08:38+31`) and unhyphenated location join; prior inframe/shimoga/night reads unchanged |

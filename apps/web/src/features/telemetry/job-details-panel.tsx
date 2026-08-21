@@ -1,8 +1,13 @@
 "use client";
 
-import type { JobStatusResponse } from "@viana/contracts";
+import type { JobStatusResponse, TelemetryMessage } from "@viana/contracts";
 
 import { Aggregate15MinTable } from "@/features/telemetry/aggregate-15min-table";
+import {
+  LiveCrossings,
+  liveCrossingCount,
+} from "@/features/telemetry/live-crossings";
+import { progressFromTelemetry } from "@/features/telemetry/telemetry-formatters";
 import {
   statusBadgeClass,
   statusLabel,
@@ -97,9 +102,11 @@ function metadataBlock(job: JobStatusResponse) {
 export function JobDetailsPanel({
   job,
   mountConfig,
+  messages,
 }: {
   job: JobStatusResponse | null;
   mountConfig: MountConfig | null;
+  messages: TelemetryMessage[];
 }) {
   if (!job) {
     return (
@@ -120,6 +127,14 @@ export function JobDetailsPanel({
     job.status === "COMPLETED" && mountConfig
       ? toHostPath(`${job.output_dir}/${stem}_15min.csv`, mountConfig.mounts)
       : null;
+  const telemetryProgress = progressFromTelemetry(messages, job.job_id);
+  const totalFrames =
+    telemetryProgress?.total ?? job.progress?.total_frames;
+  const crossingCount = liveCrossingCount(job, messages);
+  const totalFramesLabel =
+    typeof totalFrames === "number" ? String(totalFrames) : "—";
+  const crossingsLabel =
+    typeof crossingCount === "number" ? String(crossingCount) : "—";
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -151,6 +166,17 @@ export function JobDetailsPanel({
         ) : null}
 
         {metadataBlock(job)}
+
+        <p>
+          <span className="text-muted">Total frames:</span>{" "}
+          <span className="font-mono">{totalFramesLabel}</span>
+        </p>
+        <p>
+          <span className="text-muted">Crossings detected:</span>{" "}
+          <span className="font-mono">{crossingsLabel}</span>
+        </p>
+
+        <LiveCrossings job={job} messages={messages} />
 
         {job.status === "COMPLETED" && csvHostPath ? (
           <details className="rounded border border-border">

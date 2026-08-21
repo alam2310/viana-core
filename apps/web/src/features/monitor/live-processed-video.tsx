@@ -5,10 +5,10 @@
  *
  * Live in-progress `_processed.mp4` preview was unstable in Chromium (seek/reload
  * blackouts, FD exhaustion on Range storms, sync-vs-picture mismatches).
- * Decision: hide from Live Monitor; keep this module for a future revisit.
+ * Decision: hide from the UI; keep this module for a future revisit.
  * See docs/steps/STABILIZATION_BACKLOG.md § S20 / S24.
  *
- * Not imported by `monitor-sidebar.tsx` while parked.
+ * Not imported by the dashboard or job details. Do not remount.
  */
 
 import { useEffect, useRef, useState } from "react";

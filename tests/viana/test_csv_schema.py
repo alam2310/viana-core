@@ -21,6 +21,12 @@ from viana.io.csv_schema import (
 )
 
 
+def test_load_json_schema_not_found() -> None:
+    """Loading a non-existent schema raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError, match="Schema not found:"):
+        load_json_schema("nonexistent_schema_that_does_not_exist.json")
+
+
 def test_raw_event_fields_match_schema() -> None:
     """Pydantic event row fields equal events_raw.schema.json properties."""
     schema = load_json_schema(EVENTS_RAW_SCHEMA)

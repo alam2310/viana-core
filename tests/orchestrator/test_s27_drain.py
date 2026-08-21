@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import threading
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from subprocess import CompletedProcess, TimeoutExpired
@@ -126,6 +127,10 @@ def test_failed_job_starts_next_ready_fifo(
     assert failed.gpu_device is None
 
     started = pool.wait_for_status(job_b, "PROCESSING", timeout=5.0)
+    # Status flips to PROCESSING before spawn returns; wait for the worker attach.
+    deadline = time.monotonic() + 5.0
+    while len(procs) < 2 and time.monotonic() < deadline:
+        time.sleep(0.01)
     assert started.status == "PROCESSING"
     assert started.gpu_device == "cuda:0"
     assert pool.occupied_gpus() == {"cuda:0"}
@@ -172,6 +177,9 @@ def test_drain_skips_stale_queue_head(client: TestClient, monkeypatch: pytest.Mo
     holds[0].release()
     pool.wait_job(job_a, timeout=5.0)
     started = pool.wait_for_status(job_b, "PROCESSING", timeout=5.0)
+    deadline = time.monotonic() + 5.0
+    while len(holds) < 2 and time.monotonic() < deadline:
+        time.sleep(0.01)
     assert started.status == "PROCESSING"
     assert stale.job_id not in pool._queue
     holds[1].release()
@@ -199,5 +207,8 @@ def test_drain_skips_missing_queue_id(client: TestClient, monkeypatch: pytest.Mo
         pool._queue.insert(0, "job_ghost_s27")
     holds[0].release()
     pool.wait_for_status(job_b, "PROCESSING", timeout=5.0)
+    deadline = time.monotonic() + 5.0
+    while len(holds) < 2 and time.monotonic() < deadline:
+        time.sleep(0.01)
     holds[1].release()
     pool.wait_job(job_b, timeout=5.0)

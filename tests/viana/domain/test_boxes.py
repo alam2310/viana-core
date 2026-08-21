@@ -1,5 +1,10 @@
-import pytest
-from viana.domain.boxes import Detection, intersection_area, iou, ioa_child_in_parent, nms_class_agnostic
+from viana.domain.boxes import (
+    Detection,
+    intersection_area,
+    ioa_child_in_parent,
+    iou,
+    nms_class_agnostic,
+)
 
 
 def test_detection_properties():
@@ -13,6 +18,7 @@ def test_detection_properties():
     assert d1.cy == 35.0
     assert d1.bottom_center == (20.0, 50.0)
     assert d1.xyxy == (10.0, 20.0, 30.0, 50.0)
+
 
 def test_detection_negative_dimensions():
     # Inverted coordinates: x1 > x2, y1 > y2
@@ -93,7 +99,7 @@ def test_nms_class_agnostic():
     # d4 is far away -> should be kept
     d4 = Detection(100.0, 100.0, 110.0, 110.0, confidence=0.6, class_id=3)
 
-    detections = [d4, d2, d1, d3] # un-ordered
+    detections = [d4, d2, d1, d3]  # un-ordered
 
     # Overlap d1/d2 is 64 / 100 = 0.64
     # Overlap d1/d3 is 4 / 196 = ~0.02

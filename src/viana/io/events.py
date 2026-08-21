@@ -114,14 +114,17 @@ class EventsCsvWriter:
             self._handle.flush()
 
     def write_row(self, row: RawCrossingEventRow) -> None:
-        """Append one crossing event and flush (resume-friendly)."""
+        """Append one crossing event (buffered)."""
         self._writer.writerow(event_to_csv_dict(row))
-        self._handle.flush()
 
     def write_rows(self, rows: Iterable[RawCrossingEventRow]) -> None:
         """Append many crossing events."""
         for row in rows:
             self.write_row(row)
+
+    def flush(self) -> None:
+        """Flush the underlying file handle to disk."""
+        self._handle.flush()
 
     def close(self) -> None:
         """Close the underlying file handle."""

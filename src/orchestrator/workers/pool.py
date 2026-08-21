@@ -402,31 +402,50 @@ class WorkerPool:
         return self.to_submit_response(self.get_job(job_id))
 
     def cancel(self, job_id: str) -> None:
-        """Cancel queued or running work."""
+        """Cancel queued or running work.
+
+        ``CANCELLED`` is recorded immediately so DELETE is not gated on worker
+        reaping. GPU occupancy is released here so ``_drain`` can start the
+        next READY job (same occupancy rule as S27 fail-drain). Process
+        teardown runs off the request thread; ``_finalize`` must not clobber
+        this status.
+        """
         job = self.get_job(job_id)
-        if job.status in PRESCAN_PHASE_STATUSES:
-            with self._lock:
-                if job.job_id in self._prescan_queue:
-                    self._prescan_queue.remove(job.job_id)
-                    self._refresh_prescan_queue_positions()
-                job.status = "CANCELLED"
-                job.queue_position = 0
-                proc = job.process
-            if proc is not None:
-                terminate_process_tree(proc, close_pipes=False)
-            return
+        proc: Popen[str] | None = None
+        drain_gpu = False
+        drain_prescan = False
         with self._lock:
+            if job.status in {"COMPLETED", "FAILED", "CANCELLED"}:
+                return
+            if job.job_id in self._prescan_queue:
+                self._prescan_queue.remove(job.job_id)
+                self._refresh_prescan_queue_positions()
             if job.job_id in self._queue:
                 self._queue.remove(job.job_id)
-                job.status = "CANCELLED"
-                job.queue_position = 0
                 self._refresh_queue_positions()
-                return
+            was_processing = job.status == "PROCESSING"
+            was_prescan = job.status in PRESCAN_PHASE_STATUSES
             proc = job.process
+            job.status = "CANCELLED"
+            job.queue_position = 0
+            if was_processing:
+                _release_gpu_slot(job)
+                drain_gpu = True
+            elif was_prescan:
+                drain_prescan = True
         if proc is not None and proc.poll() is None:
-            terminate_process_tree(proc, close_pipes=False)
-            return
-        job.status = "CANCELLED"
+            thread = threading.Thread(
+                target=terminate_process_tree,
+                args=(proc,),
+                kwargs={"close_pipes": False},
+                daemon=True,
+            )
+            thread.start()
+            self._track_thread(thread)
+        if drain_gpu:
+            self._drain()
+        if drain_prescan:
+            self._drain_prescan()
 
     def wait_job(self, job_id: str, timeout: float = 5.0) -> JobRecord:
         """Block until a job leaves READY/PROCESSING (tests)."""
@@ -752,6 +771,9 @@ class WorkerPool:
         with self._lock:
             job = self._jobs.get(job_id)
             if job is None:
+                return
+            if job.status == "CANCELLED":
+                _release_gpu_slot(job)
                 return
             ckpt_path = artifact_paths(job.output_dir, job.source_video_path.stem)["checkpoint"]
             result = _parse_run_result(stdout)

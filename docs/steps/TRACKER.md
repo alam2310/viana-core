@@ -131,7 +131,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 |------|------|--------|
 | 6.1 | Docker image bake (`trackers==2.6.0 --no-deps` + `numpy<2`) | ✅ |
 | 6.2 | Pause / resume UX | ⬜ |
-| 6.3 | Faster cancel | ⬜ |
+| 6.3 | Faster cancel | ✅ |
 | 6.4 | Playwright | ⬜ |
 | 6.5 | Extra camera clip | ⬜ |
 | 6.6 | GPU CI | ⬜ |
@@ -146,6 +146,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **6.3 complete** — DELETE sets `CANCELLED` immediately, releases the GPU slot, drains the next READY job; `_finalize` does not clobber user cancel (S27 fail-drain unchanged) |
 | 2026-08-21 | **S28 (F023) fixed** — counting-line anchors survive brief detection gaps (class flicker); `hiv00013_shimoga` Jeep ~06:44:50 recovered on replay |
 | 2026-08-21 | **6.9 / I003 complete** — no OSD OCR in `viana run`; clock locked to confirmed metadata; S23 `hiv000001_inframe` 203.2s/13.45 fps → 179.3s/15.26 fps |
 | 2026-08-21 | **S10 (F007) fixed** — road-band horizon/counting proposal on real clips; profile override kept; `test_prescan.py` 29 passed |

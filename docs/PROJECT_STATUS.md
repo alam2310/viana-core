@@ -60,7 +60,6 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 | Browser click-through | Manual/Playwright UI pass; HTTP E2E done |
 | Extra camera clip beyond `hiv000001` | Overlay go on D sufficient for v0.1 |
 | GPU tests in CI | No GPU in GitHub Actions |
-| Faster DELETE → CANCELLED | Cancel is eventual via poll |
 
 ---
 
@@ -78,6 +77,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **6.3 complete** — DELETE marks `CANCELLED` immediately and frees the GPU so the next READY job can drain (S27 fail path unchanged) |
 | 2026-08-21 | Stabilization **S27:** FAILED GPU jobs release the slot and auto-start the next FIFO READY job (`pool.py` drain) |
 | 2026-08-21 | Stabilization **S25/S26:** Job Queue labels `Queued (prescan)` vs `Queued (GPU)`; fixed action icon slots |
 | 2026-08-21 | Stabilization S28: missed crossings when Car↔Jeep flicker drops the box for 1–2 frames across the counting line; retain previous anchors up to 15 frames (`crossing.py`) |

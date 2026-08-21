@@ -9,7 +9,7 @@ import time
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from subprocess import CompletedProcess
+from subprocess import CompletedProcess, TimeoutExpired
 from typing import Any
 
 import pytest
@@ -71,7 +71,7 @@ class InstantPopen:
         self.stdout = io.StringIO(stdout)
         self.stderr = io.StringIO(stderr)
         self.returncode = returncode
-        self.pid = 4242
+        self.pid = 0
 
     def poll(self) -> int | None:
         return self.returncode
@@ -95,13 +95,15 @@ class HoldPopen:
         self.stdout = io.StringIO(_run_result_json("job_hold"))
         self.stderr = _HoldStderr(self._done)
         self.returncode: int | None = None
-        self.pid = 4343
+        self.pid = 0
 
     def poll(self) -> int | None:
         return self.returncode
 
     def wait(self, timeout: float | None = None) -> int:
-        self._done.wait(timeout)
+        finished = self._done.wait(timeout)
+        if not finished and timeout is not None and self.returncode is None:
+            raise TimeoutExpired("hold", timeout)
         if self.returncode is None:
             self.returncode = 0
         return self.returncode

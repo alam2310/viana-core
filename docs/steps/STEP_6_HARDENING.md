@@ -16,7 +16,7 @@
 |------|------|------|
 | **6.1** | Bake `trackers` + `numpy<2` in Docker image | ✅ API / DevOps |
 | **6.2** | Pause / resume / PAUSED UX | UI (+ API) |
-| **6.3** | Faster DELETE → CANCELLED | API |
+| **6.3** | Faster DELETE → CANCELLED | ✅ API |
 | **6.4** | Browser / Playwright click-through | UI / QA |
 | **6.5** | Extra camera clip validation | Engine / QA |
 | **6.6** | GPU tests in CI | DevOps |
@@ -39,6 +39,7 @@ Mark each item ✅ in `TRACKER.md`. When all done or deferred, mark Step 6 ✅.
 
 | Date | Note |
 |------|------|
+| 2026-08-21 | **6.3 complete:** `WorkerPool.cancel` sets `CANCELLED` on DELETE, releases GPU occupancy, SIGTERM/SIGKILL off the request thread; `_finalize` keeps user cancel (does not map checkpoint SIGTERM to PAUSED). Drain-after-fail (S27) unchanged. Tests: `tests/orchestrator/test_s63_cancel.py`. |
 | 2026-08-21 | **6.9 complete (I003 / S23):** removed in-process OSD OCR; CSV uses confirmed clock; before/after on `hiv000001_inframe.mp4` 203.2s/13.45 fps → 179.3s/15.26 fps (detect remains the bulk). |
 | 2026-08-21 | **6.8 + 6.10** complete — Live Monitor removed; Live Crossings in details while processing; count from `progress.crossing_count`. |
 | 2026-08-21 | Promoted **I001 → 6.8**, **I003 → 6.9**. I002/I004 stay in idea dump. |

@@ -7,7 +7,7 @@ import json
 import threading
 from collections.abc import Iterator
 from pathlib import Path
-from subprocess import CompletedProcess
+from subprocess import CompletedProcess, TimeoutExpired
 from typing import Any
 
 import pytest
@@ -40,13 +40,15 @@ class FailHoldPopen:
         self.stdout = io.StringIO(_failed_run_result_json("job_fail"))
         self.stderr = _HoldStderr(self._done)
         self.returncode: int | None = None
-        self.pid = 4444
+        self.pid = 0
 
     def poll(self) -> int | None:
         return self.returncode
 
     def wait(self, timeout: float | None = None) -> int:
-        self._done.wait(timeout)
+        finished = self._done.wait(timeout)
+        if not finished and timeout is not None and self.returncode is None:
+            raise TimeoutExpired("fail-hold", timeout)
         if self.returncode is None:
             self.returncode = 1
         return self.returncode

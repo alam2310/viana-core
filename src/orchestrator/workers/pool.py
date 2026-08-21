@@ -561,20 +561,25 @@ class WorkerPool:
 
     def _drain_prescan(self) -> None:
         """Start PRESCAN_PENDING jobs up to ``MAX_CONCURRENT_PRESCAN_JOBS``."""
-        while True:
-            with self._lock:
-                running = sum(1 for job in self._jobs.values() if job.status == "PRESCAN_RUNNING")
-                if running >= MAX_CONCURRENT_PRESCAN_JOBS:
-                    return
-                job_id: str | None = None
-                for queued_id in self._prescan_queue:
-                    queued = self._jobs.get(queued_id)
-                    if queued is not None and queued.status == "PRESCAN_PENDING":
-                        job_id = queued_id
-                        queued.status = "PRESCAN_RUNNING"
+        with self._lock:
+            running = sum(1 for job in self._jobs.values() if job.status == "PRESCAN_RUNNING")
+            available = MAX_CONCURRENT_PRESCAN_JOBS - running
+            if available <= 0:
+                return
+
+            jobs_to_start = []
+            for queued_id in self._prescan_queue:
+                queued = self._jobs.get(queued_id)
+                if queued is not None and queued.status == "PRESCAN_PENDING":
+                    jobs_to_start.append(queued_id)
+                    queued.status = "PRESCAN_RUNNING"
+                    if len(jobs_to_start) >= available:
                         break
-                if job_id is None:
-                    return
+
+            if not jobs_to_start:
+                return
+
+        for job_id in jobs_to_start:
             thread = threading.Thread(target=self._run_prescan, args=(job_id,), daemon=True)
             thread.start()
             self._track_thread(thread)

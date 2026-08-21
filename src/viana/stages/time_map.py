@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import bisect
 import json
 import re
 from datetime import datetime, timedelta, timezone
@@ -109,14 +110,21 @@ class TimeMap(BaseModel):
             base = parse_wall_time(anchor.wall_time)
             wall = base + timedelta(milliseconds=video_pts_ms - anchor.video_pts_ms)
             return format_wall_time(wall), anchor.source, anchor.ocr_confidence
-        left = ordered[0]
-        right = ordered[-1]
-        for item in ordered:
-            if item.video_pts_ms <= video_pts_ms:
-                left = item
-            if item.video_pts_ms >= video_pts_ms:
-                right = item
-                break
+
+        # O(log N) binary search for the interpolation window
+        idx = bisect.bisect_right(ordered, video_pts_ms, key=lambda item: item.video_pts_ms)
+
+        if idx == 0:
+            left = right = ordered[0]
+        elif idx == len(ordered):
+            left = right = ordered[-1]
+        else:
+            left = ordered[idx - 1]
+            if left.video_pts_ms == video_pts_ms:
+                right = left
+            else:
+                right = ordered[idx]
+
         if left.video_pts_ms == right.video_pts_ms:
             return left.wall_time, left.source, left.ocr_confidence
         span = right.video_pts_ms - left.video_pts_ms

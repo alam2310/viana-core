@@ -23,8 +23,9 @@
 | **6.7** | Container host path access + API intake path validation (**S09 / F006**) | DevOps / API |
 | **6.8** | Job details instead of Live Monitor widget; Live Crossings in details; row click (**I001**) | UI |
 | **6.9** | No OSD OCR during processing; lock time/date/location to confirmed prescan (**I003**) | Engine |
+| **6.10** | Bind crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session list length (**I002**) | UI |
 
-Promoted from [`IDEA_DUMP.md`](IDEA_DUMP.md) on 2026-08-21. Remaining dump items (**I002** API check, **I004** demoted) are **not** Step 6 work until promoted.
+Promoted from [`IDEA_DUMP.md`](IDEA_DUMP.md) on 2026-08-21. Remaining dump item **I004** (demoted) is **not** Step 6 work until promoted.
 
 ---
 
@@ -38,6 +39,7 @@ Mark each item ✅ in `TRACKER.md`. When all done or deferred, mark Step 6 ✅.
 
 | Date | Note |
 |------|------|
+| 2026-08-21 | Promoted **I002 → 6.10** (`crossing_count` already on JobStatus / WS PROGRESS). |
 | 2026-08-21 | Promoted **I001 → 6.8**, **I003 → 6.9**. I002/I004 stay in idea dump. |
 | 2026-08-20 | Stabilization **S21 (F017)** — adaptive OSD OCR (bands, clock salvage, mixed-polarity crops); UI retest OK. |
 | 2026-08-20 | **6.1** follow-up — bake EasyOCR English CRAFT + `english_g2` at image build; `_run_prescan` marks `PRESCAN_FAILED` on `TimeoutExpired` instead of leaving the job running. |

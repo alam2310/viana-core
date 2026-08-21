@@ -111,7 +111,7 @@ Update tracker after **each** sub-step 4.1–4.5.
 
 ## On completing Step 6 — Hardening (per item)
 
-Per item **6.1–6.9** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferred.
+Per item **6.1–6.10** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferred.
 
 ---
 

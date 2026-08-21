@@ -76,14 +76,13 @@ class FrameCVEngine:
         tracked = self.tracker.update(filtered, frame_index)
         class_ids: dict[int, int] = {}
         norm_areas: dict[int, int] = {}
-        counted = {int(tid) for tid in self.crossings.counted_track_ids}
         for item in tracked:
             track_id = int(item.track_id)
             final_id, area = self.classifier.process_vehicle(
                 track_id,
                 item.raw_class_id,
                 item.detection,
-                counted=track_id in counted,
+                counted=track_id in self.crossings.counted_track_ids,
             )
             class_ids[track_id] = final_id
             norm_areas[track_id] = area

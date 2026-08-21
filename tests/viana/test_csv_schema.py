@@ -97,3 +97,18 @@ def test_aggregate_row_count_non_negative() -> None:
             count=-1,
             partial=False,
         )
+
+
+def test_csv_columns_from_schema_missing_properties() -> None:
+    """Error raised when schema has missing or invalid properties."""
+    with pytest.raises(ValueError, match="schema has no properties"):
+        csv_columns_from_schema({})
+
+    with pytest.raises(ValueError, match="schema has no properties"):
+        csv_columns_from_schema({"properties": {}})
+
+    with pytest.raises(ValueError, match="schema has no properties"):
+        csv_columns_from_schema({"properties": None})
+
+    with pytest.raises(ValueError, match="schema has no properties"):
+        csv_columns_from_schema({"properties": "not a dict"})

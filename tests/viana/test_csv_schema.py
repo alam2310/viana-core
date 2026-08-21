@@ -97,3 +97,18 @@ def test_aggregate_row_count_non_negative() -> None:
             count=-1,
             partial=False,
         )
+
+def test_load_json_schema_not_dict(monkeypatch: pytest.MonkeyPatch, tmp_path: "pathlib.Path") -> None:
+    """Loading a JSON array raises ValueError instead of crashing on dict ops."""
+    from pathlib import Path
+
+    def mock_dir() -> Path:
+        return tmp_path
+
+    monkeypatch.setattr("viana.io.csv_schema.contracts_schemas_dir", mock_dir)
+
+    bad_schema = tmp_path / "bad.schema.json"
+    bad_schema.write_text("[]", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Expected a JSON object in"):
+        load_json_schema("bad.schema.json")

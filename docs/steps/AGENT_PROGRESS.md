@@ -7,6 +7,7 @@
 | [`TRACKER.md`](TRACKER.md) | Every session |
 | This file | Step start / complete / skip |
 | [`STEP_N_*.md`](.) | Step scope + exit criteria |
+| [`IDEA_DUMP.md`](IDEA_DUMP.md) | **Do not read for work.** Parking lot for later human review. Ignore unless the user names an idea ID. |
 
 **Naming:** **Phase 0–9** = build (complete). **Step 1–6** = post-v0.1 (active).
 
@@ -124,6 +125,7 @@ Per item **6.1–6.7** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferre
 | `src/viana/stages/prescan.py` | 3 |
 | `apps/web/*` | 4 |
 | `docs/steps/STABILIZATION_BACKLOG.md` | 4 stabilization (append defects) |
+| `docs/steps/IDEA_DUMP.md` | **Never** (unless user names an idea ID to promote/implement) |
 | `verification/5_15min_results.md` | 5 |
 | `docs/ui/REDESIGN.md` | 1 (write), 4 (read) |
 

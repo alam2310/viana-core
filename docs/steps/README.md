@@ -16,8 +16,11 @@ Work **after** Phases 0–9 is tracked as **Steps 1–6** (not Phases).
 | [`STEP_6_HARDENING.md`](STEP_6_HARDENING.md) | Post-ship backlog |
 | [`STABILIZATION.md`](STABILIZATION.md) | Step 4→5 gate rules; agents log defects here |
 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) | Living defect list + **execution path S01–S08, S10** (S09 → 6.7) |
+| [`IDEA_DUMP.md`](IDEA_DUMP.md) | **Manual review only** — idea parking lot; not a work queue |
 
 **Agent rule:** New chat per Step (2–4). During Step 4 acceptance, log defects in [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) per [`STABILIZATION.md`](STABILIZATION.md).
+
+**Idea dump:** [`IDEA_DUMP.md`](IDEA_DUMP.md) is for later human review. Agents must not start work from it unless the user names an idea ID.
 
 ---
 

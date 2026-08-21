@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 0 | 1 | 2 | 20 / 22 active |
+| 0 | 1 | 1 | 21 / 22 active |
 
 **Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
@@ -33,7 +33,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S06** | F005 | C | no | — | Triage EasyOCR in container (installed? hits on test frame?) | fixed |
 | **S07** | F001 | C | **yes** | S06 | Corner ROI OSD OCR → populated `proposed_metadata` | fixed |
 | **S08** | F002 | C | no | — | Reduce prescan wall-clock (OCR works; intake still 30s+) | fixed |
-| **S10** | F007 | C | no | S07 | Improve horizon + counting line proposal (CV / geometry) | in_progress |
+| **S10** | F007 | C | no | S07 | Improve horizon + counting line proposal (CV / geometry) | fixed |
 | **S11** | F008 | B/D | no | — | `JobStatus.created_at` + sortable submitted time in API | fixed |
 | **S12** | F009 | B/D | no | — | `JobStatus.video_duration_sec` + `processing_duration_sec` from API (not UI localStorage) | fixed |
 | **S13** | F010 | B/C | no | — | Growing `_processed.mp4` streamable during job (moov/fragmented MP4) | fixed |
@@ -66,7 +66,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S06** | 1. `docker exec` into API container 2. Run prescan on `hiv000001_inframe.mp4` 3. Inspect OCR stdout | **Expected:** EasyOCR installed; corner OSD yields hits. **Actual:** EasyOCR 1.7.2 installed; `optional_easyocr_reader()` returns `CornerOsdReader` (not no-op). Frame 0 has blank top band (no OSD); full-frame OCR 0 hits. Corner ROI at t≈3s yields date/time fragments; OSD fades in by t=2s. `paragraph=True` returns `[bbox,text]` without confidence — fixed in S07. | `ocr.py`, `prescan.py` — informs corner ROI + first-OSD frame pick | engine S06–S07 | engine S07 |
 | **S07** | 1. Intake `data/raw/hiv000001_inframe.mp4` 2. `AWAITING_REVIEW` 3. Open review | **Expected:** `proposed_metadata` has time (HH:MM:SS), date (DD-MM-YYYY), location from 1–2 corner ROIs. **Actual (before):** fields empty. **After:** `02:21:25`, `18-10-2024`, `LITO-RARARANKI` on intake job `job_abec59713960`. | `src/viana/stages/ocr.py`, `prescan.py`, `time_map.py` | engine S06–S07 | engine S07 intake |
 | **S08** | 1. Intake `hiv000001_inframe.mp4` 2. Time until `AWAITING_REVIEW` | **Expected:** prescan in a few seconds. **Actual (before):** 30s+ reported; engine CLI `viana prescan` **6.676s** (OCR 5.55s @ 4× wide ROI; opening scan + second VideoCapture). **After (2026-08-19):** CLI **4.60s** (sample_opening_frame 0.069s at t=2.0s; OCR parse 3.76s on 2× tight ROI). S07 fields unchanged: `02:21:25`, `18-10-2024`, `LITO-RARARANKI`. Scan window 30s→4s; probe t=2s first; CLI no longer imports process/YOLO on prescan. | `prescan.py`, `ocr.py`, `cli.py`, `configs/engine_defaults.yaml` | `153431f` | engine CLI before/after on `hiv000001_inframe.mp4` |
-| **S10** | 1. Intake `hiv000001_inframe.mp4` (or parity clip) 2. `AWAITING_REVIEW` 3. Open review modal | **Expected:** `proposed_lines` match road geometry (horizon near vanishing point, counting line on lane boundary) — usable without large edits. **Actual (before):** `propose_lines()` used fixed normalized y-ratios or aspect-matched profile only (`lines.py` `geometric_lines`) with weak frame cues. **Current (partial):** no-profile fallback now uses deterministic dominant-slope fitting and parallel-band offsets; it improves stability but still misses best-position targets on some camera views. Parked for follow-up tuning with real clips. | `src/viana/stages/lines.py`, `src/viana/stages/prescan.py`, `tests/viana/test_prescan.py`; reference geometry targets in `tests/viana/fixtures/PARITY_NOTES.md` | uncommitted | compile + targeted unit tests |
+| **S10** | 1. Intake `hiv000001_inframe.mp4` (or parity clip) 2. `AWAITING_REVIEW` 3. Open review modal | **Expected:** `proposed_lines` match road geometry (horizon near vanishing point, counting line on lane boundary) — usable without large edits. **Actual (before):** global Hough median followed rooftops/gantries and inverted the `hiv000001` slope. **After (2026-08-21):** road-band slope clustering + parallel counting offset (`0.26 H`). Profile still overrides. Clip t=2s no-profile: **H `[0,579]→[1919,340]` C `[0,874]→[1919,635]`** (conf 0.725). Endpoint \|dy\| vs geometry **D** 213 / **C** 218 (was 887 / 984). Also checked `parity_golden`, `hiv00053_EDIT`, `hiv00013_shimoga`, `hiv00037_night`, `test_video`. | `src/viana/stages/lines.py`, `src/viana/stages/prescan.py`, `tests/viana/test_prescan.py`; targets in `tests/viana/fixtures/PARITY_NOTES.md` | uncommitted | `pytest tests/viana/test_prescan.py` (29 passed) + clip probe |
 | **S11** | 1. Intake job 2. `GET /jobs` | **Expected:** each job has `created_at` (ISO) for queue sort. **Actual:** UI uses localStorage fallback until API field exists. | `job_status.schema.json`, `pool.py` `JobRecord`, `to_status()` | `81106c0` | orchestrator tests (S11) |
 | **S12** | 1. Prescan completes 2. `GET /jobs/{id}` | **Expected:** `video_duration_sec` and `processing_duration_sec` on status for queue columns. **Actual:** UI estimates video length from progress fps when available; run time uses localStorage timestamps captured while dashboard is open during `PROCESSING` — shows `—` for jobs completed before first poll or after page refresh. | prescan worker persists meta on `JobRecord`; schema + TS types; `job-local-meta.ts` | `81106c0` | orchestrator tests (S12) |
 | **S13** | 1. `PROCESSING` job 2. Open live monitor 3. Try partial MP4 in VLC | **Expected:** `_processed.mp4` playable while growing. **Actual (before):** file not playable until job completes (moov atom at end). **After:** FFmpeg writer always emits fragmented MP4 with frequent fragments/keyframes (`frag_duration=1s`) so in-progress output is streamable. | `src/viana/stages/render.py`, `tests/viana/test_render.py`, `tests/orchestrator/test_job_routes.py` | uncommitted | `pytest tests/viana/test_render.py tests/orchestrator/test_job_routes.py -q` |
@@ -103,7 +103,7 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 ## F007 design note (line proposal)
 
-**Today:** `propose_lines(width, height, profiles)` never inspects the sampled frame pixels. Fallback is `geometric_lines()` with fixed norms (`_HORIZON_Y`, `_COUNTING_Y`) or a profile matched by aspect ratio only (`confidence` 0.4 vs 0.85).
+**Today:** Matching calibration profile still wins (`confidence` 0.85). Else `propose_lines(..., frame=)` uses the prescan sample: OSD-masked Hough, slope cluster scored in the road band (not rooftops), horizon intercept in the far/mid band, counting line parallel at `0.26 H`. No frame / weak cues → `geometric_lines()` (`confidence` 0.4). Endpoints stay clamped to frame bounds.
 
 **Target:** Use the prescan sample frame (same frame as OCR / preview JPEG) to propose horizon and counting lines that align with visible road geometry — e.g. edge/vanishing-point heuristics, optional lane/horizon cues — while staying within frame bounds and returning `ProposedLines.confidence` honestly.
 
@@ -231,6 +231,7 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **S10 fixed:** road-band slope clustering + parallel counting offset; `hiv000001_inframe` proposal near geometry C/D (endpoint \|dy\| 218/213 vs 984/887); profile override unchanged; `test_prescan.py` 29 passed |
 | 2026-08-21 | **S22 fixed:** close subprocess pipes / process groups, VideoCapture, and ffmpeg on success/fail/cancel; multi-file intake FD loop stable; UI 502 treated as EMFILE symptom (S24 player not remounted) |
 | 2026-08-20 | **S19 fixed:** MPEG-PS/DVR header duration inflated video length/ETA; ffprobe packet recount when implied bitrate &lt; 80 kbps; units documented (sec vs frames vs processing_fps)
 | 2026-08-20 | **S24 parked:** Live Monitor hides partial-MP4 preview (code retained, not mounted); Live Crossings show telemetry immediately with no UI delay; S20 follow-on live-edge work parked

@@ -114,6 +114,87 @@ def test_invalid_frame_shape_falls_back_to_geometric() -> None:
     assert proposed.confidence == GEOMETRIC_CONFIDENCE
 
 
+def test_frame_guided_lines_prefer_road_band_over_rooflines() -> None:
+    """Upper-frame building edges must not invert the road slope (S10)."""
+    cv2 = __import__("pytest").importorskip("cv2")
+    np = __import__("pytest").importorskip("numpy")
+    frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    cv2.line(frame, (0, 90), (1279, 240), (255, 255, 255), 7)
+    cv2.line(frame, (0, 130), (1279, 280), (255, 255, 255), 7)
+    cv2.line(frame, (0, 390), (1279, 250), (255, 255, 255), 4)
+    cv2.line(frame, (0, 610), (1279, 470), (255, 255, 255), 4)
+    proposed = propose_lines(1280, 720, [], frame=frame)
+    h_dy = proposed.horizon_line.end[1] - proposed.horizon_line.start[1]
+    c_dy = proposed.counting_line.end[1] - proposed.counting_line.start[1]
+    assert h_dy < 0
+    assert c_dy < 0
+    assert 300 <= proposed.horizon_line.start[1] <= 450
+    assert proposed.counting_line.start[1] >= proposed.horizon_line.start[1] + 80
+    proposed.horizon_line.assert_within_frame(1280, 720, "horizon_line")
+    proposed.counting_line.assert_within_frame(1280, 720, "counting_line")
+
+
+def test_matching_profile_overrides_frame_guided(tmp_path: Path) -> None:
+    """Saved profile still wins even when a sampled frame is present (S10)."""
+    cv2 = __import__("pytest").importorskip("cv2")
+    np = __import__("pytest").importorskip("numpy")
+    profile = CalibrationProfile(
+        profile_id="s10_override",
+        profile_name="S10 override",
+        reference_resolution=(1280, 720),
+        horizon_line=LineSegment(start=(0, 200), end=(1279, 180)),
+        counting_line=LineSegment(start=(0, 500), end=(1279, 480)),
+        source="user_drawn",
+    )
+    save_profile(tmp_path, profile)
+    frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    cv2.line(frame, (0, 390), (1279, 250), (255, 255, 255), 4)
+    cv2.line(frame, (0, 610), (1279, 470), (255, 255, 255), 4)
+    proposed = propose_lines(1280, 720, list_profiles(tmp_path), frame=frame)
+    assert proposed.confidence == PROFILE_CONFIDENCE
+    assert proposed.horizon_line.start == (0, 200)
+    assert proposed.counting_line.start == (0, 500)
+
+
+def test_hiv000001_inframe_proposal_near_review_geometry() -> None:
+    """S10: no-profile proposal on the parity clip stays near geometry C/D."""
+    pytest = __import__("pytest")
+    pytest.importorskip("cv2")
+    from viana.config.defaults import load_engine_defaults
+    from viana.stages.prescan import sample_opening_frame
+
+    clip = Path("/data/raw/hiv000001_inframe.mp4")
+    if not clip.is_file():
+        clip = Path("/home/mushaffa/Work/ViAna/data/raw/hiv000001_inframe.mp4")
+    if not clip.is_file():
+        pytest.skip("hiv000001_inframe.mp4 not available")
+    defaults = load_engine_defaults()
+    sampled = sample_opening_frame(
+        clip,
+        requested_offset_sec=0.0,
+        scan_sec=defaults.prescan.dark_frame_scan_sec,
+        step_sec=defaults.prescan.dark_frame_step_sec,
+        luminance_threshold=defaults.prescan.dark_frame_luminance_threshold,
+        min_osd_score=defaults.prescan.osd_min_score,
+        probe_start_sec=defaults.prescan.osd_probe_start_sec,
+    )
+    assert sampled.frame is not None
+    proposed = propose_lines(sampled.meta.width, sampled.meta.height, [], frame=sampled.frame)
+    proposed.horizon_line.assert_within_frame(1920, 1080, "horizon_line")
+    proposed.counting_line.assert_within_frame(1920, 1080, "counting_line")
+    assert proposed.horizon_line.start[0] == 0
+    assert proposed.horizon_line.end[0] == 1919
+    assert proposed.counting_line.start[0] == 0
+    assert proposed.counting_line.end[0] == 1919
+    # Geometry C/D: horizon left ~500–540, right ~200–325; counting left ~775–850.
+    assert 430 <= proposed.horizon_line.start[1] <= 650
+    assert 150 <= proposed.horizon_line.end[1] <= 430
+    assert proposed.horizon_line.end[1] < proposed.horizon_line.start[1]
+    assert 680 <= proposed.counting_line.start[1] <= 980
+    assert proposed.counting_line.start[1] > proposed.horizon_line.start[1]
+    assert proposed.confidence > GEOMETRIC_CONFIDENCE
+
+
 def test_parse_osd_hits_respects_min_confidence() -> None:
     """Low-prob EasyOCR strings are dropped before time/date parse."""
     parsed, mean = parse_osd_hits(

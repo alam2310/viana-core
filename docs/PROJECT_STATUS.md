@@ -42,7 +42,7 @@
 
 **Parked items** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md).
 
-**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. **2026-08-21:** I001 → **6.8**, I003 → **6.9**, I002 → **6.10**; I004 demoted.
+**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. **2026-08-21:** I001 → **6.8**, I003 → **6.9**, I002 → **6.10**, I006 → **6.11**; I004 demoted; I005 open.
 
 ---
 
@@ -69,7 +69,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 - Container `viana_core`: `docker compose build && up`; publishes **8000**
 - Scripted live flow: health → prescan → submit → progress → COMPLETED → aggregate → 409 → start-fresh → cancel
 - **15-min CSV:** engine supports `viana aggregate`; needs wall-clock from prescan UI (not a legacy parity gap)
-- **YOLO + FFmpeg:** H.264 NVENC (cq 28) processed MP4 for browser live monitor; HEVC fallback only if H.264 encoders missing; NumPy &lt; 2 + `trackers==2.6.0 --no-deps` baked into the image (rebuild required)
+- **YOLO + FFmpeg:** H.264 NVENC (cq 32, preset p4) processed MP4 for browser live monitor; async annotate/write thread; HEVC fallback only if H.264 encoders missing; NumPy &lt; 2 + `trackers==2.6.0 --no-deps` baked into the image (rebuild required)
 
 ---
 
@@ -77,6 +77,8 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | Idea dump: **I006 → Step 6.11** — prescan-review `render_video` toggle (existing API/engine field) |
+| 2026-08-21 | **Render perf/size:** async FFmpeg writer (copy-on-enqueue + drain on close); H.264 NVENC cq 32 / p4; libx264 CRF 34 / veryfast (replaces cq 28 / p7) |
 | 2026-08-21 | **6.7 complete (S09 / F006)** — API normalizes host intake paths onto container mounts or 400s unreadable paths; compose passes `VIANA_HOST_*` maps; extra volume via `VIANA_EXTRA_INTAKE_ROOT` + `VIANA_PATH_MAPS` |
 | 2026-08-21 | **6.3 complete** — DELETE marks `CANCELLED` immediately and frees the GPU so the next READY job can drain (S27 fail path unchanged) |
 | 2026-08-21 | Stabilization **S27:** FAILED GPU jobs release the slot and auto-start the next FIFO READY job (`pool.py` drain) |

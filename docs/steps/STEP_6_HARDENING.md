@@ -24,8 +24,9 @@
 | **6.8** | Job details instead of Live Monitor widget; Live Crossings in details; row click (**I001**) | UI |
 | **6.9** | No OSD OCR during processing; lock time/date/location to confirmed prescan (**I003**) | Engine |
 | **6.10** | Bind crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session list length (**I002**) | UI |
+| **6.11** | Prescan-review `render_video` toggle; wire existing confirm/submit field (**I006**) | UI |
 
-Promoted from [`IDEA_DUMP.md`](IDEA_DUMP.md) on 2026-08-21. Remaining dump item **I004** (demoted) is **not** Step 6 work until promoted.
+Promoted from [`IDEA_DUMP.md`](IDEA_DUMP.md) on 2026-08-21. Remaining dump items **I004** (demoted) and **I005** (mux soft subs) are **not** Step 6 work until promoted.
 
 ---
 
@@ -39,6 +40,7 @@ Mark each item ✅ in `TRACKER.md`. When all done or deferred, mark Step 6 ✅.
 
 | Date | Note |
 |------|------|
+| 2026-08-21 | Promoted **I006 → 6.11** (`render_video` toggle in prescan review; field already in contracts/engine). |
 | 2026-08-21 | **6.7 complete (S09 / F006):** `POST /jobs/intake` and `POST /jobs` rewrite host prefixes (`VIANA_HOST_DATA_ROOT` → `/data`, repo → `/app/ViAna`, suffix `/data/` fallback) and **400** unmapped paths. Extra bind-mount: uncomment compose volume, set `VIANA_EXTRA_INTAKE_ROOT` + `VIANA_PATH_MAPS`. UI still maps via `container-paths.ts`. Tests: `tests/orchestrator/test_s67_intake_paths.py`. |
 | 2026-08-21 | **6.3 complete:** `WorkerPool.cancel` sets `CANCELLED` on DELETE, releases GPU occupancy, SIGTERM/SIGKILL off the request thread; `_finalize` keeps user cancel (does not map checkpoint SIGTERM to PAUSED). Drain-after-fail (S27) unchanged. Tests: `tests/orchestrator/test_s63_cancel.py`. |
 | 2026-08-21 | **6.9 complete (I003 / S23):** removed in-process OSD OCR; CSV uses confirmed clock; before/after on `hiv000001_inframe.mp4` 203.2s/13.45 fps → 179.3s/15.26 fps (detect remains the bulk). |

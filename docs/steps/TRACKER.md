@@ -139,6 +139,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 6.8 | Job details: drop Live Monitor widget/action; Live Crossings in details; row click opens details (**I001**) | ✅ |
 | 6.9 | Disable in-process OSD OCR; wall-clock/location from confirmed prescan only (**I003**) | ✅ |
 | 6.10 | Bind live crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session WS list length (**I002**) | ✅ |
+| 6.11 | Prescan-review `render_video` toggle; pass through confirm/submit (existing field; no new schema) (**I006**) | ⬜ |
 
 ---
 
@@ -146,6 +147,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | Promoted **I006 → 6.11** — expose `render_video` in prescan review; existing API/engine field (expect perf win when false) |
 | 2026-08-21 | **6.7 complete (S09 / F006)** — intake (and `POST /jobs`) rewrites host paths onto compose mounts (`/data`, `/app/ViAna`) or **400**s unreadable paths; extra drive via `VIANA_INTAKE_ROOTS` + `VIANA_PATH_MAPS`. Tests: `tests/orchestrator/test_s67_intake_paths.py` |
 | 2026-08-21 | **6.3 complete** — DELETE sets `CANCELLED` immediately, releases the GPU slot, drains the next READY job; `_finalize` does not clobber user cancel (S27 fail-drain unchanged) |
 | 2026-08-21 | **S28 (F023) fixed** — counting-line anchors survive brief detection gaps (class flicker); `hiv00013_shimoga` Jeep ~06:44:50 recovered on replay |

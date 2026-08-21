@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import type { JobStatusResponse } from "@viana/contracts";
 
 import {
@@ -89,7 +90,10 @@ export function JobQueueTable({
   onStop: (jobId: string) => void;
   onOpenOutput: (job: JobStatusResponse) => void;
 }) {
-  const sorted = sortJobsBySubmitted(jobs);
+  // ⚡ Bolt Optimization: Memoize the sorted jobs list.
+  // This avoids re-running the O(N log N) sorting logic on every re-render
+  // (for instance, when selectedJobId or busyId changes).
+  const sorted = useMemo(() => sortJobsBySubmitted(jobs), [jobs]);
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">

@@ -8,6 +8,7 @@ from orchestrator.hub import TelemetryHub
 
 def test_telemetry_hub() -> None:
     """Test telemetry hub subscribe, unsubscribe, and publish."""
+
     async def _test() -> None:
         hub = TelemetryHub()
         loop = asyncio.get_running_loop()
@@ -47,6 +48,7 @@ def test_telemetry_hub() -> None:
 
 def test_publish_no_loop() -> None:
     """Test publish safely returns when no loop is bound."""
+
     async def _test() -> None:
         hub = TelemetryHub()
         # Bind no loop intentionally

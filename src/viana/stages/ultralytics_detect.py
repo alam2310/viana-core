@@ -69,16 +69,20 @@ class UltralyticsDualDetector:
         boxes = results[0].boxes
         if boxes is None:
             return detections
-        for box in boxes:
-            xyxy = box.xyxy[0].tolist()
+        # Convert tensors to numpy arrays once to avoid per-box iteration overhead
+        xyxy_arr = boxes.xyxy.cpu().numpy()
+        conf_arr = boxes.conf.cpu().numpy()
+        cls_arr = boxes.cls.cpu().numpy()
+
+        for i in range(len(boxes)):
             detections.append(
                 Detection(
-                    x1=float(xyxy[0]),
-                    y1=float(xyxy[1]),
-                    x2=float(xyxy[2]),
-                    y2=float(xyxy[3]),
-                    confidence=float(box.conf[0]),
-                    class_id=int(box.cls[0]),
+                    x1=float(xyxy_arr[i, 0]),
+                    y1=float(xyxy_arr[i, 1]),
+                    x2=float(xyxy_arr[i, 2]),
+                    y2=float(xyxy_arr[i, 3]),
+                    confidence=float(conf_arr[i]),
+                    class_id=int(cls_arr[i]),
                 )
             )
         return detections

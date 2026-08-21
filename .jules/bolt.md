@@ -6,6 +6,10 @@
 ## 2024-06-25 - Caching base date in telemetry message loops
 **Learning:** In telemetry parsing (`crossingsFromTelemetry`), avoiding redundant regex and Date instantiation inside high-frequency message loops prevents significant performance degradation during live monitoring.
 **Action:** When iterating over real-time or bulk events in UI formatters, lift any static parsings (e.g. baseline timestamps from job metadata) out of the loop and reuse a pre-calculated reference.
-## 2026-08-21 - [Performance] Inlining Fast AABB Bailout and precalculating coordinates for NMS
-**Learning:** In PyTorch code doing intersection-over-union loops like `nms_class_agnostic`, evaluating `.area` and `.x1`/`y1` properties in tight inner loops adds measurable overhead. Calling an outer function `iou()` that calls `intersection_area()` invokes a lot of overhead.
-**Action:** Always inline AABB (axis-aligned bounding box) checks with a fast rejection: `if cx2 <= ox1 or ox2 <= cx1 or cy2 <= oy1 or oy2 <= cy1: continue`. Precalculate properties before loops. This dramatically speeds up NMS logic.
+
+### Threading Optimization & Concurrency Safety
+* **O(N) Operations in Lock Boundaries:** When dealing with multi-threaded components (like `WorkerPool` in `src/orchestrator/workers/pool.py`), placing $O(N)$ scanning operations inside tight `while True:` loop lock boundaries leads to catastrophic CPU utilization bottlenecks as the active queue size increases.
+* **Class-Level State Tracking:** Rather than scanning large state structures (like looping through all jobs to identify occupied GPUs or running prescans) upon every loop iteration, explicitly manage application state changes (in `job.status`) via a single setter method (e.g., `_set_job_status(job, new_status)`). This allows for atomic updates to caching properties (like `self._occupied_gpus` and `self._running_prescans`), driving $O(N)$ operations down to $O(1)$.
+* **Stale Cached State Hazards:** Never read global state from a localized variable cache outside of a thread lock boundary while yielding or blocking. This explicitly leads to race condition states when multiple threads manipulate the process pool simultaneously, particularly breaking GPU allocation isolation constraints. Always access up-to-date state synchronously under the thread lock right when it is needed. Prefer updating occupancy caches inside the status setter under the same RLock.
+* **Batch under one lock:** For `_drain_prescan`, compute available slots once and collect a batch of jobs before releasing the lock and starting threads — avoids O(K×N) rescans in a `while True` loop.
+- Replaced recursive `rglob` with targeted `glob` in `resolve_preview_path`

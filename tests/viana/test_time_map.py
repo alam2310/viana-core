@@ -16,8 +16,28 @@ from viana.stages.time_map import (
     normalize_ocr_date,
     parse_location_texts,
     parse_ocr_texts,
+    parse_user_datetime,
     time_map_from_metadata,
 )
+
+
+def test_parse_user_datetime_invalid() -> None:
+    """Invalid user datetime formats return None."""
+    assert parse_user_datetime("invalid", "invalid") is None
+    assert parse_user_datetime("15-03-2026", "invalid") is None
+    assert parse_user_datetime("invalid", "09:00:12") is None
+    assert parse_user_datetime("2026-15-03", "09:00:12") is None  # Invalid date format
+    assert parse_user_datetime("15-03-2026", "25:00:12") is None  # Invalid time format
+
+
+def test_parse_user_datetime_empty() -> None:
+    """Empty or None input returns None."""
+    assert parse_user_datetime(None, None) is None
+    assert parse_user_datetime("", "") is None
+    assert parse_user_datetime("15-03-2026", None) is None
+    assert parse_user_datetime(None, "09:00:12") is None
+    assert parse_user_datetime("15-03-2026", "") is None
+    assert parse_user_datetime("", "09:00:12") is None
 
 
 def test_parse_ocr_texts() -> None:

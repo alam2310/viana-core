@@ -350,6 +350,7 @@ def run_moving_count(
                         stage_sec["telemetry"] += time.perf_counter() - t_tel
                     if processed % defaults.pipeline.checkpoint_interval_frames == 0:
                         t_io = time.perf_counter()
+                        csv_writer.flush()
                         _save_progress_checkpoint(
                             paths,
                             job,
@@ -368,6 +369,7 @@ def run_moving_count(
                         # Decoder EOF is the true length when MPEG-PS headers inflate nb_frames.
                         total_frames = observed
                 processed = max(processed, last_index + 1)
+                csv_writer.flush()
                 _save_progress_checkpoint(
                     paths,
                     job,

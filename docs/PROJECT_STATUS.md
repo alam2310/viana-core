@@ -1,9 +1,9 @@
 # Project Status (Living Document)
 
-**Last updated:** 2026-08-21
-**Current focus:** **Step 6** — hardening backlog (see `docs/steps/TRACKER.md`)  
+**Last updated:** 2026-08-22
+**Current focus:** **Step 6** — hardening + remaining stabilization polish (**S29–S33**; see `docs/steps/TRACKER.md`)
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
-**API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 unblocked).  
+**API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 complete).
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
 **Phase 9 parity:** signed off 2026-08-19 — `legacy/` removed  
 **Canonical plan:** `docs/PROJECT_PLAN.md` (Phases 0–9); **Steps 1–6** for remaining work
@@ -40,26 +40,31 @@
 
 **Goals (Steps 1–5):** Backend prescan lifecycle → UI redesign → verify `{stem}_15min.csv`.
 
-**Parked items** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md).
+**Parked / remaining Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md). Open Seq: [`STABILIZATION_BACKLOG.md`](steps/STABILIZATION_BACKLOG.md) (**S29–S33**).
 
-**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. **2026-08-21:** I001 → **6.8**, I003 → **6.9**, I002 → **6.10**; I004 demoted.
+**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. Promoted: I001→**6.8**, I003→**6.9**, I002→**6.10**, I006→**6.11**. Dump only: I004 (demoted), I005 (soft subs).
 
 ---
 
-## Next (legacy list — see Steps above)
+## Next (Step 6 + open Seq)
 
-1. **Step 5** — Verify 15-min grid on test clip (`verification/5_15min_results.md`).
+1. **S30** — triage API 502 on restart/resume (before 6.2).
+2. **S33** — Pedestrian in `_15min.csv` (`aggregate: true`).
+3. **S31 + 6.11** — prescan Confirm + `render_video` toggle.
+4. **6.2** pause/resume UX (after S30) → **S29** output layout → **S32** CSV trim.
+5. **6.5** extra clip → **6.4** Playwright → **6.6** GPU CI.
 
-## Parked (revisit later)
-
-See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
+## Still open on Step 6
 
 | Item | Notes |
 |------|--------|
-| Pause / resume / PAUSED UX | Needs job &gt; 500-frame checkpoint |
-| Browser click-through | Manual/Playwright UI pass; HTTP E2E done |
-| Extra camera clip beyond `hiv000001` | Overlay go on D sufficient for v0.1 |
-| GPU tests in CI | No GPU in GitHub Actions |
+| 6.2 Pause / resume / PAUSED UX | After S30; needs checkpoint path |
+| 6.4 Browser / Playwright | After S31/6.11 |
+| 6.5 Extra camera clip | Beyond `hiv000001` |
+| 6.6 GPU tests in CI | No GPU in GitHub Actions |
+| 6.11 `render_video` toggle | Promoted I006; UI only |
+
+**Parked (not Step 6 until re-promoted):** S20/S24 live-edge player; idea dump I004 / I005.
 
 ---
 
@@ -69,7 +74,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 - Container `viana_core`: `docker compose build && up`; publishes **8000**
 - Scripted live flow: health → prescan → submit → progress → COMPLETED → aggregate → 409 → start-fresh → cancel
 - **15-min CSV:** engine supports `viana aggregate`; needs wall-clock from prescan UI (not a legacy parity gap)
-- **YOLO + FFmpeg:** H.264 NVENC (cq 28) processed MP4 for browser live monitor; HEVC fallback only if H.264 encoders missing; NumPy &lt; 2 + `trackers==2.6.0 --no-deps` baked into the image (rebuild required)
+- **YOLO + FFmpeg:** H.264 NVENC (cq 32, preset p4) processed MP4 for browser live monitor; async annotate/write thread; HEVC fallback only if H.264 encoders missing; NumPy &lt; 2 + `trackers==2.6.0 --no-deps` baked into the image (rebuild required)
 
 ---
 
@@ -77,6 +82,9 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | Doc sync: Next/focus → Step 6 + open Seq S29–S33; removed stale “Next: Step 5” |
+| 2026-08-21 | Idea dump: **I006 → Step 6.11** — prescan-review `render_video` toggle (existing API/engine field) |
+| 2026-08-21 | **Render perf/size:** async FFmpeg writer (copy-on-enqueue + drain on close); H.264 NVENC cq 32 / p4; libx264 CRF 34 / veryfast (replaces cq 28 / p7) |
 | 2026-08-21 | **6.7 complete (S09 / F006)** — API normalizes host intake paths onto container mounts or 400s unreadable paths; compose passes `VIANA_HOST_*` maps; extra volume via `VIANA_EXTRA_INTAKE_ROOT` + `VIANA_PATH_MAPS` |
 | 2026-08-21 | **6.3 complete** — DELETE marks `CANCELLED` immediately and frees the GPU so the next READY job can drain (S27 fail path unchanged) |
 | 2026-08-21 | Stabilization **S27:** FAILED GPU jobs release the slot and auto-start the next FIFO READY job (`pool.py` drain) |

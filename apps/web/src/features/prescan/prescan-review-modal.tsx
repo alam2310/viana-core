@@ -201,7 +201,7 @@ export function PrescanReviewModal({
 
   function fieldInputClass(invalid: boolean, mono = false): string {
     return cn(
-      "mt-1 w-full rounded border bg-card px-2 py-1 text-sm text-foreground",
+      "mt-1 w-full rounded border bg-card px-2 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border",
       mono && "font-mono",
       invalid ? "border-red-500" : "border-input",
     );
@@ -453,7 +453,7 @@ export function PrescanReviewModal({
                 <label className="text-sm">
                   profile_id
                   <input
-                    className="mt-1 w-full rounded border border-input bg-card px-2 py-1 font-mono text-sm"
+                    className="mt-1 w-full rounded border border-input bg-card px-2 py-1 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
                     value={profileId}
                     onChange={(event) => setProfileId(event.target.value)}
                   />

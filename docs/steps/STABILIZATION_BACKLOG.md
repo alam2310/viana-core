@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 0 | 1 | 3 | 22 / 25 active |
+| 0 | 1 | 3 | 23 / 26 active |
 
 **Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
@@ -51,6 +51,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S25** | F020 | A | no | — | Review job status UI labels vs lifecycle (Queued vs Ready inconsistency) | open |
 | **S26** | F021 | A | no | — | Standardize Job Queue action icons (stable slots; enable/disable by status) | open |
 | **S27** | F022 | B | no | — | After a job FAILED, next READY job did not start despite free GPU | open |
+| **S28** | F023 | C | no | — | Missed counting-line events when class flicker drops the box for 1–2 frames | fixed |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
@@ -87,8 +88,9 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S25** | 1. Submit job → wait for GPU while still in prescan queue 2. Confirm review → wait for GPU before `PROCESSING` 3. Scan Job Queue badges for all statuses | **Expected:** waiting-for-resource states read consistently; every lifecycle status has a clear operator-facing name. **Actual:** `PRESCAN_PENDING` shows **Queued** while post-review `READY` (also waiting for the GPU pool) shows **Ready** — naming is inconsistent for the same “waiting for resources” situation. Need a full label review (see F020). | `apps/web/src/features/queue/job-status.ts` (`STATUS_LABELS`); queue + job-details badges; contracts `JobStatus` enum | — | Step 4 UI chat |
 | **S26** | 1. Queue a non-reviewable job (e.g. `PRESCAN_PENDING` / `PROCESSING`) — only Stop shows 2. Move same job to `AWAITING_REVIEW` / `READY` — Review appears left of Stop 3. Compare Actions column across rows | **Expected:** action icons stay in fixed positions so muscle memory and scanability work across statuses. **Actual:** Actions render conditionally (`null` when N/A), so the red Stop (`IconCancel`) sits alone on the left when it is the only button, then jumps right when Review (or Retry/Resume/etc.) mounts to its left. Proposed easy win: keep a stable icon set and enable/disable by status — but confirm against UI standards first (see F021). | `apps/web/src/features/queue/job-queue-table.tsx` Actions cell; `RoundIconButton` / icons; `docs/ui/` patterns | — | Step 4 / hardening UI chat |
 | **S27** | 1. Confirm ≥2 jobs so one is `PROCESSING` and the next is `READY` 2. Let the first job fail (engine/worker error → `FAILED`) 3. Observe GPU free and next job status | **Expected:** when a GPU slot frees on terminal `FAILED` (or equivalent), `_drain` starts the next FIFO `READY` job without operator intervention. **Actual:** previous job failed; GPU appeared free; next job stayed waiting and did not enter `PROCESSING` (see F022). | `src/orchestrator/workers/pool.py` (`_drain`, `_monitor`/`_finalize`, GPU occupancy); orchestrator tests for fail→next | — | Step 4 / hardening UI chat |
+| **S28** | 1. Process `hiv00013_shimoga.mp4` (`job_0349289d5fe6`) 2. Watch white SUV/Jeep approach counting line ~06:44:50 3. Inspect `_events.csv` | **Expected:** one Jeep (or Car) crossing around 06:44:50. **Actual (before):** overlay showed `Car #3` then Jeep with class flicker; track absent from events (gap 06:44:43→06:45:01). Replay: track present frame 254 (side &lt; 0), missing 255–256, back at 257 already past line — `CrossingState` cleared `_previous` on any absence so no event. **After:** retain last bottom-center up to `max_gap_frames=15`; same window emits Jeep `in` at frame 257 (~06:44:52). | `src/viana/stages/crossing.py`, `tests/viana/test_track_crossing.py` | uncommitted | unit tests + shimoga window replay |
 
-**Lane:** `A` UI · `B` API/orchestrator · `C` engine prescan · `D` contract · `TBD`  
+**Lane:** `A` UI · `B` API/orchestrator · `C` engine · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `parked` · `wontfix`  
 **Blocker:** `yes` = gates Step 5 · `no` = polish
 
@@ -287,6 +289,18 @@ API enum values stay as-is (`JobStatusLiteral` / contracts). This item is **UI c
 
 ---
 
+## F023 design note (missed crossings across detection gaps)
+
+**Observed (`hiv00013_shimoga`, ~06:44:50):** a white SUV/Jeep crosses the counting line in the processed overlay with Car↔Jeep label flicker, but no row appears in `_events.csv`.
+
+**Root cause:** `CrossingState` deleted the last bottom-center whenever a track was absent for a single frame. Class flicker / confidence dips near conf=0.75 often drop the box for 1–2 frames exactly while the vehicle straddles the line; when the box returns on the far side, `previous is None` so no crossing is emitted (once-per-track never fires).
+
+**Fix:** keep the previous anchor for up to `DEFAULT_MAX_GAP_FRAMES` (15) empty frames; still once-per-track; forget after long disappearances to avoid false late counts.
+
+**Scope:** Lane C (`crossing.py`). Re-process affected clips to refresh events CSV.
+
+---
+
 ## F022 design note (drain after FAILED)
 
 **Observed:** After a processing job entered `FAILED`, a subsequent `READY` job did not start even though a GPU was free.
@@ -307,6 +321,7 @@ API enum values stay as-is (`JobStatusLiteral` / contracts). This item is **UI c
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **S28 (F023) fixed:** retain counting-line previous anchors across brief detection gaps (class flicker); recovers missed Jeep on `hiv00013_shimoga` ~06:44:50 |
 | 2026-08-21 | Added **S27 (F022)** next READY job did not start after prior job FAILED despite free GPU |
 | 2026-08-21 | Added **S26 (F021)** standardize Job Queue action icons (Stop jumps left/right when Review mounts; prefer stable slots + enable/disable after UI standards check) |
 | 2026-08-21 | **S10 fixed:** road-band slope clustering + parallel counting offset; `hiv000001_inframe` proposal near geometry C/D (endpoint \|dy\| 218/213 vs 984/887); profile override unchanged; `test_prescan.py` 29 passed |

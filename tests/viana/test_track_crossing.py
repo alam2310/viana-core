@@ -83,6 +83,72 @@ def test_crossing_emits_once_per_track() -> None:
     assert 1 in state.counted_track_ids
 
 
+def test_crossing_survives_brief_detection_gap() -> None:
+    """hiv00013-style miss: class flicker / conf dip drops the box for 1–2 frames.
+
+    If the bottom-center reappears already on the far side of the counting line,
+    the last pre-gap anchor must still produce one event (once-per-track).
+    """
+    line = LineSegment(start=(0, 100), end=(200, 100))
+    state = CrossingState(counting_line=line, max_gap_frames=15)
+    before = TrackedDetection(
+        track_id=3,
+        detection=Detection(x1=40, y1=120, x2=60, y2=160, confidence=0.8, class_id=0),
+        raw_class_id=0,
+    )
+    after = TrackedDetection(
+        track_id=3,
+        detection=Detection(x1=42, y1=20, x2=62, y2=70, confidence=0.85, class_id=1),
+        raw_class_id=1,
+    )
+    assert (
+        state.update([before], class_ids={3: 0}, norm_areas={3: 10}, frame_index=10, video_pts_ms=400)
+        == []
+    )
+    # Two empty frames while the jeep straddles / passes the line (shimoga ~06:44:50).
+    assert (
+        state.update([], class_ids={}, norm_areas={}, frame_index=11, video_pts_ms=440) == []
+    )
+    assert (
+        state.update([], class_ids={}, norm_areas={}, frame_index=12, video_pts_ms=480) == []
+    )
+    recovered = state.update(
+        [after], class_ids={3: 1}, norm_areas={3: 12}, frame_index=13, video_pts_ms=520
+    )
+    assert len(recovered) == 1
+    assert recovered[0].track_id == 3
+    assert recovered[0].class_id == 1
+    assert recovered[0].direction in ("in", "out")
+    # Still once-per-track after recovery.
+    assert (
+        state.update([after], class_ids={3: 1}, norm_areas={3: 12}, frame_index=14, video_pts_ms=560)
+        == []
+    )
+
+
+def test_crossing_forgets_anchor_after_max_gap() -> None:
+    """Long disappearances still reset the previous anchor (no false late counts)."""
+    line = LineSegment(start=(0, 100), end=(200, 100))
+    state = CrossingState(counting_line=line, max_gap_frames=2)
+    before = TrackedDetection(
+        track_id=9,
+        detection=Detection(x1=40, y1=120, x2=60, y2=160, confidence=0.9, class_id=0),
+        raw_class_id=0,
+    )
+    after = TrackedDetection(
+        track_id=9,
+        detection=Detection(x1=40, y1=20, x2=60, y2=60, confidence=0.9, class_id=0),
+        raw_class_id=0,
+    )
+    state.update([before], class_ids={9: 0}, norm_areas={9: 1}, frame_index=1, video_pts_ms=40)
+    for index in (2, 3, 4):
+        state.update([], class_ids={}, norm_areas={}, frame_index=index, video_pts_ms=index * 40)
+    late = state.update(
+        [after], class_ids={9: 0}, norm_areas={9: 1}, frame_index=5, video_pts_ms=200
+    )
+    assert late == []
+
+
 def test_frame_engine_counts_crossing_without_15min() -> None:
     """FrameCVEngine emits crossings only; it does not bin 15-minute counts."""
     defaults = load_engine_defaults()

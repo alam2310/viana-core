@@ -99,6 +99,7 @@ class WorkerPool:
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
+        self._status_cv = threading.Condition(self._lock)
         self._jobs: dict[str, JobRecord] = {}
         self._queue: list[str] = []
         self._prescan_queue: list[str] = []
@@ -107,8 +108,8 @@ class WorkerPool:
         self._running_prescans: int = 0
 
     def _set_job_status(self, job: JobRecord, new_status: JobStatusLiteral) -> None:
-        """Update status and occupancy caches under ``_lock`` (RLock-safe)."""
-        with self._lock:
+        """Update status and occupancy caches under ``_lock``; wake status waiters."""
+        with self._status_cv:
             old_status = job.status
             if old_status == new_status:
                 return
@@ -124,6 +125,7 @@ class WorkerPool:
                 self._occupied_gpus.add(job.gpu_device)
 
             job.status = new_status
+            self._status_cv.notify_all()
 
     def occupied_gpus(self) -> set[str]:
         """Return GPU ids currently running a PROCESSING job."""
@@ -488,30 +490,36 @@ class WorkerPool:
 
     def wait_job(self, job_id: str, timeout: float = 5.0) -> JobRecord:
         """Block until a job leaves READY/PROCESSING (tests)."""
-        import time
-
-        job = self.get_job(job_id)
         end = time.time() + timeout
-        while time.time() < end:
-            if job.status not in {"READY", "PROCESSING"}:
-                return job
-            time.sleep(0.02)
-        return job
+        with self._status_cv:
+            while True:
+                job = self._jobs.get(job_id)
+                if job is None:
+                    not_found(f"job not found: {job_id}")
+                if job.status not in {"READY", "PROCESSING"}:
+                    return job
+                remaining = end - time.time()
+                if remaining <= 0:
+                    return job
+                self._status_cv.wait(timeout=remaining)
 
     def wait_for_status(
         self, job_id: str, *statuses: JobStatusLiteral, timeout: float = 5.0
     ) -> JobRecord:
         """Block until job reaches one of ``statuses`` (tests)."""
-        import time
-
         targets = set(statuses)
-        job = self.get_job(job_id)
         end = time.time() + timeout
-        while time.time() < end:
-            if job.status in targets:
-                return job
-            time.sleep(0.02)
-        return job
+        with self._status_cv:
+            while True:
+                job = self._jobs.get(job_id)
+                if job is None:
+                    not_found(f"job not found: {job_id}")
+                if job.status in targets:
+                    return job
+                remaining = end - time.time()
+                if remaining <= 0:
+                    return job
+                self._status_cv.wait(timeout=remaining)
 
     def _refresh_prescan_queue_positions(self) -> None:
         """Set 1-based prescan queue index for PRESCAN_PENDING rows."""

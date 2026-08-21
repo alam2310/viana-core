@@ -14,6 +14,7 @@ from viana.stages.time_map import (
     load_time_map,
     next_boundary_delta_ms,
     normalize_ocr_date,
+    parse_location_texts,
     parse_ocr_texts,
     time_map_from_metadata,
 )
@@ -37,6 +38,13 @@ def test_normalize_ocr_date_repairs_spaces_and_year() -> None:
     assert extract_ocr_time(["Bangalorebypassjz 06 :44:35"]) == "06:44:35"
     assert extract_ocr_time(["29-07 2026 WE 0982713"]) is None
     assert extract_ocr_time(['19 10-2024 Sat 05:34"04']) == "05:34:04"
+    assert extract_ocr_time(
+        ["18-10 2074 Frich? 21 33", "18-10-2024 Fri 03 21.33", "18-1u 2074 Fri 02.21 33"]
+    ) == "02:21:33"
+    assert extract_ocr_time(["18-10 2074 Fri 02 21.25", "18-10-2024 Fri 03 21.25"]) == "02:21:25"
+    assert extract_ocr_time(["18-10-2024 Fri 08:38+31"]) == "08:38:31"
+    assert extract_ocr_time(["18-10-2024 Fri 08.38:29"]) == "08:38:29"
+    assert extract_ocr_time(["18-10-2024 Fri 08.3831"]) == "08:38:31"
     assert normalize_ocr_date("19-10-7074") == "19-10-2024"
 
 
@@ -62,6 +70,22 @@ def test_date_year_is_not_used_as_clock() -> None:
     assert parsed.time == "09:27:32"
     assert parsed.date == "29-07-2026"
     assert parsed.location == "Bangalorebypass_J2"
+
+
+def test_parse_location_texts_picks_one_hyphenated_label() -> None:
+    """Polarity variants of the same OSD must not be concatenated."""
+    assert (
+        parse_location_texts(["LITO-RARARANKI", "L1TO-RARARANKI", "LIT-BRBNKI"])
+        == "L1TO-RARARANKI"
+    )
+    assert (
+        parse_location_texts(["LITO-BARARANKI", "L1TO-RARARANKI", "LIT-RARABANKI"])
+        == "LITO-BARARANKI"
+    )
+    assert (
+        parse_location_texts(["I3TRARARANKT", "L3TRARARANKT", "I37NARARAN80"])
+        == "L3TRARARANKT"
+    )
 
 
 def test_parse_ocr_texts_splits_spaced_colon_clock_from_location() -> None:

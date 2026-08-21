@@ -10,6 +10,7 @@ import {
 import { progressFromTelemetry } from "@/features/telemetry/telemetry-formatters";
 import {
   statusBadgeClass,
+  statusHint,
   statusLabel,
 } from "@/features/queue/job-status";
 import type { MountConfig } from "@/lib/container-paths";
@@ -147,6 +148,7 @@ export function JobDetailsPanel({
         <p className="flex items-center gap-2">
           <span className="text-muted">Status:</span>
           <span
+            title={statusHint(job.status)}
             className={cn(
               "inline-block rounded px-1.5 py-0.5 text-xs font-medium",
               statusBadgeClass(job.status),

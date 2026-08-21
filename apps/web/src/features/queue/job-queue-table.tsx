@@ -6,16 +6,17 @@ import type { JobStatusResponse } from "@viana/contracts";
 import {
   IconCancel,
   IconFolder,
-  IconResume,
   IconRestart,
-  IconRetry,
   IconReview,
   RoundIconButton,
 } from "@/components/ui/icon-button";
 import {
+  canOpenOutput,
+  canStartFresh,
   isCancellable,
   isReviewable,
   statusBadgeClass,
+  statusHint,
   statusLabel,
 } from "@/features/queue/job-status";
 import { videoStem } from "@/lib/geometry";
@@ -50,26 +51,12 @@ function timeRemaining(job: JobStatusResponse): string {
   return formatEta(job.progress.eta_sec);
 }
 
-/** Pause from operator stop is resumable; engine failure parked as PAUSED is not. */
-function isResumablePause(job: JobStatusResponse): boolean {
-  if (job.status !== "PAUSED") {
-    return false;
-  }
-  const message = job.error_message?.trim() ?? "";
-  if (!message) {
-    return true;
-  }
-  return /^(worker cancelled|interrupted)$/i.test(message);
-}
-
 export function JobQueueTable({
   jobs,
   busyId,
   selectedJobId,
   onSelectJob,
   onReview,
-  onRetryPrescan,
-  onResume,
   onStartFresh,
   onStop,
   onOpenOutput,
@@ -79,8 +66,6 @@ export function JobQueueTable({
   selectedJobId: string | null;
   onSelectJob: (job: JobStatusResponse) => void;
   onReview: (job: JobStatusResponse) => void;
-  onRetryPrescan: (jobId: string) => void;
-  onResume: (jobId: string) => void;
   onStartFresh: (jobId: string) => void;
   onStop: (jobId: string) => void;
   onOpenOutput: (job: JobStatusResponse) => void;
@@ -100,33 +85,38 @@ export function JobQueueTable({
       <div className="mt-3 overflow-x-auto">
         <table className="w-full table-fixed text-left text-sm leading-tight">
           <colgroup>
-            <col style={{ width: "15%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "13%" }} />
             <col style={{ width: "10%" }} />
-            <col style={{ width: "9%" }} />
             <col style={{ width: "5%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "11%" }} />
             <col style={{ width: "9%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "12%" }} />
             <col style={{ width: "12%" }} />
           </colgroup>
           <thead>
             <tr className="border-b border-border text-xs text-muted">
-              <th className="px-2 py-1 font-medium">Video</th>
-              <th className="px-2 py-1 font-medium">Submitted</th>
-              <th className="px-2 py-1 font-medium">Status</th>
-              <th className="px-2 py-1 text-left font-medium">GPU</th>
-              <th className="px-2 py-1 font-medium whitespace-nowrap">Video Length</th>
-              <th className="px-2 py-1 font-medium whitespace-nowrap">Run Time</th>
-              <th className="px-2 py-1 font-medium">Progress</th>
-              <th className="px-2 py-1 font-medium whitespace-nowrap">Time Remaining</th>
-              <th className="px-2 py-1 font-medium">Actions</th>
+              <th className="px-3 py-1 font-medium">Video</th>
+              <th className="px-3 py-1 font-medium">Submitted</th>
+              <th className="px-3 py-1 font-medium">Status</th>
+              <th className="px-3 py-1 font-medium">GPU</th>
+              <th className="px-3 py-1 font-medium whitespace-nowrap">Video Length</th>
+              <th className="px-3 py-1 font-medium whitespace-nowrap">Run Time</th>
+              <th className="px-3 py-1 font-medium">Progress</th>
+              <th className="px-3 py-1 font-medium whitespace-nowrap">Time Remaining</th>
+              <th className="px-3 py-1 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((job) => {
               const pct = progressPct(job);
               const paused = job.status === "PAUSED";
+              const busy = busyId === job.job_id;
+              const review = isReviewable(job.status);
+              const startFresh = canStartFresh(job.status);
+              const openOutput = canOpenOutput(job.status);
+              const stop = isCancellable(job.status);
               return (
                 <tr
                   key={job.job_id}
@@ -137,7 +127,7 @@ export function JobQueueTable({
                   )}
                   onClick={() => onSelectJob(job)}
                 >
-                  <td className="px-2 py-1">
+                  <td className="px-3 py-1">
                     <p
                       className="truncate font-mono text-xs leading-tight"
                       title={job.source_video_path}
@@ -145,32 +135,33 @@ export function JobQueueTable({
                       {videoStem(job.source_video_path)}
                     </p>
                   </td>
-                  <td className="px-2 py-1 text-xs text-muted whitespace-nowrap">
+                  <td className="px-3 py-1 text-xs text-muted whitespace-nowrap">
                     {formatSubmittedAt(job.created_at)}
                   </td>
-                  <td className="px-2 py-1">
+                  <td className="px-3 py-1">
                     <span
+                      title={statusHint(job.status)}
                       className={cn(
-                        "inline-block whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-medium leading-none",
+                        "inline-block max-w-full truncate whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-medium leading-none",
                         statusBadgeClass(job.status),
                       )}
                     >
                       {statusLabel(job.status)}
                     </span>
                   </td>
-                  <td className="px-2 py-1 text-left font-mono text-xs text-muted">
+                  <td className="px-3 py-1 font-mono text-xs text-muted">
                     {gpuIdFromDevice(job.gpu_device)}
                   </td>
-                  <td className="px-2 py-1 font-mono text-xs text-muted whitespace-nowrap">
+                  <td className="px-3 py-1 font-mono text-xs text-muted whitespace-nowrap">
                     {formatVideoLengthHms(job.video_duration_sec)}
                   </td>
-                  <td className="px-2 py-1 font-mono text-xs text-muted whitespace-nowrap">
+                  <td className="px-3 py-1 font-mono text-xs text-muted whitespace-nowrap">
                     {formatVideoLengthHms(runTimeSec(job))}
                   </td>
-                  <td className="px-2 py-1">
+                  <td className="px-3 py-1">
                     {pct !== null ? (
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-[4.5rem] shrink-0 overflow-hidden rounded bg-accent">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded bg-accent">
                           <div
                             className={cn(
                               "h-full transition-colors",
@@ -179,7 +170,7 @@ export function JobQueueTable({
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                        <span className="w-10 shrink-0 text-right text-xs tabular-nums">
+                        <span className="w-8 shrink-0 text-right text-xs tabular-nums">
                           {pct}%
                         </span>
                       </div>
@@ -191,79 +182,54 @@ export function JobQueueTable({
                       <span className="text-xs text-muted">—</span>
                     )}
                   </td>
-                  <td className="px-2 py-1 text-xs text-muted whitespace-nowrap">
+                  <td className="px-3 py-1 text-xs tabular-nums text-muted whitespace-nowrap">
                     {timeRemaining(job)}
                   </td>
-                  <td className="px-2 py-1">
+                  <td className="px-3 py-1">
                     <div
-                      className="flex items-center justify-start gap-1"
+                      className="flex flex-nowrap items-center justify-start gap-1"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      {isReviewable(job.status) ? (
-                        <RoundIconButton
-                          label="Review Prescan"
-                          variant="info"
-                          size="sm"
-                          onClick={() => onReview(job)}
-                        >
-                          <IconReview size={16} />
-                        </RoundIconButton>
-                      ) : null}
-                      {job.status === "PRESCAN_FAILED" ? (
-                        <RoundIconButton
-                          label="Retry Prescan"
-                          variant="warning"
-                          size="sm"
-                          disabled={busyId === job.job_id}
-                          onClick={() => onRetryPrescan(job.job_id)}
-                        >
-                          <IconRetry size={16} />
-                        </RoundIconButton>
-                      ) : null}
-                      {isResumablePause(job) ? (
-                        <RoundIconButton
-                          label="Resume Job"
-                          variant="success"
-                          size="sm"
-                          disabled={busyId === job.job_id}
-                          onClick={() => onResume(job.job_id)}
-                        >
-                          <IconResume size={16} />
-                        </RoundIconButton>
-                      ) : null}
-                      {(job.status === "PAUSED" ||
-                        job.status === "FAILED") && (
-                        <RoundIconButton
-                          label="Start Fresh Job"
-                          variant="accent"
-                          size="sm"
-                          disabled={busyId === job.job_id}
-                          onClick={() => onStartFresh(job.job_id)}
-                        >
-                          <IconRestart size={16} />
-                        </RoundIconButton>
-                      )}
-                      {job.status === "COMPLETED" ? (
+                      {openOutput ? (
                         <RoundIconButton
                           label="Open Output Directory"
                           variant="info"
-                          size="sm"
+                          size="xs"
                           onClick={() => onOpenOutput(job)}
                         >
-                          <IconFolder size={16} />
+                          <IconFolder size={14} />
                         </RoundIconButton>
-                      ) : null}
-                      {isCancellable(job.status) ? (
-                        <RoundIconButton
-                          label="Stop Job"
-                          size="sm"
-                          variant="danger"
-                          disabled={busyId === job.job_id}
-                          onClick={() => onStop(job.job_id)}
-                        >
-                          <IconCancel size={16} />
-                        </RoundIconButton>
-                      ) : null}
+                      ) : (
+                        <>
+                          <RoundIconButton
+                            label="Review Prescan"
+                            variant="info"
+                            size="xs"
+                            disabled={!review}
+                            onClick={() => onReview(job)}
+                          >
+                            <IconReview size={14} />
+                          </RoundIconButton>
+                          <RoundIconButton
+                            label="Restart (Overwrite)"
+                            variant="accent"
+                            size="xs"
+                            disabled={!startFresh || busy}
+                            onClick={() => onStartFresh(job.job_id)}
+                          >
+                            <IconRestart size={14} />
+                          </RoundIconButton>
+                          <RoundIconButton
+                            label="Stop Job"
+                            size="xs"
+                            variant="danger"
+                            disabled={!stop || busy}
+                            onClick={() => onStop(job.job_id)}
+                          >
+                            <IconCancel size={14} />
+                          </RoundIconButton>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

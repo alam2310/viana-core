@@ -6,12 +6,18 @@ import { cn } from "@/lib/utils";
 
 const VARIANT_CLASS = {
   default: "text-muted hover:bg-accent",
-  success: "text-emerald-600 hover:bg-emerald-50",
-  info: "text-sky-600 hover:bg-sky-50",
-  warning: "text-amber-600 hover:bg-amber-50",
-  accent: "text-violet-600 hover:bg-violet-50",
-  danger: "text-red-600 hover:bg-red-50",
+  success:
+    "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/70",
+  info: "text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/70",
+  warning:
+    "text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/70",
+  accent:
+    "text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/70",
+  danger: "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/70",
 } as const;
+
+const DISABLED_CLASS =
+  "cursor-not-allowed text-zinc-400 hover:bg-transparent dark:text-zinc-500 dark:hover:bg-transparent";
 
 export type IconButtonVariant = keyof typeof VARIANT_CLASS;
 
@@ -28,23 +34,25 @@ export function RoundIconButton({
   disabled?: boolean;
   children: ReactNode;
   variant?: IconButtonVariant;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
 }) {
   return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      disabled={disabled}
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border disabled:opacity-40",
-        size === "sm" ? "h-8 w-8" : "h-9 w-9",
-        VARIANT_CLASS[variant],
-      )}
-      onClick={onClick}
-    >
-      {children}
-    </button>
+    <span className="inline-flex shrink-0" title={label}>
+      <button
+        type="button"
+        title={label}
+        aria-label={label}
+        disabled={disabled}
+        className={cn(
+          "inline-flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border",
+          size === "xs" ? "h-6 w-6" : size === "sm" ? "h-8 w-8" : "h-9 w-9",
+          disabled ? DISABLED_CLASS : VARIANT_CLASS[variant],
+        )}
+        onClick={onClick}
+      >
+        {children}
+      </button>
+    </span>
   );
 }
 

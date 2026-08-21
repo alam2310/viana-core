@@ -80,11 +80,11 @@ Step 6 **6.7** addresses arbitrary host path access.
 
 | Status | Operator label |
 |--------|----------------|
-| `PRESCAN_PENDING` | Waiting for prescan |
-| `PRESCAN_RUNNING` | Pre-scanning video |
+| `PRESCAN_PENDING` | Queued (PS) |
+| `PRESCAN_RUNNING` | Pre-scanning |
 | `PRESCAN_FAILED` | Prescan failed |
 | `AWAITING_REVIEW` | Needs review |
-| `READY` | Ready |
+| `READY` | Queued (GPU) |
 | `PROCESSING` | Processing |
 | `PAUSED` | Paused |
 | `COMPLETED` | Completed |
@@ -135,18 +135,19 @@ Legacy `PENDING` removed.
 | Progress · ETA | `PROCESSING` |
 | Crossing count | `PROCESSING` (from WS `MOVING_EVENT` count) |
 | GPU | `PROCESSING` / `READY` |
-| Actions | Contextual |
+| Actions | Always — three fixed slots; `COMPLETED` shows Open output only |
 
 ### Row actions
 
-| Action | When |
-|--------|------|
-| **Review** | `AWAITING_REVIEW`, `READY`, `PRESCAN_FAILED` (after retry to review) |
-| **Monitor** | `PROCESSING` — opens live sidebar |
-| **Retry prescan** | `PRESCAN_FAILED` |
-| **Resume / Start fresh** | `PAUSED` |
-| **Cancel** | Before `COMPLETED` |
-| **Artifacts** | `COMPLETED` — events, 15min, processed MP4 links |
+Non-completed rows always render **Review**, **Restart (Overwrite)**, **Stop** in that order. Disabled (muted) when N/A so Stop does not shift. **Retry prescan**, **Resume**, and **Monitor** are not queue actions (I001).
+
+| Slot | Action | Enabled when |
+|------|--------|----------------|
+| 1 | **Review** | `AWAITING_REVIEW`, `READY`, `PRESCAN_FAILED` |
+| 2 | **Restart (Overwrite)** | `PAUSED`, `FAILED` |
+| 3 | **Stop** | Not `COMPLETED` / `CANCELLED` |
+
+**Completed row:** only **Open output** (no Review / Restart / Stop).
 
 ### Completed row
 

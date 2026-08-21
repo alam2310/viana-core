@@ -18,8 +18,6 @@ import {
   getHealth,
   intakeJobs,
   listJobs,
-  resumeJob,
-  retryPrescan,
   startFreshJob,
   subscribeJobTelemetry,
 } from "@/lib/api-client";
@@ -253,32 +251,6 @@ export function Dashboard() {
     }
   }
 
-  async function onRetryPrescan(jobId: string) {
-    setBusyId(jobId);
-    setError(null);
-    try {
-      await retryPrescan(jobId);
-      await refreshJobs();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function onResume(jobId: string) {
-    setBusyId(jobId);
-    setError(null);
-    try {
-      await resumeJob(jobId);
-      await refreshJobs();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   async function onStartFresh(jobId: string) {
     setBusyId(jobId);
     setError(null);
@@ -410,8 +382,6 @@ export function Dashboard() {
           selectedJobId={selectedJobId}
           onSelectJob={(job) => setSelectedJobId(job.job_id)}
           onReview={setReviewJob}
-          onRetryPrescan={(id) => void onRetryPrescan(id)}
-          onResume={(id) => void onResume(id)}
           onStartFresh={(id) => void onStartFresh(id)}
           onStop={(id) => void onStop(id)}
           onOpenOutput={(job) => {

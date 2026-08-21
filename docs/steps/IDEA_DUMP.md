@@ -1,7 +1,7 @@
 # Idea dump (manual review only)
 
 **Status:** parking lot — **not** a work queue  
-**Last updated:** 2026-08-21 (I005 added)  
+**Last updated:** 2026-08-21 (I005 conclusion: mux soft subs)  
 **Owner:** human (this chat / later review)
 
 > **Agents: do not implement, prioritize, or start a Step/Seq from this file.**  
@@ -49,7 +49,7 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 | ID | Date | Category | Idea | Impact | Comment | Status |
 |----|------|----------|------|--------|---------|--------|
 | I004 | 2026-08-21 | `ui` | Play processed video from job details; investigate in-progress (play bytes already written, not live-edge) vs complete-only | **low** | **Demoted** (aesthetics / later). Not in Step 6. Revisit after 6.8 job details exist. | open |
-| I005 | 2026-08-21 | `engine` / `product` | Investigate video subtitles; optionally mux crossing events onto `_processed.mp4`; assess performance | **medium** | Investigation first. Soft subs (sidecar SRT/WebVTT or a text track) after events CSV should be cheap. Burn-in on the encode path would hit FPS (S23). Browser players often ignore unknown tracks — pair with I004 later. | open |
+| I005 | 2026-08-21 | `engine` / `product` | Crossing events as soft subtitles muxed into `_processed.mp4` (post-process from `_events.csv`) | **medium** | **Direction set:** CSV → soft SRT/VTT → FFmpeg mux into a **single** deliverable file (`-c:v copy`). No burn-in; no GPU-loop change. See detail below. | open |
 
 ### Categories (use these labels)
 
@@ -87,6 +87,8 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 
 **Suggested impact: medium.** This is a research item, not a Step 6 patch. Crossing rows already have video timestamps in `_events.csv`, so a **post-process sidecar** (SRT / WebVTT) or an optional muxed text track is the low-cost path: no extra GPU work in the detect/track loop. **Burned-in** captions (FFmpeg `subtitles`/`drawtext` on every frame) would compete with the current `_processed.mp4` encode and likely regress FPS (see S23). Investigation should cover: (1) soft vs hard subs, (2) cue text (class, direction, wall time), (3) player support in VLC vs browser, (4) mux-at-end vs grow-during-job (fragmented MP4 + timed text is harder). Do not implement until promoted.
 
+**Conclusion (2026-08-21):** Prefer soft subtitles as an **event log**, not on-box burn-in or ASS spatial cues. After the job completes, **post-process** `_events.csv` → SRT/WebVTT cues (`video_pts_ms`, class, direction, wall time), then **mux** that track into `_processed.mp4` so operators get a **single file** (FFmpeg stream copy for video; no re-encode). Performance and size impact stay near zero. Skip mid-run mux on fragmented growing MP4. Burn-in / client overlay remain out of scope unless re-promoted later (I004 for in-app playback).
+
 ---
 
 ## Promoted / dropped
@@ -109,3 +111,4 @@ Human review of I001–I004. **Agents: implement only promoted Step 6 items** (`
 | 2026-08-21 | Review: **I001 → 6.8**, **I003 → 6.9**. I002 stays dump P3 (API availability check first). I004 demoted (aesthetics / later). |
 | 2026-08-21 | I002 promoted → **6.10** (`crossing_count` confirmed on JobStatus and WS PROGRESS). I004 still demoted. |
 | 2026-08-21 | I005 added — investigate crossing events as processed-video subtitles + performance. |
+| 2026-08-21 | I005 conclusion — post-process `_events.csv` → soft SRT/VTT → mux into a single `_processed.mp4` (no re-encode / no burn-in). |

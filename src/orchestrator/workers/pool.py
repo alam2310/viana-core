@@ -106,11 +106,7 @@ class WorkerPool:
     def occupied_gpus(self) -> set[str]:
         """Return GPU ids currently running a PROCESSING job."""
         with self._lock:
-            return {
-                job.gpu_device
-                for job in self._jobs.values()
-                if job.status == "PROCESSING" and job.gpu_device is not None
-            }
+            return self._occupied_gpu_ids()
 
     def assign_gpu(self, occupied: set[str]) -> str | None:
         """Return the next free ``cuda:0`` or ``cuda:1``, or None if both busy."""
@@ -474,23 +470,46 @@ class WorkerPool:
             if job.status == "PROCESSING":
                 job.queue_position = 0
 
+    def _occupied_gpu_ids(self) -> set[str]:
+        """GPU ids held by PROCESSING jobs. Caller must hold ``_lock``."""
+        return {
+            job.gpu_device
+            for job in self._jobs.values()
+            if job.status == "PROCESSING" and job.gpu_device is not None
+        }
+
+    def _pop_next_ready_locked(self) -> JobRecord | None:
+        """Pop the FIFO READY head, skipping stale queue entries. Caller holds lock."""
+        while self._queue:
+            job_id = self._queue[0]
+            job = self._jobs.get(job_id)
+            if job is None or job.status != "READY":
+                self._queue.pop(0)
+                continue
+            self._queue.pop(0)
+            return job
+        self._refresh_queue_positions()
+        return None
+
+    def _fail_spawn(self, job: JobRecord, exc: BaseException) -> None:
+        """Mark a PROCESSING job FAILED after spawn errors so the GPU is freed."""
+        with self._lock:
+            if job.status == "PROCESSING":
+                job.status = "FAILED"
+                job.error_message = str(exc)
+            _release_gpu_slot(job)
+        logger.error("viana_spawn_failed", job_id=job.job_id, error=str(exc))
+
     def _drain(self) -> None:
         """Start queued READY jobs while GPUs are free."""
         while True:
             with self._lock:
-                occupied = {
-                    j.gpu_device
-                    for j in self._jobs.values()
-                    if j.status == "PROCESSING" and j.gpu_device is not None
-                }
-                device = self.assign_gpu(occupied)
-                if device is None or not self._queue:
+                device = self.assign_gpu(self._occupied_gpu_ids())
+                if device is None:
                     return
-                job_id = self._queue[0]
-                job = self._jobs[job_id]
-                if job.status != "READY":
+                job = self._pop_next_ready_locked()
+                if job is None:
                     return
-                self._queue.pop(0)
                 job.gpu_device = device
                 job.status = "PROCESSING"
                 if job.processing_started_monotonic is None:
@@ -498,7 +517,10 @@ class WorkerPool:
                     job.processing_ended_monotonic = None
                 job.queue_position = 0
                 self._refresh_queue_positions()
-            self._spawn(job)
+            try:
+                self._spawn(job)
+            except (OSError, ValueError, RuntimeError) as exc:
+                self._fail_spawn(job, exc)
 
     def _drain_prescan(self) -> None:
         """Start PRESCAN_PENDING jobs up to ``MAX_CONCURRENT_PRESCAN_JOBS``."""
@@ -667,6 +689,11 @@ class WorkerPool:
             job = self._jobs.get(job_id)
             proc = job.process if job is not None else None
         if proc is None:
+            with self._lock:
+                if job is not None and job.status == "PROCESSING":
+                    job.status = "FAILED"
+                    job.error_message = job.error_message or "worker process missing"
+                    _release_gpu_slot(job)
             self._drain()
             return
         try:
@@ -687,8 +714,7 @@ class WorkerPool:
                     if current.status != "CANCELLED":
                         current.status = "FAILED"
                         current.error_message = str(exc)
-                    current.process = None
-                    _mark_processing_ended(current)
+                    _release_gpu_slot(current)
         finally:
             close_stdio(proc)
             with self._lock:
@@ -727,7 +753,6 @@ class WorkerPool:
             job = self._jobs.get(job_id)
             if job is None:
                 return
-            job.process = None
             ckpt_path = artifact_paths(job.output_dir, job.source_video_path.stem)["checkpoint"]
             result = _parse_run_result(stdout)
             terminal = False
@@ -750,10 +775,10 @@ class WorkerPool:
                         if checkpoint is not None and not checkpoint.is_complete():
                             job.status = "PAUSED"
                             job.error_message = "worker cancelled"
-                            _mark_processing_ended(job)
+                            _release_gpu_slot(job)
                             return
                     job.status = "CANCELLED"
-                    _mark_processing_ended(job)
+                    _release_gpu_slot(job)
                     return
                 if returncode != 0:
                     job.status = "FAILED"
@@ -765,11 +790,11 @@ class WorkerPool:
                             checkpoint = None
                         if checkpoint is not None and not checkpoint.is_complete():
                             job.status = "PAUSED"
-                    _mark_processing_ended(job)
+                    _release_gpu_slot(job)
                     return
                 job.status = "COMPLETED"
                 aggregate_target = job
-            _mark_processing_ended(job)
+            _release_gpu_slot(job)
         if aggregate_target is not None:
             self._auto_aggregate(aggregate_target)
 
@@ -828,6 +853,13 @@ def _mark_processing_ended(job: JobRecord) -> None:
         return
     if job.processing_ended_monotonic is None:
         job.processing_ended_monotonic = time.monotonic()
+
+
+def _release_gpu_slot(job: JobRecord) -> None:
+    """Drop process handle and GPU assignment so occupancy cannot stick."""
+    job.process = None
+    job.gpu_device = None
+    _mark_processing_ended(job)
 
 
 def _apply_prescan_payload(job: JobRecord, payload: dict[str, Any]) -> None:

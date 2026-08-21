@@ -78,6 +78,8 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | Stabilization **S27:** FAILED GPU jobs release the slot and auto-start the next FIFO READY job (`pool.py` drain) |
+| 2026-08-21 | Stabilization **S25/S26:** Job Queue labels `Queued (prescan)` vs `Queued (GPU)`; fixed action icon slots |
 | 2026-08-21 | Stabilization S28: missed crossings when Car↔Jeep flicker drops the box for 1–2 frames across the counting line; retain previous anchors up to 15 frames (`crossing.py`) |
 | 2026-08-21 | **S23 / 6.9 (I003):** process loop no longer runs EasyOCR; wall-clock interpolates confirmed prescan/user metadata; `hiv000001_inframe` 203.2s @ 13.45 fps → 179.3s @ 15.26 fps |
 | 2026-08-21 | **S10:** no-profile line proposal uses road-band slope clustering + parallel counting offset; `hiv000001_inframe` near geometry C/D; profile override unchanged |

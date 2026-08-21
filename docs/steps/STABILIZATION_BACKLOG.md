@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Path steps done |
 |---------------|----------------|-------------|-----------------|
-| 0 | 1 | 3 | 23 / 26 active |
+| 0 | 1 | 3 | 26 / 29 active |
 
 **Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
 
@@ -48,10 +48,13 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S22** | F018 | B/C | no | — | Intake/prescan triggers `[Errno 24] Too many open files`, followed by API 502 in UI refresh | **fixed** |
 | **S23** | F019 | C | no | — | Processing throughput regression: end-to-end run is much slower than earlier baseline | **fixed** |
 | **S24** | F010 | A | no | S20 | Park in-progress `_processed.mp4` preview; crossings immediate (no delay). Player stays unmounted after I001. | parked |
-| **S25** | F020 | A | no | — | Review job status UI labels vs lifecycle (Queued vs Ready inconsistency) | open |
-| **S26** | F021 | A | no | — | Standardize Job Queue action icons (stable slots; enable/disable by status) | open |
-| **S27** | F022 | B | no | — | After a job FAILED, next READY job did not start despite free GPU | open |
+| **S25** | F020 | A | no | — | Review job status UI labels vs lifecycle (Queued vs Ready inconsistency) | **fixed** |
+| **S26** | F021 | A | no | — | Standardize Job Queue action icons (stable slots; enable/disable by status) | **fixed** |
+| **S27** | F022 | B | no | — | After a job FAILED, next READY job did not start despite free GPU | **fixed** |
 | **S28** | F023 | C | no | — | Missed counting-line events when class flicker drops the box for 1–2 frames | fixed |
+| **S29** | F024 | B/C | no | — | Excess leftover files in output dir after successful COMPLETED (strategy + layout) | open |
+| **S30** | F025 | A/B | no | — | UI API 502 (`fetch failed`) when restarting/resuming a job from the queue | open |
+| **S31** | F026 | A | no | — | Prescan review: remove duplicate Close; rename Submit → Confirm | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
@@ -85,10 +88,13 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S22** | 1. Select/add two videos to intake job 2. Observe prescan/job processing in container 3. Repeat with one file after failure | **Expected:** intake and prescan work repeatedly without process/file descriptor exhaustion. **Actual (before):** `[Errno 24] Too many open files`; afterwards UI refresh hits API 502 (`fetch failed`) until container restart. **After (2026-08-21):** Root cause was leaked stdio pipes and orphaned process groups (prescan `run_viana` / GPU `Popen` kept by `Thread.args`, timeout/cancel not killing OpenCV/ffprobe/ffmpeg grandchildren, VideoCapture not released if the frame iterator was abandoned, ffmpeg stdin left open on hang). Engine+orchestrator now close pipes, kill the session, release captures, and join worker threads on success/fail/cancel. Next.js 502 remains a downstream symptom of EMFILE, not a UI bug. S24 live-monitor MP4 player stays unmounted. | `src/viana/io/proc.py`, `src/orchestrator/cli.py`, `src/orchestrator/workers/pool.py`, `src/viana/stages/{video,prescan,process,render}.py`, `src/viana/io/media.py` | uncommitted | `pytest tests/viana/test_proc.py tests/viana/test_process.py tests/orchestrator/test_s22_resources.py tests/orchestrator/test_job_routes.py` + FD loop (`/proc/self/fd`) |
 | **S23** | 1. Run the same clip/config used previously for benchmark 2. Compare time-to-COMPLETED and average processing FPS vs earlier runs | **Expected:** throughput should be within an acceptable range of prior baseline. **Actual:** processing now takes significantly longer than before (user-observed regression). **After (2026-08-21, I003 / 6.9):** removed in-process OSD OCR (EasyOCR init + frame-0 parse + `recalibration_interval_sec` mid-run). Prescan OCR (S21) unchanged. Confirmed job metadata is the only clock; CSV/`time_map` interpolate `user_fallback`/`ocr_anchor` and never write `ocr_recalibrated` during `viana run`. **Benchmark** (same clip/config/GPU): `hiv000001_inframe.mp4` (2701 frames, 180s, 1920×1088 detect), geometry B, conf 0.75, `render_video=true`, `cuda:0` RTX 3060, container `viana_core`. Command: `python3 -m viana run -c <job.json>` (`start_fresh=true`). **Before (process-loop EasyOCR):** wall **203.2s**, avg FPS **13.45**, FPS@300 **6.43**. **After:** wall **179.3s**, avg FPS **15.26**, FPS@300 **14.43**. Stage split after: detect **161.7s**, track **2.7s**, render **9.1s**, telemetry **0.01s**, I/O **0.01s** (remainder ≈ decode + model/ffmpeg setup). GPU during after: ~84% util, ~1261 MiB. Dominant leftover cost is YOLO detect, not telemetry/I/O. On clips longer than 300s this also drops extra EasyOCR passes every 5 min. | uncommitted | `pytest tests/viana/test_process.py tests/viana/test_time_map.py tests/viana/test_prescan.py` + before/after `viana run` on `hiv000001_inframe.mp4` |
 | **S24** | Live Monitor showed partial MP4 + delayed crossings | **Decision (2026-08-20):** Park in-progress video preview. **2026-08-21 (I001):** Live Monitor widget removed; job details shows progress + **Live Crossings** immediately (no frame delay). Do not remount the player. | parked: `live-processed-video.tsx`, `crossing-media-sync.ts`; Live Crossings: `live-crossings.tsx` | uncommitted | UI: no `<video>` in details; crossings update on emit |
-| **S25** | 1. Submit job → wait for GPU while still in prescan queue 2. Confirm review → wait for GPU before `PROCESSING` 3. Scan Job Queue badges for all statuses | **Expected:** waiting-for-resource states read consistently; every lifecycle status has a clear operator-facing name. **Actual:** `PRESCAN_PENDING` shows **Queued** while post-review `READY` (also waiting for the GPU pool) shows **Ready** — naming is inconsistent for the same “waiting for resources” situation. Need a full label review (see F020). | `apps/web/src/features/queue/job-status.ts` (`STATUS_LABELS`); queue + job-details badges; contracts `JobStatus` enum | — | Step 4 UI chat |
-| **S26** | 1. Queue a non-reviewable job (e.g. `PRESCAN_PENDING` / `PROCESSING`) — only Stop shows 2. Move same job to `AWAITING_REVIEW` / `READY` — Review appears left of Stop 3. Compare Actions column across rows | **Expected:** action icons stay in fixed positions so muscle memory and scanability work across statuses. **Actual:** Actions render conditionally (`null` when N/A), so the red Stop (`IconCancel`) sits alone on the left when it is the only button, then jumps right when Review (or Retry/Resume/etc.) mounts to its left. Proposed easy win: keep a stable icon set and enable/disable by status — but confirm against UI standards first (see F021). | `apps/web/src/features/queue/job-queue-table.tsx` Actions cell; `RoundIconButton` / icons; `docs/ui/` patterns | — | Step 4 / hardening UI chat |
-| **S27** | 1. Confirm ≥2 jobs so one is `PROCESSING` and the next is `READY` 2. Let the first job fail (engine/worker error → `FAILED`) 3. Observe GPU free and next job status | **Expected:** when a GPU slot frees on terminal `FAILED` (or equivalent), `_drain` starts the next FIFO `READY` job without operator intervention. **Actual:** previous job failed; GPU appeared free; next job stayed waiting and did not enter `PROCESSING` (see F022). | `src/orchestrator/workers/pool.py` (`_drain`, `_monitor`/`_finalize`, GPU occupancy); orchestrator tests for fail→next | — | Step 4 / hardening UI chat |
+| **S25** | 1. Submit job → wait for GPU while still in prescan queue 2. Confirm review → wait for GPU before `PROCESSING` 3. Scan Job Queue badges for all statuses | **Expected:** waiting-for-resource states read consistently; every lifecycle status has a clear operator-facing name. **Actual (before):** `PRESCAN_PENDING` showed **Queued** while post-review `READY` showed **Ready**. **After:** both wait states use **Queued** plus the resource — `Queued (prescan)` / `Queued (GPU)`. Other labels: Pre-scanning, Prescan failed, Needs review (distinct from the Review action). API enums unchanged. | `job-status.ts` `STATUS_LABELS` + `STATUS_HINTS`; queue + job-details badges; `docs/ui/REDESIGN.md` / `DISCOVERY.md` | uncommitted | typecheck + label matrix (all `JobStatus`) |
+| **S26** | 1. Queue a non-reviewable job (e.g. `PRESCAN_PENDING` / `PROCESSING`) — only Stop shows 2. Move same job to `AWAITING_REVIEW` / `READY` — Review appears left of Stop 3. Compare Actions column across rows | **Expected:** action icons stay in fixed positions. **Actual (before):** Actions mounted only when valid, so Stop jumped. **After:** six always-on slots — Review, Stop, Retry, Resume, Start Fresh, Open output — muted/disabled when N/A (`Unavailable: …` tooltip). Dark+light disabled use zinc muted tokens (no light-only hover flash). Monitor stays omitted (I001). | `job-queue-table.tsx`; `RoundIconButton` disabled + dark variants; `docs/ui/REDESIGN.md` / `COMPONENT_MAP.md` | uncommitted | typecheck + slot enable matrix vs `JobStatus` |
+| **S27** | 1. Confirm ≥2 jobs so one is `PROCESSING` and the next is `READY` 2. Let the first job fail (engine/worker error → `FAILED`) 3. Observe GPU free and next job status | **Expected:** when a GPU slot frees on terminal `FAILED` (or equivalent), `_drain` starts the next FIFO `READY` job without operator intervention. **Actual (before):** previous job failed; GPU appeared free; next job stayed waiting. **After (2026-08-21):** `_drain` skips stale/non-READY queue heads; `_monitor`/`_finalize` always drain after FAILED (and spawn failure / missing process); `_release_gpu_slot` clears `gpu_device` + `process` so occupancy cannot stick. | `src/orchestrator/workers/pool.py`; `tests/orchestrator/test_s27_drain.py` | this commit | `pytest tests/orchestrator/test_s27_drain.py` (fail→next + stale-head skip) |
 | **S28** | 1. Process `hiv00013_shimoga.mp4` (`job_0349289d5fe6`) 2. Watch white SUV/Jeep approach counting line ~06:44:50 3. Inspect `_events.csv` | **Expected:** one Jeep (or Car) crossing around 06:44:50. **Actual (before):** overlay showed `Car #3` then Jeep with class flicker; track absent from events (gap 06:44:43→06:45:01). Replay: track present frame 254 (side &lt; 0), missing 255–256, back at 257 already past line — `CrossingState` cleared `_previous` on any absence so no event. **After:** retain last bottom-center up to `max_gap_frames=15`; same window emits Jeep `in` at frame 257 (~06:44:52). | `src/viana/stages/crossing.py`, `tests/viana/test_track_crossing.py` | uncommitted | unit tests + shimoga window replay |
+| **S29** | 1. Run a job to `COMPLETED` 2. List project `output_dir` for that stem | **Expected:** operator-facing deliverables are clear; ephemeral/intermediate artifacts are cleaned or isolated. **Actual:** many leftovers remain (JSON sidecars, prescan images, etc.) cluttering the output tree — inventory all files written before success and decide keep vs delete vs relocate (see F024). | `artifact_paths` / `prescan_dir` / profiles; engine write sites; ADR or docs for retention | — | Step 4 / hardening UI chat |
+| **S30** | 1. From Job Queue, restart/resume a paused or failed job (UI Start Fresh / Resume) 2. Watch dashboard refresh | **Expected:** action succeeds or returns a clear API error; `GET /jobs` polling keeps working. **Actual:** Next.js throws `ApiClientError` **API 502: fetch failed** from `parseJson` → `Dashboard.refreshJobs` (`api-client.ts:166`). May be API down / proxy / EMFILE recurrence (S22) — triage required (see F025). | `dashboard.tsx` `onResume`/`onStartFresh` + `refreshJobs`; orchestrator resume/start-fresh; container logs | — | Step 4 / hardening UI chat |
+| **S31** | 1. Open prescan review modal 2. Inspect header Close vs footer Cancel 3. Inspect primary footer button label | **Expected:** one dismiss control; primary action reads **Confirm**. **Actual:** header **Close** duplicates footer **Cancel**; primary button says **Submit**. | `apps/web/src/features/prescan/prescan-review-modal.tsx` | — | Step 4 / hardening UI chat |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `parked` · `wontfix`  
@@ -247,26 +253,24 @@ Optional fallback (only if browser codec fails): lightweight `GET /jobs/{id}/fra
 
 API enum values stay as-is (`JobStatusLiteral` / contracts). This item is **UI copy + badge clarity** only unless review decides a contract rename is warranted.
 
-**Current mapping** (`apps/web/src/features/queue/job-status.ts`):
+**Decision (2026-08-21):** Share the word **Queued** and name the resource. Do not rename API enums.
 
-| API status | Current UI label | Lifecycle meaning (review target) |
-|------------|------------------|-----------------------------------|
-| `PRESCAN_PENDING` | Queued | Submitted; waiting for prescan capacity |
-| `PRESCAN_RUNNING` | Pre-scan | Prescan worker active |
-| `PRESCAN_FAILED` | Pre-scan failed | Prescan error; may retry / fail path |
-| `AWAITING_REVIEW` | Review | Prescan done; operator must confirm geometry/metadata |
-| `READY` | Ready | Confirmed; waiting for GPU / process pool |
+**Operator labels** (`apps/web/src/features/queue/job-status.ts`):
+
+| API status | UI label | Lifecycle meaning |
+|------------|----------|-------------------|
+| `PRESCAN_PENDING` | Queued (prescan) | Submitted; waiting for prescan capacity |
+| `PRESCAN_RUNNING` | Pre-scanning | Prescan worker active |
+| `PRESCAN_FAILED` | Prescan failed | Prescan error; may retry |
+| `AWAITING_REVIEW` | Needs review | Prescan done; operator must confirm |
+| `READY` | Queued (GPU) | Confirmed; waiting for GPU / process pool |
 | `PROCESSING` | Processing | Engine running |
 | `PAUSED` | Paused | Processing paused |
 | `COMPLETED` | Completed | Success terminal |
 | `FAILED` | Failed | Error terminal |
 | `CANCELLED` | Cancelled | Cancelled terminal |
 
-**Review asks:**
-1. Enumerate every status operators can see in Job Queue + job details.
-2. Decide whether waiting-for-prescan vs waiting-for-GPU should share wording (e.g. both “Queued”, or “Queued (prescan)” / “Queued (process)”, or keep distinct but clearer names).
-3. Confirm remaining labels are accurate and consistent (especially `Review` vs `Ready`).
-4. Apply agreed labels in `STATUS_LABELS` (and any tooltips) without inventing new API statuses unless a contract change is approved.
+Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a GPU slot”).
 
 **Scope:** Lane A (UI). No Step 5 blocker.
 
@@ -276,14 +280,18 @@ API enum values stay as-is (`JobStatusLiteral` / contracts). This item is **UI c
 
 **Issue:** The Actions column mounts buttons only when applicable. That makes the Stop (red cross) icon shift horizontally depending on which other actions are present — e.g. alone on the left vs to the right of Review when the job is under review.
 
-**Candidate fix (easy win):** Always render the primary action icons in a fixed order; `disabled` (+ muted styling / `aria-disabled`) when the action is not valid for the current `JobStatus`. Tooltips still explain why (label unchanged or “Unavailable: …”).
+**Decision (2026-08-21):** Always render six slots in this order; `disabled` + muted zinc (light + dark) when invalid. Tooltip `Unavailable: …` when N/A. **Monitor** is not a slot (I001).
 
-**Before coding — check UI standards:**
-1. Read `docs/ui/DISCOVERY.md` / `REDESIGN.md` / `COMPONENT_MAP.md` for queue action expectations.
-2. Confirm `RoundIconButton` disabled affordance is clear in light + dark (related history: F013 theme).
-3. Decide the stable slot set and order (at minimum Review + Stop; also Retry / Resume / Start Fresh / Open Output — keep all slots always, or only the high-frequency pair).
-4. Prefer disabled-visible over hide unless discovery explicitly wants terminal rows sparse (e.g. `COMPLETED` only folder).
-5. Accessibility: disabled controls remain focusable or are skipped consistently; don’t remove hit targets mid-poll.
+| Slot | Action | Enabled |
+|------|--------|---------|
+| 1 | Review | `AWAITING_REVIEW`, `READY`, `PRESCAN_FAILED` |
+| 2 | Stop | not `COMPLETED` / `CANCELLED` |
+| 3 | Retry | `PRESCAN_FAILED` |
+| 4 | Resume | operator `PAUSED` |
+| 5 | Start Fresh | `PAUSED`, `FAILED` |
+| 6 | Open output | `COMPLETED` |
+
+`RoundIconButton` enabled colors have explicit `dark:` hover tokens so light↔dark does not leave a pale hover flash (F013).
 
 **Scope:** Lane A (UI). No Step 5 blocker. No API change.
 
@@ -307,13 +315,53 @@ API enum values stay as-is (`JobStatusLiteral` / contracts). This item is **UI c
 
 **Expected behavior:** FIFO execution — when a GPU worker finishes (success or failure), `JobPool._drain()` should assign a free device to the head `READY` job and spawn it.
 
-**Likely investigation points** (`src/orchestrator/workers/pool.py`):
-1. Does `_monitor` / `_finalize` always call `_drain()` on every terminal path (`FAILED`, crash, cancelled-as-failed)?
-2. Does `_drain` bail early when `_queue[0]` is not `READY` (`if job.status != "READY": return`) instead of skipping stale heads?
-3. Is GPU occupancy stuck (job still counted as `PROCESSING`, or `gpu_device` / process handle not cleared) so `assign_gpu` returns `None` while nvidia-smi looks idle?
-4. Add a regression test: job A fails → job B auto-starts on the freed device.
+**Fix (2026-08-21):**
+1. `_monitor` always calls `_drain()` in `finally` (FAILED JSON, non-zero exit, monitor exception, missing process). Spawn errors mark FAILED, release the slot, and continue draining.
+2. `_drain` pops stale queue heads (`status != READY` or missing record) instead of returning.
+3. `_release_gpu_slot` clears `process` and `gpu_device` on every leave-PROCESSING path so `occupied_gpus()` cannot keep a dead assignment.
 
 **Scope:** Lane B (orchestrator). No Step 5 blocker (ops reliability; triage may promote if reproducible).
+
+---
+
+## F024 design note (output leftovers after COMPLETED)
+
+**Observed:** After a successful job, the project output directory still contains many non-deliverable files (JSON sidecars, prescan images, etc.).
+
+**Work:**
+1. Inventory every path written from intake → prescan → run → aggregate (start from `artifact_paths`, `prescan_dir`, `profiles_dir`, job JSON, checkpoints, run_result, time_map, preview JPEGs).
+2. Classify each as: **operator deliverable** (e.g. `_events.csv`, `_15min.csv`, `_processed.mp4`), **runtime required** (checkpoint / status for resume), **debug/ephemeral**, or **orchestrator-only**.
+3. Strategy options (pick deliberately, document):
+   - delete ephemerals on `COMPLETED`;
+   - move intermediates under e.g. `{stem}/.work/` or `prescan/` / `_meta/`;
+   - keep only what resume / job status / re-review needs, with a clear directory layout.
+4. Do not delete anything needed for PAUSED resume or audit without an ADR/docs update.
+
+**Scope:** Lane B/C (+ docs). Design before mass delete.
+
+---
+
+## F025 design note (502 on UI restart/resume)
+
+**Observed:** Restarting/resuming a job from the UI surfaces `Runtime ApiClientError` — **API 502: fetch failed** in `parseJson` during `Dashboard.refreshJobs` (`apps/web/src/lib/api-client.ts`).
+
+**Triage:**
+1. Reproduce with Start Fresh vs Resume; capture whether the mutate call fails or only the subsequent `GET /jobs` poll.
+2. Check API/container logs at the same moment (crash, timeout, proxy, EMFILE — related history S22).
+3. Harden UI: avoid unhandled throw on refresh; show recoverable banner if API is briefly unreachable.
+4. Fix root cause in orchestrator/engine if restart path takes down or saturates the API.
+
+**Scope:** Lane A/B. Related to S22 if FD exhaustion returns.
+
+---
+
+## F026 design note (prescan Close vs Confirm)
+
+**Observed:** Prescan review modal has header **Close** and footer **Cancel** doing the same dismiss; primary footer label is **Submit**.
+
+**Fix:** Remove the redundant Close control; rename Submit → **Confirm** (and loading copy to **Confirming…** if present). Keep a single cancel/dismiss path.
+
+**Scope:** Lane A. `prescan-review-modal.tsx` only unless shared dialog chrome is involved.
 
 ---
 
@@ -321,6 +369,10 @@ API enum values stay as-is (`JobStatusLiteral` / contracts). This item is **UI c
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **S27 (F022) fixed:** after PROCESSING→FAILED, `_drain` starts the next FIFO READY job; skip stale queue heads; clear GPU occupancy |
+| 2026-08-21 | Added **S29 (F024)** output leftovers after COMPLETED — inventory + retention/directory strategy |
+| 2026-08-21 | Added **S30 (F025)** API 502 `fetch failed` when restarting/resuming job from UI (`refreshJobs`) |
+| 2026-08-21 | Added **S31 (F026)** prescan review: remove duplicate Close; rename Submit → Confirm |
 | 2026-08-21 | **S28 (F023) fixed:** retain counting-line previous anchors across brief detection gaps (class flicker); recovers missed Jeep on `hiv00013_shimoga` ~06:44:50 |
 | 2026-08-21 | Added **S27 (F022)** next READY job did not start after prior job FAILED despite free GPU |
 | 2026-08-21 | Added **S26 (F021)** standardize Job Queue action icons (Stop jumps left/right when Review mounts; prefer stable slots + enable/disable after UI standards check) |

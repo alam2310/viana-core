@@ -1,11 +1,18 @@
 # Step tracker (living)
 
-**Last updated:** 2026-08-20  
+**Last updated:** 2026-08-21  
 **Current Step:** **6** — Hardening backlog  
 **Canonical plan:** [`PLAN.md`](PLAN.md)  
-**Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)
+**Agent checklist:** [`AGENT_PROGRESS.md`](AGENT_PROGRESS.md)  
+**Idea dump (manual review only):** [`IDEA_DUMP.md`](IDEA_DUMP.md)
 
 > Update this file when a Step changes status. Agents: do not rely on chat memory.
+
+### Idea dump — not a work queue
+
+[`IDEA_DUMP.md`](IDEA_DUMP.md) is a **parking lot** for ideas captured outside active Steps. Use it for **human review after current work**, then promote chosen items into Step 6 / stabilization / a new Step.
+
+**Agents: do not pick work from `IDEA_DUMP.md` unless the user explicitly names an idea ID.** Do not treat it as the current Step, a blocker, or a source of Seq/F IDs.
 
 ---
 
@@ -135,6 +142,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | Added [`IDEA_DUMP.md`](IDEA_DUMP.md) — manual-review parking lot; agents must not self-assign from it |
 | 2026-08-21 | S21 follow-up: `test_video.mp4` plus-as-colon clock (`08:38+31`) and unhyphenated location join; prior inframe/shimoga/night reads unchanged |
 | 2026-08-20 | S21 (F017) fixed — adaptive OSD bands + clock/date salvage (spaced/`"` colons, year `7074`→`2024`, mixed-polarity location); UI retest OK; no `hiv000001_inframe` S07/S08 regression |
 | 2026-08-20 | S19 (F016) fixed — MPEG-PS/DVR header duration corrected via ffprobe packet count; queue video length/ETA units documented |

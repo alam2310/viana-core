@@ -1,6 +1,6 @@
 # Project Status (Living Document)
 
-**Last updated:** 2026-08-20  
+**Last updated:** 2026-08-21  
 **Current focus:** **Step 6** — hardening backlog (see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 unblocked).  
@@ -42,6 +42,8 @@
 
 **Parked items** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md).
 
+**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign.
+
 ---
 
 ## Next (legacy list — see Steps above)
@@ -76,6 +78,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | Added `docs/steps/IDEA_DUMP.md` — parked ideas for later human review; not a work queue |
 | 2026-08-20 | **S21:** adaptive OSD OCR (bands, clock salvage, mixed-polarity location, `7074` year repair) — UI retest OK; `hiv000001_inframe` S07 fields unchanged |
 | 2026-08-20 | **S24:** Live Monitor parks in-progress `_processed.mp4` preview (code retained, not mounted); Live Crossings show WS events immediately |
 | 2026-08-20 | Step 6.1 follow-up: bake EasyOCR English weights (CRAFT + `english_g2`) into the image so first prescan after rebuild does not stall on GitHub |

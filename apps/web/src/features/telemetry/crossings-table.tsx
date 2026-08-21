@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import type { CrossingRow } from "@/features/telemetry/telemetry-formatters";
 import { crossingArrowClass } from "@/features/telemetry/telemetry-formatters";
 
@@ -12,7 +14,13 @@ export function CrossingsTable({
   maxRows?: number;
   reverse?: boolean;
 }) {
-  const visible = reverse ? rows.slice(-maxRows).reverse() : rows.slice(0, maxRows);
+  // ⚡ Bolt: Memoize the visible rows slice and reversal.
+  // Impact: Prevents O(N) array slicing and reversal operations on every render,
+  // particularly when telemetry messages update rapidly.
+  const visible = useMemo(
+    () => (reverse ? rows.slice(-maxRows).reverse() : rows.slice(0, maxRows)),
+    [rows, maxRows, reverse]
+  );
 
   if (visible.length === 0) {
     return null;

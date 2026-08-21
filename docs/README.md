@@ -3,7 +3,7 @@
 | Document | Purpose |
 |----------|---------|
 | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | **Living status** — phases, Steps, API matrix |
-| [`steps/`](steps/) | **Post-v0.1 Steps 1–6** — tracker, plan, agent checklist, kickoffs |
+| [`steps/`](steps/) | **Post-v0.1 Steps 1–6** — tracker, plan, agent checklist, kickoffs; [`steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) is **manual review only** |
 | [`ops/ENVIRONMENT_SETUP.md`](ops/ENVIRONMENT_SETUP.md) | **From-scratch** Docker/GPU setup |
 | [`PROJECT_PLAN.md`](PROJECT_PLAN.md) | v2 implementation plan |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design |

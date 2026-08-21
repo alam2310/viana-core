@@ -28,13 +28,15 @@ def merge_detections(
     confidence_threshold: float,
     pedestrian_id: int = PEDESTRIAN_ID,
 ) -> list[Detection]:
-    """Combine model-A vehicles and model-B persons, then class-agnostic NMS.
+    """Combine model-A vehicles and model-B persons, then per-pool NMS.
 
     Pedestrian YOLO **person** (COCO 0) is remapped to ``pedestrian_id``. Other
     model-B classes (car, bicycle, …) are dropped so they cannot inherit the
     passenger/slow/pedestrian taxonomy row. Vehicle boxes outside the ITVA id
     set are dropped. Persons overlapping a vehicle above ``suppression_ioa``
-    are dropped. Confidence is applied after merge.
+    are dropped. Confidence is applied after merge. NMS runs separately on
+    vehicles and people so a roadside pedestrian is not suppressed by a
+    nearby vehicle box.
     """
     kept_vehicles = [item for item in vehicles if item.class_id in VEHICLE_CLASS_IDS]
     mapped_people: list[Detection] = []
@@ -53,9 +55,14 @@ def merge_detections(
             continue
         mapped_people.append(remapped)
 
-    merged = [
-        item for item in kept_vehicles + mapped_people if item.confidence >= confidence_threshold
-    ]
-    if not merged:
+    kept_vehicles = [item for item in kept_vehicles if item.confidence >= confidence_threshold]
+    mapped_people = [item for item in mapped_people if item.confidence >= confidence_threshold]
+    if not kept_vehicles and not mapped_people:
         return []
-    return nms_class_agnostic(merged, nms_threshold)
+    # NMS within each pool only. Class-agnostic NMS across vehicles+people would
+    # drop roadside pedestrians whose boxes overlap a nearby vehicle (IoU≥thr)
+    # even when they are not "inside" by the IOA passenger test.
+    return [
+        *nms_class_agnostic(kept_vehicles, nms_threshold),
+        *nms_class_agnostic(mapped_people, nms_threshold),
+    ]

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import queue
 import shutil
 import subprocess  # nosec B404
+import threading
+import time
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -11,6 +14,11 @@ from viana.config.job import LineSegment
 from viana.io.proc import close_stdio, run_captured, terminate_process_tree
 from viana.stages.cv_core import FrameCVResult
 from viana.stages.video import VideoFrame
+
+# Bounded queue: back-pressures the CV loop when annotate/encode lags.
+_RENDER_QUEUE_MAX = 30
+_RENDER_PUT_TIMEOUT_SEC = 0.25
+_RENDER_CLOSE_DEADLINE_SEC = 60.0
 
 # BGR overlay colors by ITVA class id (not horizon red / counting green).
 OVERLAY_BGR: dict[int, tuple[int, int, int]] = {
@@ -48,19 +56,22 @@ _FRAG_MP4_ARGS = [
 
 # H.264 for browser <video> (S20). Prefer NVENC when listed, else libx264.
 # HEVC is smaller but Chrome/Firefox on Linux cannot decode hev1/hvc1 in <video>.
+# Size/speed knobs (review deliverable, not archival):
+# - NVENC: p4 (faster than p7) + higher cq → smaller bitstream
+# - libx264: veryfast + higher CRF → smaller + less CPU on the writer thread
 _H264_NVENC_ARGS = [
     "-c:v",
     "h264_nvenc",
     "-pix_fmt",
     "yuv420p",
     "-preset",
-    "p7",
+    "p4",
     "-tune",
     "hq",
     "-rc",
     "vbr",
     "-cq",
-    "28",
+    "32",
     "-b:v",
     "0",
     "-g",
@@ -78,13 +89,13 @@ _HEVC_NVENC_ARGS = [
     "-pix_fmt",
     "yuv420p",
     "-preset",
-    "p7",
+    "p4",
     "-tune",
     "hq",
     "-rc",
     "vbr",
     "-cq",
-    "42",
+    "44",
     "-b:v",
     "0",
     "-bf",
@@ -102,6 +113,42 @@ _HEVC_NVENC_ARGS = [
     *_FRAG_MP4_ARGS,
 ]
 
+_LIBX264_ARGS = [
+    "-c:v",
+    "libx264",
+    "-pix_fmt",
+    "yuv420p",
+    "-crf",
+    "34",
+    "-preset",
+    "veryfast",
+    "-g",
+    "30",
+    "-keyint_min",
+    "30",
+    "-sc_threshold",
+    "0",
+    *_FRAG_MP4_ARGS,
+]
+
+_LIBX265_ARGS = [
+    "-c:v",
+    "libx265",
+    "-pix_fmt",
+    "yuv420p",
+    "-crf",
+    "36",
+    "-preset",
+    "veryfast",
+    "-g",
+    "30",
+    "-keyint_min",
+    "30",
+    "-sc_threshold",
+    "0",
+    *_FRAG_MP4_ARGS,
+]
+
 
 def ffmpeg_video_args(path: Path, *, encoder_list: str) -> list[str]:
     """Pick a browser-playable review encode, then size-oriented HEVC fallbacks.
@@ -113,63 +160,12 @@ def ffmpeg_video_args(path: Path, *, encoder_list: str) -> list[str]:
     if "h264_nvenc" in encoder_list:
         return [*_H264_NVENC_ARGS, out]
     if "libx264" in encoder_list:
-        return [
-            "-c:v",
-            "libx264",
-            "-pix_fmt",
-            "yuv420p",
-            "-crf",
-            "30",
-            "-preset",
-            "medium",
-            "-g",
-            "30",
-            "-keyint_min",
-            "30",
-            "-sc_threshold",
-            "0",
-            *_FRAG_MP4_ARGS,
-            out,
-        ]
+        return [*_LIBX264_ARGS, out]
     if "hevc_nvenc" in encoder_list:
         return [*_HEVC_NVENC_ARGS, out]
     if "libx265" in encoder_list:
-        return [
-            "-c:v",
-            "libx265",
-            "-pix_fmt",
-            "yuv420p",
-            "-crf",
-            "34",
-            "-preset",
-            "medium",
-            "-g",
-            "30",
-            "-keyint_min",
-            "30",
-            "-sc_threshold",
-            "0",
-            *_FRAG_MP4_ARGS,
-            out,
-        ]
-    return [
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        "-crf",
-        "30",
-        "-preset",
-        "medium",
-        "-g",
-        "30",
-        "-keyint_min",
-        "30",
-        "-sc_threshold",
-        "0",
-        *_FRAG_MP4_ARGS,
-        out,
-    ]
+        return [*_LIBX265_ARGS, out]
+    return [*_LIBX264_ARGS, out]
 
 
 class FrameRenderer(Protocol):
@@ -249,7 +245,12 @@ def annotate_bgr(
 
 
 class FfmpegRenderer:
-    """Pipe BGR frames to FFmpeg (H.264 NVENC when available; fragmented MP4)."""
+    """Pipe BGR frames to FFmpeg (H.264 NVENC when available; fragmented MP4).
+
+    Annotation and stdin writes run on a background thread so the detect/track
+    loop is not blocked on OpenCV draw + FFmpeg I/O. Frames are copied before
+    enqueue so the decoder can reuse its capture buffer safely.
+    """
 
     def __init__(self, path: Path, width: int, height: int, fps: float) -> None:
         ffmpeg = shutil.which("ffmpeg")
@@ -285,6 +286,15 @@ class FfmpegRenderer:
         self._horizon: LineSegment | None = None
         self._counting: LineSegment | None = None
         self._class_names: dict[int, str] = {}
+        self._queue: queue.Queue[tuple[Any, FrameCVResult | None]] = queue.Queue(
+            maxsize=_RENDER_QUEUE_MAX
+        )
+        self._thread = threading.Thread(
+            target=self._writer_loop,
+            name="viana-ffmpeg-renderer",
+            daemon=True,
+        )
+        self._thread.start()
 
     def set_lines(self, horizon: LineSegment, counting_line: LineSegment) -> None:
         """Store overlay geometry."""
@@ -295,26 +305,60 @@ class FfmpegRenderer:
         """YOLO id → display name for box labels."""
         self._class_names = dict(class_names)
 
+    def _writer_loop(self) -> None:
+        """Annotate and write queued frames until a shutdown sentinel arrives."""
+        while True:
+            frame_image, result = self._queue.get()
+            if frame_image is None:
+                break
+            try:
+                image: Any = frame_image
+                if result is not None and self._horizon is not None and self._counting is not None:
+                    image = annotate_bgr(
+                        image,
+                        result,
+                        self._horizon,
+                        self._counting,
+                        class_names=self._class_names,
+                    )
+                if self._proc.stdin is not None:
+                    self._proc.stdin.write(image.tobytes())
+            except OSError:
+                break
+
     def write(self, frame: VideoFrame, result: FrameCVResult) -> None:
-        """Encode one annotated frame."""
-        if frame.image is None or self._proc.stdin is None:
+        """Enqueue one frame for background annotate + encode."""
+        if self._closed or frame.image is None or self._proc.stdin is None:
             return
-        image: Any = frame.image
-        if self._horizon is not None and self._counting is not None:
-            image = annotate_bgr(
-                image,
-                result,
-                self._horizon,
-                self._counting,
-                class_names=self._class_names,
-            )
-        self._proc.stdin.write(image.tobytes())
+        # Detach from the capture buffer before the next decoder read.
+        src: Any = frame.image
+        image = src.copy()
+        while True:
+            if not self._thread.is_alive():
+                raise OSError("Background writer thread died unexpectedly")
+            try:
+                self._queue.put((image, result), timeout=_RENDER_PUT_TIMEOUT_SEC)
+                return
+            except queue.Full:
+                continue
 
     def close(self) -> None:
-        """Flush ffmpeg stdin, wait, and kill the process group if it hangs."""
+        """Drain the writer thread, then flush ffmpeg stdin and wait."""
         if getattr(self, "_closed", False):
             return
         self._closed = True
+
+        if self._thread.is_alive():
+            deadline = time.monotonic() + _RENDER_CLOSE_DEADLINE_SEC
+            while self._thread.is_alive() and time.monotonic() < deadline:
+                try:
+                    self._queue.put((None, None), timeout=_RENDER_PUT_TIMEOUT_SEC)
+                    break
+                except queue.Full:
+                    continue
+            remaining = max(0.0, deadline - time.monotonic())
+            self._thread.join(timeout=remaining)
+
         proc = self._proc
         try:
             if proc.stdin is not None:

@@ -109,7 +109,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S28 | F023 — missed crossings when class flicker drops box across counting line | C | **fixed** |
 | S20 | F010 follow-on — browser live monitor play of in-progress MP4 (H.264) | A/B | **parked** → S24 |
 | S24 | Park live-monitor partial MP4 UI; crossings immediate | A | parked |
-| ~~S09~~ | F006 — intake path validation | B | **deferred → 6.7** |
+| ~~S09~~ | F006 — intake path validation | B | **fixed (6.7)** |
 
 ---
 
@@ -135,7 +135,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 6.4 | Playwright | ⬜ |
 | 6.5 | Extra camera clip | ⬜ |
 | 6.6 | GPU CI | ⬜ |
-| 6.7 | Container host path access + API intake path validation (S09 / F006) | ⬜ |
+| 6.7 | Container host path access + API intake path validation (S09 / F006) | ✅ |
 | 6.8 | Job details: drop Live Monitor widget/action; Live Crossings in details; row click opens details (**I001**) | ✅ |
 | 6.9 | Disable in-process OSD OCR; wall-clock/location from confirmed prescan only (**I003**) | ✅ |
 | 6.10 | Bind live crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session WS list length (**I002**) | ✅ |
@@ -146,6 +146,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **6.7 complete (S09 / F006)** — intake (and `POST /jobs`) rewrites host paths onto compose mounts (`/data`, `/app/ViAna`) or **400**s unreadable paths; extra drive via `VIANA_INTAKE_ROOTS` + `VIANA_PATH_MAPS`. Tests: `tests/orchestrator/test_s67_intake_paths.py` |
 | 2026-08-21 | **6.3 complete** — DELETE sets `CANCELLED` immediately, releases the GPU slot, drains the next READY job; `_finalize` does not clobber user cancel (S27 fail-drain unchanged) |
 | 2026-08-21 | **S28 (F023) fixed** — counting-line anchors survive brief detection gaps (class flicker); `hiv00013_shimoga` Jeep ~06:44:50 recovered on replay |
 | 2026-08-21 | **6.9 / I003 complete** — no OSD OCR in `viana run`; clock locked to confirmed metadata; S23 `hiv000001_inframe` 203.2s/13.45 fps → 179.3s/15.26 fps |

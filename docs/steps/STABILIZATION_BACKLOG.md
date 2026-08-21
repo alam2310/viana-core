@@ -15,7 +15,7 @@
 |---------------|----------------|-------------|-----------------|
 | 0 | 1 | 4 | 26 / 30 active |
 
-**Deferred to Step 6.7:** S09 (F006). **Not counted** in path progress.
+**S09 (F006) closed in Step 6.7.** **Not counted** in path progress.
 
 ---
 
@@ -56,7 +56,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S30** | F025 | A/B | no | — | UI API 502 (`fetch failed`) when restarting/resuming a job from the queue | open |
 | **S31** | F026 | A | no | — | Prescan review: remove duplicate Close; rename Submit → Confirm | open |
 | **S32** | F027 | C/D | no | — | Relook raw events + 15-min CSV schemas — keep only necessary columns | open |
-| ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **deferred → Step 6.7** |
+| ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **fixed → Step 6.7** |
 
 **After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
 
@@ -388,6 +388,7 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **S09 (F006) fixed via Step 6.7** — intake/submit rewrite host paths onto `/data` and `/app/ViAna` or 400; extra mounts via `VIANA_INTAKE_ROOTS` + `VIANA_PATH_MAPS` |
 | 2026-08-21 | Added **S32 (F027)** relook raw events + 15-min CSV schemas — keep only necessary columns |
 | 2026-08-21 | **S25 (F020) + S26 (F021) fixed:** queue labels `Queued (PS)` / `Queued (GPU)`; actions Review → Restart (Overwrite) → Stop; Open output only on `COMPLETED` |
 | 2026-08-21 | **S27 (F022) fixed:** after PROCESSING→FAILED, `_drain` starts the next FIFO READY job; skip stale queue heads; clear GPU occupancy |
@@ -435,4 +436,4 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 | Seq | Reason | Date |
 |-----|--------|------|
-| **S09** (F006) | API intake path validation — UI mitigated via `container-paths.ts`; full fix → **Step 6.7** | 2026-08-19 |
+| ~~S09~~ (F006) | Closed in **Step 6.7** (was deferred 2026-08-19; UI `container-paths.ts` remains) | 2026-08-21 |

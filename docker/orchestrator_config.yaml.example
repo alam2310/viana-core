@@ -8,6 +8,8 @@ container:
   volumes:
     - /path/to/ViAna:/app/ViAna
     - /path/to/data:/data
+    # Extra video tree (Step 6.7 / G21): also set VIANA_EXTRA_INTAKE_ROOT + VIANA_PATH_MAPS
+    # - /mnt/ext-hdd/videos:/mnt/extra
 
 output:
   parent_dir: /data/viana-outputs

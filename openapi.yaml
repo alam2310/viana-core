@@ -117,6 +117,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JobSubmitResponse"
+        "400":
+          description: Source path is not readable inside the processing container
         "409":
           description: Checkpoint exists; explicit resume required
         "422":
@@ -140,6 +142,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JobIntakeResponse"
+        "400":
+          description: One or more paths are not readable inside the processing container
         "422":
           description: Invalid body
 

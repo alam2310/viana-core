@@ -77,6 +77,7 @@ See **Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md):
 
 | Date | Change |
 |------|--------|
+| 2026-08-21 | **6.7 complete (S09 / F006)** — API normalizes host intake paths onto container mounts or 400s unreadable paths; compose passes `VIANA_HOST_*` maps; extra volume via `VIANA_EXTRA_INTAKE_ROOT` + `VIANA_PATH_MAPS` |
 | 2026-08-21 | **6.3 complete** — DELETE marks `CANCELLED` immediately and frees the GPU so the next READY job can drain (S27 fail path unchanged) |
 | 2026-08-21 | Stabilization **S27:** FAILED GPU jobs release the slot and auto-start the next FIFO READY job (`pool.py` drain) |
 | 2026-08-21 | Stabilization **S25/S26:** Job Queue labels `Queued (PS)` vs `Queued (GPU)`; actions Review → Restart (Overwrite) → Stop; Open output on completed only |

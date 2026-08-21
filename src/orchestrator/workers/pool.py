@@ -14,6 +14,7 @@ from typing import Any, Literal
 from orchestrator.cli import run_viana, start_viana_process
 from orchestrator.errors import bad_request, conflict, not_found
 from orchestrator.hub import hub
+from orchestrator.intake_paths import IntakePathError, resolve_intake_path, resolve_intake_paths
 from orchestrator.logging_config import get_logger
 from orchestrator.models import (
     JobProgress,
@@ -189,10 +190,21 @@ class WorkerPool:
 
     def intake(self, body: JobIntakeRequest) -> JobIntakeResponse:
         """Register one job per video path at ``PRESCAN_PENDING`` (Step 3 runs prescan)."""
+        try:
+            source_paths = resolve_intake_paths(body.source_video_paths)
+        except IntakePathError as exc:
+            bad_request(str(exc))
+        rewritten = [
+            {"from": str(original), "to": str(normalized)}
+            for original, normalized in zip(body.source_video_paths, source_paths, strict=True)
+            if Path(original) != normalized
+        ]
+        if rewritten:
+            logger.info("intake_paths_normalized", mappings=rewritten, project_id=body.project_id)
         output_dir = resolve_output_dir(body.project_id, body.output_dir)
         items: list[JobIntakeItem] = []
         with self._lock:
-            for path in body.source_video_paths:
+            for path in source_paths:
                 job_id = f"job_{uuid.uuid4().hex[:12]}"
                 job = JobRecord(
                     job_id=job_id,
@@ -316,8 +328,12 @@ class WorkerPool:
 
     def submit(self, body: JobSubmitRequest) -> JobSubmitResponse:
         """Accept POST /jobs: assign ids, 409 on silent resume, enqueue or start."""
+        try:
+            source_video_path = resolve_intake_path(body.source_video_path)
+        except IntakePathError as exc:
+            bad_request(str(exc))
         output_dir = resolve_output_dir(body.project_id, body.output_dir)
-        stem = body.source_video_path.stem
+        stem = source_video_path.stem
         ckpt_path = artifact_paths(output_dir, stem)["checkpoint"]
         if ckpt_path.is_file() and not body.resume and not body.start_fresh:
             conflict(CHECKPOINT_CONFLICT)
@@ -326,11 +342,13 @@ class WorkerPool:
 
         job_id = f"job_{uuid.uuid4().hex[:12]}"
         command: CommandKind = "resume" if body.resume else "run"
-        submit_body = body.model_copy(update={"output_dir": output_dir})
+        submit_body = body.model_copy(
+            update={"output_dir": output_dir, "source_video_path": source_video_path}
+        )
         job = JobRecord(
             job_id=job_id,
             status="READY",
-            source_video_path=body.source_video_path,
+            source_video_path=source_video_path,
             project_id=body.project_id,
             output_dir=output_dir,
             submit=submit_body,

@@ -74,5 +74,4 @@ Interpretation:
 
 ## Follow-up
 
-- Keep Step 6.7 open for intake path validation + host/container mapping UX.
-- Optional additional QA pass after 6.7: verify same negative-path request is rejected earlier with clearer operator guidance.
+- Step 6.7 (2026-08-21): `POST /jobs/intake` now rewrites host `…/data/raw/…` onto `/data/raw/…` when compose maps are present, and **400**s unmapped host paths instead of `PRESCAN_FAILED` / `Video not found`. Re-run the §5.2 payload after recreating `viana_core` to confirm 201+`/data/raw/…` or 400 with bind-mount guidance.

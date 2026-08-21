@@ -9,6 +9,25 @@ from typing import Any
 import structlog
 
 
+def redact_pii_processor(
+    _logger: logging.Logger, _name: str, event_dict: dict[str, Any]
+) -> dict[str, Any]:
+    """Scrub sensitive PII fields (like location) from logs."""
+    sensitive_keys = {"location", "user_start_time", "user_start_date"}
+
+    def _redact(data: Any) -> Any:
+        if isinstance(data, dict):
+            return {
+                k: "***REDACTED***" if k in sensitive_keys else _redact(v)
+                for k, v in data.items()
+            }
+        elif isinstance(data, list):
+            return [_redact(item) for item in data]
+        return data
+
+    return _redact(event_dict)  # type: ignore[no-any-return]
+
+
 def configure_logging(*, json_logs: bool = False) -> None:
     """Configure structlog for development (console) or production (JSON).
 
@@ -18,6 +37,7 @@ def configure_logging(*, json_logs: bool = False) -> None:
     shared_processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
+        redact_pii_processor,
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),

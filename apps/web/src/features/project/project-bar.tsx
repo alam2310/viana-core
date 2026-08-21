@@ -26,7 +26,7 @@ export function ProjectBar({
 }) {
   const selected = TASK_TYPE_OPTIONS.find((opt) => opt.id === taskType);
   const fieldClass =
-    "mt-1 w-full rounded border border-input bg-card px-2 py-1.5 text-sm text-foreground";
+    "mt-1 w-full rounded border border-input bg-card px-2 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border";
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -69,7 +69,7 @@ export function ProjectBar({
           Output Directory
           <div className="mt-1 flex gap-2">
             <input
-              className="min-w-0 flex-1 rounded border border-input bg-card px-2 py-1.5 font-mono text-xs text-foreground"
+              className="min-w-0 flex-1 rounded border border-input bg-card px-2 py-1.5 font-mono text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
               placeholder="/data/viana-outputs"
               value={outputDir}
               onChange={(event) => onOutputDir(event.target.value)}

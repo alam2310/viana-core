@@ -99,10 +99,33 @@ class WorkerPool:
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
+        self._status_cv = threading.Condition(self._lock)
         self._jobs: dict[str, JobRecord] = {}
         self._queue: list[str] = []
         self._prescan_queue: list[str] = []
         self._threads: list[threading.Thread] = []
+        self._occupied_gpus: set[str] = set()
+        self._running_prescans: int = 0
+
+    def _set_job_status(self, job: JobRecord, new_status: JobStatusLiteral) -> None:
+        """Update status and occupancy caches under ``_lock``; wake status waiters."""
+        with self._status_cv:
+            old_status = job.status
+            if old_status == new_status:
+                return
+
+            if old_status == "PRESCAN_RUNNING":
+                self._running_prescans -= 1
+            if new_status == "PRESCAN_RUNNING":
+                self._running_prescans += 1
+
+            if old_status == "PROCESSING" and job.gpu_device is not None:
+                self._occupied_gpus.discard(job.gpu_device)
+            if new_status == "PROCESSING" and job.gpu_device is not None:
+                self._occupied_gpus.add(job.gpu_device)
+
+            job.status = new_status
+            self._status_cv.notify_all()
 
     def occupied_gpus(self) -> set[str]:
         """Return GPU ids currently running a PROCESSING job."""
@@ -250,7 +273,7 @@ class WorkerPool:
             task_parameters=body.task_parameters,
             calibration_profile_id=body.calibration_profile_id,
         )
-        job.status = "READY"
+        self._set_job_status(job, "READY")
         job.error_message = None
         with self._lock:
             if job.job_id in self._prescan_queue:
@@ -268,7 +291,7 @@ class WorkerPool:
         job = self.get_job(job_id)
         if job.status != "PRESCAN_FAILED":
             bad_request(f"job status {job.status} cannot retry prescan")
-        job.status = "PRESCAN_PENDING"
+        self._set_job_status(job, "PRESCAN_PENDING")
         job.error_message = None
         with self._lock:
             if job.job_id not in self._prescan_queue:
@@ -315,7 +338,7 @@ class WorkerPool:
         job = self.get_job(job_id)
         if job.status not in {"PRESCAN_PENDING", "PRESCAN_RUNNING", "PRESCAN_FAILED"}:
             bad_request(f"job status {job.status} cannot enter AWAITING_REVIEW")
-        job.status = "AWAITING_REVIEW"
+        self._set_job_status(job, "AWAITING_REVIEW")
         job.proposed_metadata = proposed_metadata
         job.proposed_lines = proposed_lines
         job.proposed_preview_url = proposed_preview_url
@@ -389,7 +412,7 @@ class WorkerPool:
             not_found(f"checkpoint not found: {ckpt_path}")
         job.submit = job.submit.model_copy(update={"resume": True, "start_fresh": False})
         job.command = "resume"
-        job.status = "READY"
+        self._set_job_status(job, "READY")
         job.error_message = None
         job.processing_ended_monotonic = None
         with self._lock:
@@ -408,7 +431,7 @@ class WorkerPool:
             bad_request("job has no submit payload; confirm prescan first")
         job.submit = job.submit.model_copy(update={"resume": False, "start_fresh": True})
         job.command = "run"
-        job.status = "READY"
+        self._set_job_status(job, "READY")
         job.error_message = None
         job.processing_started_monotonic = None
         job.processing_ended_monotonic = None
@@ -444,7 +467,7 @@ class WorkerPool:
             was_processing = job.status == "PROCESSING"
             was_prescan = job.status in PRESCAN_PHASE_STATUSES
             proc = job.process
-            job.status = "CANCELLED"
+            self._set_job_status(job, "CANCELLED")
             job.queue_position = 0
             if was_processing:
                 _release_gpu_slot(job)
@@ -467,30 +490,36 @@ class WorkerPool:
 
     def wait_job(self, job_id: str, timeout: float = 5.0) -> JobRecord:
         """Block until a job leaves READY/PROCESSING (tests)."""
-        import time
-
-        job = self.get_job(job_id)
         end = time.time() + timeout
-        while time.time() < end:
-            if job.status not in {"READY", "PROCESSING"}:
-                return job
-            time.sleep(0.02)
-        return job
+        with self._status_cv:
+            while True:
+                job = self._jobs.get(job_id)
+                if job is None:
+                    not_found(f"job not found: {job_id}")
+                if job.status not in {"READY", "PROCESSING"}:
+                    return job
+                remaining = end - time.time()
+                if remaining <= 0:
+                    return job
+                self._status_cv.wait(timeout=remaining)
 
     def wait_for_status(
         self, job_id: str, *statuses: JobStatusLiteral, timeout: float = 5.0
     ) -> JobRecord:
         """Block until job reaches one of ``statuses`` (tests)."""
-        import time
-
         targets = set(statuses)
-        job = self.get_job(job_id)
         end = time.time() + timeout
-        while time.time() < end:
-            if job.status in targets:
-                return job
-            time.sleep(0.02)
-        return job
+        with self._status_cv:
+            while True:
+                job = self._jobs.get(job_id)
+                if job is None:
+                    not_found(f"job not found: {job_id}")
+                if job.status in targets:
+                    return job
+                remaining = end - time.time()
+                if remaining <= 0:
+                    return job
+                self._status_cv.wait(timeout=remaining)
 
     def _refresh_prescan_queue_positions(self) -> None:
         """Set 1-based prescan queue index for PRESCAN_PENDING rows."""
@@ -509,11 +538,7 @@ class WorkerPool:
 
     def _occupied_gpu_ids(self) -> set[str]:
         """GPU ids held by PROCESSING jobs. Caller must hold ``_lock``."""
-        return {
-            job.gpu_device
-            for job in self._jobs.values()
-            if job.status == "PROCESSING" and job.gpu_device is not None
-        }
+        return set(self._occupied_gpus)
 
     def _pop_next_ready_locked(self) -> JobRecord | None:
         """Pop the FIFO READY head, skipping stale queue entries. Caller holds lock."""
@@ -525,14 +550,13 @@ class WorkerPool:
                 continue
             self._queue.pop(0)
             return job
-        self._refresh_queue_positions()
         return None
 
     def _fail_spawn(self, job: JobRecord, exc: BaseException) -> None:
         """Mark a PROCESSING job FAILED after spawn errors so the GPU is freed."""
         with self._lock:
             if job.status == "PROCESSING":
-                job.status = "FAILED"
+                self._set_job_status(job, "FAILED")
                 job.error_message = str(exc)
             _release_gpu_slot(job)
         logger.error("viana_spawn_failed", job_id=job.job_id, error=str(exc))
@@ -543,17 +567,18 @@ class WorkerPool:
             with self._lock:
                 device = self.assign_gpu(self._occupied_gpu_ids())
                 if device is None:
+                    self._refresh_queue_positions()
                     return
                 job = self._pop_next_ready_locked()
                 if job is None:
+                    self._refresh_queue_positions()
                     return
                 job.gpu_device = device
-                job.status = "PROCESSING"
+                self._set_job_status(job, "PROCESSING")
                 if job.processing_started_monotonic is None:
                     job.processing_started_monotonic = time.monotonic()
                     job.processing_ended_monotonic = None
                 job.queue_position = 0
-                self._refresh_queue_positions()
             try:
                 self._spawn(job)
             except (OSError, ValueError, RuntimeError) as exc:
@@ -561,20 +586,21 @@ class WorkerPool:
 
     def _drain_prescan(self) -> None:
         """Start PRESCAN_PENDING jobs up to ``MAX_CONCURRENT_PRESCAN_JOBS``."""
-        while True:
-            with self._lock:
-                running = sum(1 for job in self._jobs.values() if job.status == "PRESCAN_RUNNING")
-                if running >= MAX_CONCURRENT_PRESCAN_JOBS:
-                    return
-                job_id: str | None = None
-                for queued_id in self._prescan_queue:
-                    queued = self._jobs.get(queued_id)
-                    if queued is not None and queued.status == "PRESCAN_PENDING":
-                        job_id = queued_id
-                        queued.status = "PRESCAN_RUNNING"
+        with self._lock:
+            available = MAX_CONCURRENT_PRESCAN_JOBS - self._running_prescans
+            if available <= 0:
+                return
+            jobs_to_start: list[str] = []
+            for queued_id in self._prescan_queue:
+                queued = self._jobs.get(queued_id)
+                if queued is not None and queued.status == "PRESCAN_PENDING":
+                    jobs_to_start.append(queued_id)
+                    self._set_job_status(queued, "PRESCAN_RUNNING")
+                    if len(jobs_to_start) >= available:
                         break
-                if job_id is None:
-                    return
+            if not jobs_to_start:
+                return
+        for job_id in jobs_to_start:
             thread = threading.Thread(target=self._run_prescan, args=(job_id,), daemon=True)
             thread.start()
             self._track_thread(thread)
@@ -605,26 +631,26 @@ class WorkerPool:
             if job.status != "PRESCAN_RUNNING":
                 return
             if result.returncode != 0:
-                job.status = "PRESCAN_FAILED"
+                self._set_job_status(job, "PRESCAN_FAILED")
                 job.error_message = (
                     result.stderr.strip() or result.stdout.strip() or "prescan failed"
                 )
                 return
             payload = json.loads(result.stdout)
             if not isinstance(payload, dict):
-                job.status = "PRESCAN_FAILED"
+                self._set_job_status(job, "PRESCAN_FAILED")
                 job.error_message = "prescan stdout was not a JSON object"
                 return
             _apply_prescan_payload(job, payload)
-            job.status = "AWAITING_REVIEW"
+            self._set_job_status(job, "AWAITING_REVIEW")
             job.error_message = None
         except TimeoutExpired:
             if job.status == "PRESCAN_RUNNING":
-                job.status = "PRESCAN_FAILED"
+                self._set_job_status(job, "PRESCAN_FAILED")
                 job.error_message = "prescan timed out"
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             if job.status == "PRESCAN_RUNNING":
-                job.status = "PRESCAN_FAILED"
+                self._set_job_status(job, "PRESCAN_FAILED")
                 job.error_message = str(exc)
         finally:
             with self._lock:
@@ -728,7 +754,7 @@ class WorkerPool:
         if proc is None:
             with self._lock:
                 if job is not None and job.status == "PROCESSING":
-                    job.status = "FAILED"
+                    self._set_job_status(job, "FAILED")
                     job.error_message = job.error_message or "worker process missing"
                     _release_gpu_slot(job)
             self._drain()
@@ -749,7 +775,7 @@ class WorkerPool:
                 current = self._jobs.get(job_id)
                 if current is not None:
                     if current.status != "CANCELLED":
-                        current.status = "FAILED"
+                        self._set_job_status(current, "FAILED")
                         current.error_message = str(exc)
                     _release_gpu_slot(current)
         finally:
@@ -799,7 +825,7 @@ class WorkerPool:
             if result is not None:
                 status = result.get("status")
                 if status in {"COMPLETED", "FAILED", "CANCELLED"}:
-                    job.status = status
+                    self._set_job_status(job, status)
                     err = result.get("error_message")
                     job.error_message = err if isinstance(err, str) else None
                     if status == "COMPLETED":
@@ -813,15 +839,15 @@ class WorkerPool:
                         except (OSError, ValueError):
                             checkpoint = None
                         if checkpoint is not None and not checkpoint.is_complete():
-                            job.status = "PAUSED"
+                            self._set_job_status(job, "PAUSED")
                             job.error_message = "worker cancelled"
                             _release_gpu_slot(job)
                             return
-                    job.status = "CANCELLED"
+                    self._set_job_status(job, "CANCELLED")
                     _release_gpu_slot(job)
                     return
                 if returncode != 0:
-                    job.status = "FAILED"
+                    self._set_job_status(job, "FAILED")
                     job.error_message = stdout.strip() or f"viana exited {returncode}"
                     if ckpt_path.is_file():
                         try:
@@ -829,10 +855,10 @@ class WorkerPool:
                         except (OSError, ValueError):
                             checkpoint = None
                         if checkpoint is not None and not checkpoint.is_complete():
-                            job.status = "PAUSED"
+                            self._set_job_status(job, "PAUSED")
                     _release_gpu_slot(job)
                     return
-                job.status = "COMPLETED"
+                self._set_job_status(job, "COMPLETED")
                 aggregate_target = job
             _release_gpu_slot(job)
         if aggregate_target is not None:

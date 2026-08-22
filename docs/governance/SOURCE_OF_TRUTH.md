@@ -24,6 +24,8 @@ When two documents disagree, **this table wins**.
 | **Environment setup** | `docs/ops/ENVIRONMENT_SETUP.md` | From-scratch Docker/GPU |
 | **Historical research** | `docs/archive/ITVA_RESEARCH_LOG.md` | **Not** current status |
 | **Parked ideas (manual review)** | `docs/steps/IDEA_DUMP.md` | **Not** a work queue; agents ignore unless user names an idea ID |
+| **Current Step / Step checklist** | `docs/steps/TRACKER.md` | Mirror only; keep Seq table synced with backlog |
+| **Stabilization Seq status** | `docs/steps/STABILIZATION_BACKLOG.md` | SoT for open/fixed/parked Seq |
 | **Architecture decisions** | `docs/adr/*.md` | |
 | **Production model weights** | `models/v1/itva_medium_1088p.pt` | |
 | **Pedestrian weights** | `models/pretrained/yolo11l.pt` | |

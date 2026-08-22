@@ -69,15 +69,14 @@
 
 ---
 
-## Stabilization (Step 4 → Step 5 gate)
+## Stabilization (Step 4 → Step 5 gate; polish continues in Step 6)
 
-If Step 4 UI is built but prescan/queue is not ready for E2E:
+Step **5 is complete**. Remaining open Seq rows are **polish** during Step 6.
 
-1. Follow **Execution path** [`STABILIZATION_BACKLOG.md` § S01–S08, S10](STABILIZATION_BACKLOG.md#execution-path) in order (respect **Depends**).
+1. Follow **Execution path** in [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md#execution-path) (respect **Depends**). SoT for Seq status is the backlog, not chat memory.
 2. Log new issues: add **Seq** + **ID** rows per [`STABILIZATION.md`](STABILIZATION.md).
-3. Do **not** start Step 5 until **S07** (F001 blocker) is `fixed` or `deferred`.
-4. Lane A: S03–S05. Lane B: S01–S02. Lane C: S06–S08, S10. (S09 → Step 6.7.)
-5. Planning chat assigns the next open Seq to a patch chat.
+3. Historical gate: Step 5 required **S07** (F001) `fixed` or `deferred` — done.
+4. Assign next open Seq to a lane chat (A UI / B API / C engine / D contract).
 
 ---
 
@@ -111,7 +110,7 @@ Update tracker after **each** sub-step 4.1–4.5.
 
 ## On completing Step 6 — Hardening (per item)
 
-Per item **6.1–6.10** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferred.
+Per item **6.1–6.11** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferred.
 
 ---
 

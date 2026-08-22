@@ -54,3 +54,18 @@ def test_checkpoint_rejects_frame_past_total() -> None:
             total_frames=10,
             saved_at=utc_now_iso(),
         )
+
+
+def test_load_checkpoint_invalid_json_type(tmp_path: Path) -> None:
+    """ValueError is raised if JSON root is not a dict."""
+    path = tmp_path / "invalid.checkpoint.json"
+    path.write_text("[]", encoding="utf-8")
+    with pytest.raises(ValueError, match=f"Expected a JSON object in {path}"):
+        load_checkpoint(path)
+
+
+def test_load_checkpoint_file_not_found(tmp_path: Path) -> None:
+    """load_checkpoint raises FileNotFoundError if path does not exist."""
+    missing_path = tmp_path / "does_not_exist.json"
+    with pytest.raises(FileNotFoundError, match="Checkpoint not found: "):
+        load_checkpoint(missing_path)

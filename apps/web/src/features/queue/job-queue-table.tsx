@@ -326,7 +326,7 @@ export function JobQueueTable({
         <label className="inline-flex items-center gap-2">
           <span className="whitespace-nowrap">Rows per page</span>
           <select
-            className="h-7 rounded border border-input bg-card px-2 text-xs text-foreground"
+            className="h-7 rounded border border-input bg-card px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
             value={pageSizeLabel(pageSize)}
             aria-label="Rows per page"
             onChange={(event) => {
@@ -354,7 +354,7 @@ export function JobQueueTable({
         <nav className="inline-flex items-center gap-1" aria-label="Job queue pages">
           <button
             type="button"
-            className="inline-flex h-7 min-w-7 items-center justify-center rounded border border-border px-2 text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-7 min-w-7 items-center justify-center rounded border border-border px-2 text-foreground disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
             aria-label="Previous page"
             disabled={safePage <= 1 || sorted.length === 0}
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
@@ -375,7 +375,7 @@ export function JobQueueTable({
                 key={item}
                 type="button"
                 className={cn(
-                  "inline-flex h-7 min-w-7 items-center justify-center rounded border px-2 tabular-nums",
+                  "inline-flex h-7 min-w-7 items-center justify-center rounded border px-2 tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border",
                   item === safePage
                     ? "border-foreground/30 bg-accent font-medium text-foreground"
                     : "border-border text-foreground hover:bg-card-hover",
@@ -391,7 +391,7 @@ export function JobQueueTable({
           )}
           <button
             type="button"
-            className="inline-flex h-7 min-w-7 items-center justify-center rounded border border-border px-2 text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-7 min-w-7 items-center justify-center rounded border border-border px-2 text-foreground disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
             aria-label="Next page"
             disabled={safePage >= totalPages || sorted.length === 0}
             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}

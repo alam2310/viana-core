@@ -212,7 +212,7 @@ export function PathBrowser({
         {showNewDir && purpose === "output_dir" ? (
           <div className="mx-5 mt-3 flex gap-2">
             <input
-              className="min-w-0 flex-1 rounded border border-input bg-card px-2 py-1 font-mono text-xs text-foreground"
+              className="min-w-0 flex-1 rounded border border-input bg-card px-2 py-1 font-mono text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
               placeholder="folder-name"
               value={newDirName}
               onChange={(event) => setNewDirName(event.target.value)}

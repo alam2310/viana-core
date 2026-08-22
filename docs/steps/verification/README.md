@@ -2,6 +2,6 @@
 
 | File | Step | Description |
 |------|------|-------------|
-| _(none yet)_ | 5 | Add `5_15min_results.md` after Step 5 |
+| [`5_15min_results.md`](5_15min_results.md) | 5 | Intake → COMPLETED + `_15min.csv` evidence (2026-08-19) |
 
 **Naming:** `{step}_{short_name}.md`

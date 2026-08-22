@@ -28,7 +28,7 @@ def resolve_preview_path(prescan_id: str) -> Path | None:
             return resolved
     root = output_parent().resolve()
     if root.is_dir():
-        for candidate in root.rglob(f"{prescan_id}_preview.jpg"):
+        for candidate in root.glob(f"*/prescan/{prescan_id}_preview.jpg"):
             if candidate.is_file():
                 register_preview(prescan_id, candidate)
                 resolved = candidate.resolve()

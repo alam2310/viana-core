@@ -59,6 +59,25 @@ def test_standalone_pedestrian_kept() -> None:
     assert ids == [0, 11]
 
 
+def test_roadside_pedestrian_not_suppressed_by_vehicle_nms() -> None:
+    """Person beside a car (high IoU, low IOA) must still count as Pedestrian.
+
+    Joint class-agnostic NMS would keep only the higher-confidence vehicle.
+    """
+    # Compact vehicle box overlapping the upper body of a taller person box.
+    vehicle = _box(30, 40, 90, 100, class_id=0, conf=0.95)
+    person = _box(20, 20, 100, 180, class_id=0, conf=0.85)
+    merged = merge_detections(
+        [vehicle],
+        [person],
+        suppression_ioa=0.3,
+        nms_threshold=0.25,
+        confidence_threshold=0.75,
+    )
+    ids = sorted(item.class_id for item in merged)
+    assert ids == [0, 11]
+
+
 def test_coco_non_person_not_mapped_to_pedestrian() -> None:
     """YOLO11 bicycle/car ids must not become Pedestrian taxonomy rows."""
     bike = _box(80, 80, 100, 140, class_id=1, conf=0.9)

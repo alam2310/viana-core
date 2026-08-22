@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pathlib
 from uuid import uuid4
 
 import pytest
@@ -19,6 +20,12 @@ from viana.io.csv_schema import (
     load_json_schema,
     validate_csv_header,
 )
+
+
+def test_load_json_schema_not_found() -> None:
+    """Loading a non-existent schema raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError, match="Schema not found:"):
+        load_json_schema("nonexistent_schema_that_does_not_exist.json")
 
 
 def test_raw_event_fields_match_schema() -> None:
@@ -97,3 +104,33 @@ def test_aggregate_row_count_non_negative() -> None:
             count=-1,
             partial=False,
         )
+
+
+def test_csv_columns_from_schema_missing_properties() -> None:
+    """Error raised when schema has missing or invalid properties."""
+    with pytest.raises(ValueError, match="schema has no properties"):
+        csv_columns_from_schema({})
+
+    with pytest.raises(ValueError, match="schema has no properties"):
+        csv_columns_from_schema({"properties": {}})
+
+    with pytest.raises(ValueError, match="schema has no properties"):
+        csv_columns_from_schema({"properties": None})
+
+    with pytest.raises(ValueError, match="schema has no properties"):
+        csv_columns_from_schema({"properties": "not a dict"})
+
+
+def test_load_json_schema_not_dict(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
+    """Loading a JSON array raises ValueError instead of crashing on dict ops."""
+
+    def mock_dir() -> pathlib.Path:
+        return tmp_path
+
+    monkeypatch.setattr("viana.io.csv_schema.contracts_schemas_dir", mock_dir)
+
+    bad_schema = tmp_path / "bad.schema.json"
+    bad_schema.write_text("[]", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Expected a JSON object in"):
+        load_json_schema("bad.schema.json")

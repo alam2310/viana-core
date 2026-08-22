@@ -1,21 +1,21 @@
 # Stabilization backlog (living)
 
 **Rules:** [`STABILIZATION.md`](STABILIZATION.md)  
-**Step 5 blocked while any blocker row is `open` or `in_progress`.**
+**Step 5:** Complete (no open blockers). New defects during Step 6 are polish unless explicitly marked blocker.
 
 > **Follow [`Execution path`](#execution-path) in Seq order.** One row = one unit of work. Do not skip ahead unless a dependency is `fixed` / `deferred`.
 
-**Last updated:** 2026-08-21
+**Last updated:** 2026-08-22
 
 ---
 
 ## Summary
 
-| Blockers open | Blockers fixed | Polish open | Path steps done |
-|---------------|----------------|-------------|-----------------|
-| 0 | 1 | 4 | 26 / 30 active |
+| Blockers open | Blockers fixed | Polish open | Parked | Path done (fixed + parked) |
+|---------------|----------------|-------------|---------|----------------------------|
+| 0 | 1 (S07) | 5 (S29–S33) | 2 (S20, S24) | **27 / 32** active |
 
-**S09 (F006) closed in Step 6.7.** **Not counted** in path progress.
+**Counts:** Active Seq = S01–S08 + S10–S33 (**32**). **S09** closed in Step 6.7 — not counted. Step 5 is complete; remaining open rows are Step 6 polish.
 
 ---
 
@@ -56,9 +56,10 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S30** | F025 | A/B | no | — | UI API 502 (`fetch failed`) when restarting/resuming a job from the queue | open |
 | **S31** | F026 | A | no | — | Prescan review: remove duplicate Close; rename Submit → Confirm | open |
 | **S32** | F027 | C/D | no | — | Relook raw events + 15-min CSV schemas — keep only necessary columns | open |
+| **S33** | F028 | C | no | — | Pedestrian crossings missing from `_15min.csv` aggregated counts | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **fixed → Step 6.7** |
 
-**After S07 is `fixed` or `deferred` (approved):** Step 5 may start. S08 and S10 are polish (may continue in parallel or after Step 5).
+**Step 5:** Complete (S07 fixed). Continue open Seq (**S29–S33**) as Step 6 polish; respect **Depends**.
 
 ---
 
@@ -97,6 +98,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S30** | 1. From Job Queue, restart/resume a paused or failed job (UI Start Fresh / Resume) 2. Watch dashboard refresh | **Expected:** action succeeds or returns a clear API error; `GET /jobs` polling keeps working. **Actual:** Next.js throws `ApiClientError` **API 502: fetch failed** from `parseJson` → `Dashboard.refreshJobs` (`api-client.ts:166`). May be API down / proxy / EMFILE recurrence (S22) — triage required (see F025). | `dashboard.tsx` `onResume`/`onStartFresh` + `refreshJobs`; orchestrator resume/start-fresh; container logs | — | Step 4 / hardening UI chat |
 | **S31** | 1. Open prescan review modal 2. Inspect header Close vs footer Cancel 3. Inspect primary footer button label | **Expected:** one dismiss control; primary action reads **Confirm**. **Actual:** header **Close** duplicates footer **Cancel**; primary button says **Submit**. | `apps/web/src/features/prescan/prescan-review-modal.tsx` | — | Step 4 / hardening UI chat |
 | **S32** | 1. Inspect `{stem}_events.csv` and `{stem}_15min.csv` headers after a COMPLETED run 2. Cross-check `events_raw` / `events_15min` schemas + writers/parsers | **Expected:** CSV columns match operator/report needs only; no redundant or unused fields. **Actual:** schemas carry a wide column set (class taxonomy duplicates, debug anchors, etc.) — relook and trim to necessary (see F027). Contract-first if columns change. | `packages/contracts/schemas/events_raw.schema.json`, `events_15min.schema.json`; `csv_schema.py` / aggregate / UI parsers | — | Step 4 / hardening UI chat |
+| **S33** | 1. Complete a job with Pedestrian crossings in `_events.csv` 2. Open `{stem}_15min.csv` 3. Search for Pedestrian / class counts | **Expected:** 15-min aggregate includes Pedestrian counts (in/out) like other counted classes. **Actual:** Pedestrian rows are absent from `_15min.csv` even when present in raw events (see F028 — `aggregate: false` in taxonomy). | `configs/classes.yaml` (`Pedestrian.aggregate`); `aggregate.py` `taxonomy.aggregatable()`; tests | — | Step 4 / hardening UI chat |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine · `D` contract · `TBD`
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `parked` · `wontfix`  
@@ -384,10 +386,28 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 ---
 
+## F028 design note (Pedestrian missing from `_15min.csv`)
+
+**Observed:** Pedestrian crossings appear in raw `_events.csv` (when detected) but are not present in `{stem}_15min.csv` aggregated counts.
+
+**Likely cause (by design today):** `configs/classes.yaml` sets `Pedestrian.aggregate: false`. `build_aggregate_rows` only grids `taxonomy.aggregatable()` — so Pedestrian is filtered out of the zero-filled 15-min report. Schema text also says “vehicle classes only.”
+
+**Fix path (confirm product intent first):**
+1. Set `Pedestrian.aggregate: true` (and document that `_15min` is vehicles **+** pedestrians).
+2. Add/adjust aggregate tests so Pedestrian in/out windows appear (including zero-fill).
+3. Re-run aggregate on a clip with known pedestrian events; verify counts match raw events.
+4. Coordinate with F027 if class taxonomy columns are being trimmed at the same time.
+
+**Scope:** Lane C (`classes.yaml` + `aggregate.py` / tests). No Step 5 blocker.
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | Summary counts corrected: **27/32** done (fixed+parked), **5** open (S29–S33); Step 5 complete note |
+| 2026-08-21 | Added **S33 (F028)** Pedestrian missing from `_15min.csv` (taxonomy `aggregate: false`) |
 | 2026-08-21 | **S09 (F006) fixed via Step 6.7** — intake/submit rewrite host paths onto `/data` and `/app/ViAna` or 400; extra mounts via `VIANA_INTAKE_ROOTS` + `VIANA_PATH_MAPS` |
 | 2026-08-21 | Added **S32 (F027)** relook raw events + 15-min CSV schemas — keep only necessary columns |
 | 2026-08-21 | **S25 (F020) + S26 (F021) fixed:** queue labels `Queued (PS)` / `Queued (GPU)`; actions Review → Restart (Overwrite) → Stop; Open output only on `COMPLETED` |

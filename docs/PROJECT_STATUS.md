@@ -42,7 +42,7 @@
 
 **Parked / remaining Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md). Open Seq: [`STABILIZATION_BACKLOG.md`](steps/STABILIZATION_BACKLOG.md) (**S29, S32**).
 
-**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. Promoted: I001→**6.8**, I003→**6.9**, I002→**6.10**, I006→**6.11**. Dump only: I004 (demoted), I005 (soft subs).
+**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. Promoted & done: I001→**6.8**, I003→**6.9**, I002→**6.10**, I006→**6.11**. Dump only: I004 (demoted), I005 (soft subs).
 
 ---
 
@@ -58,7 +58,7 @@
 | Item | Notes |
 |------|--------|
 | 6.2 Pause / resume / PAUSED UX | After S30; needs checkpoint path |
-| 6.4 Browser / Playwright | After S31/6.11 |
+| 6.4 Browser / Playwright | After S31/6.11 (both done) |
 | 6.5 Extra camera clip | Beyond `hiv000001` |
 | 6.6 GPU tests in CI | No GPU in GitHub Actions |
 

@@ -1,7 +1,7 @@
 # Idea dump (manual review only)
 
 **Status:** parking lot — **not** a work queue  
-**Last updated:** 2026-08-21 (I006 promoted → 6.11)  
+**Last updated:** 2026-08-22 (I006 / 6.11 complete)  
 **Owner:** human (this chat / later review)
 
 > **Agents: do not implement, prioritize, or start a Step/Seq from this file.**  
@@ -33,14 +33,14 @@ This file exists so active coding sessions stay on the current Step. Come back h
 
 ### Review ranking (2026-08-21)
 
-Human review of I001–I006. **Agents: implement only promoted Step 6 items** (`6.8`–`6.11`), not remaining dump rows.
+Human review of I001–I006. Promoted Step items **6.8–6.11 are all ✅ complete**. Remaining dump rows (**I004**, **I005**) are not work until re-promoted.
 
 | Rank | ID | Decision |
 |------|----|----------|
-| 1 | **I001** | **Promoted** → Step **6.8** (UI) |
-| 2 | **I003** | **Promoted** → Step **6.9** (engine) |
-| 3 | **I002** | **Promoted** → Step **6.10** (UI) — `crossing_count` already on JobStatus and WS PROGRESS |
-| 4 | **I006** | **Promoted** → Step **6.11** (UI) — prescan `render_video` toggle; existing API field |
+| 1 | **I001** | **Promoted** → Step **6.8** (UI) — ✅ done |
+| 2 | **I003** | **Promoted** → Step **6.9** (engine) — ✅ done |
+| 3 | **I002** | **Promoted** → Step **6.10** (UI) — ✅ done |
+| 4 | **I006** | **Promoted** → Step **6.11** (UI) — ✅ done (`render_video` toggle) |
 | 5 | **I005** | Stay in dump — mux soft event subs into `_processed.mp4` (direction set) |
 | 6 | **I004** | **Demoted** — later / aesthetics. Do not start from this dump. |
 
@@ -91,11 +91,13 @@ Human review of I001–I006. **Agents: implement only promoted Step 6 items** (`
 
 **Conclusion (2026-08-21):** Prefer soft subtitles as an **event log**, not on-box burn-in or ASS spatial cues. After the job completes, **post-process** `_events.csv` → SRT/WebVTT cues (`video_pts_ms`, class, direction, wall time), then **mux** that track into `_processed.mp4` so operators get a **single file** (FFmpeg stream copy for video; no re-encode). Performance and size impact stay near zero. Skip mid-run mux on fragmented growing MP4. Burn-in / client overlay remain out of scope unless re-promoted later (I004 for in-app playback).
 
-### I006 — Render-video flag in prescan review (promoted → 6.11)
+### I006 — Render-video flag in prescan review (promoted → 6.11 — ✅ complete)
 
 **Dump:** Implement a video rendering flag in prescan review and pass it through the API on job submission. Expect performance to improve when output video file writing is disabled.
 
-**Suggested impact: high.** `_processed.mp4` encode/write is a major cost beside detect/track. Contract and engine already have `task_parameters.render_video` (default `true`; false → no-op renderer in `process`/`render`). Gap is **UI**: prescan confirm currently sends `render_video: true` fixed. Add a clear toggle in the review modal, include the value on `PATCH` confirm / submit, and surface the choice on job details. No new schema field. When false: no processed MP4 artifact (I004/I005 N/A for that job); CSV/events still produce. Optional: measure before/after wall time on a known clip (S23 style).
+**Suggested impact: high.** `_processed.mp4` encode/write is a major cost beside detect/track. Contract and engine already have `task_parameters.render_video` (default `true`; false → no-op renderer in `process`/`render`). Gap was **UI**: prescan confirm sent `render_video: true` fixed.
+
+**Done (2026-08-22, Step 6.11 / S31):** Toggle in `prescan-review-modal.tsx` (default true); value on `PATCH /jobs/{id}/prescan` `task_parameters.render_video`. No schema change. Verified `test_video` with false → COMPLETED, no `_processed.mp4`.
 
 ---
 
@@ -106,7 +108,7 @@ Human review of I001–I006. **Agents: implement only promoted Step 6 items** (`
 | I001 | 2026-08-21 | **promoted** → **6.8** | Remove Live Monitor widget; Live Crossings in job details; row click opens details. |
 | I002 | 2026-08-21 | **promoted** → **6.10** | Bind UI count to existing `crossing_count` (JobStatus / WS PROGRESS). No new API field. |
 | I003 | 2026-08-21 | **promoted** → **6.9** | No in-process OSD OCR; lock clock/location to confirmed prescan. |
-| I006 | 2026-08-21 | **promoted** → **6.11** | Prescan-review `render_video` toggle; pass existing confirm/submit field (no new schema). |
+| I006 | 2026-08-21 | **promoted** → **6.11** | Prescan-review `render_video` toggle; pass existing confirm/submit field (no new schema). **Implemented 2026-08-22.** |
 
 ---
 
@@ -114,6 +116,7 @@ Human review of I001–I006. **Agents: implement only promoted Step 6 items** (`
 
 | Date | Note |
 |------|------|
+| 2026-08-22 | **I006 / 6.11 complete** — prescan `render_video` toggle (default true); Confirm/Confirming…; `test_video` false skips `_processed.mp4`. |
 | 2026-08-21 | **6.9 implemented** — process loop no longer OCR-rescans; clock/location locked to confirmed prescan/user metadata; S23 before/after documented. |
 | 2026-08-22 | I004 note: 6.8 job details exist; still demoted until re-promoted |
 | 2026-08-21 | File created. Manual-review parking lot; agents must not self-assign. |

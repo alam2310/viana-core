@@ -493,12 +493,6 @@ export function Dashboard() {
           job={selectedJob}
           mountConfig={mountConfig}
           messages={telemetry}
-          busy={busyId !== null && selectedJob !== null && busyId === selectedJob.job_id}
-          onPause={(id) => void onPause(id)}
-          onResume={(id) => void onResume(id)}
-          onRetryPrescan={(id) => void onRetryPrescan(id)}
-          onStartFresh={(id) => void onStartFresh(id)}
-          onCancel={(id) => void onCancel(id)}
         />
       </div>
 

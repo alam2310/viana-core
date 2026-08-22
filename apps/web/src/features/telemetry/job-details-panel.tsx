@@ -123,10 +123,15 @@ export function JobDetailsPanel({
   }
 
   // PAUSED/CANCELLED may keep error_message="interrupted" as an internal marker — not an operator error.
+  // CHECKPOINT_EXISTS (Partial): show a fixed overwrite guidance banner.
+  const PARTIAL_EXISTING_OUTPUT_MESSAGE =
+    "This video file was processed previously, and output files already exist. You can force restart the job to overwrite the existing files and process the video from the beginning.";
   const errorText =
     job.status === "PAUSED" || job.status === "CANCELLED"
       ? null
-      : formatJobErrorMessage(job.error_message);
+      : job.status === "CHECKPOINT_EXISTS"
+        ? PARTIAL_EXISTING_OUTPUT_MESSAGE
+        : formatJobErrorMessage(job.error_message);
   const stem = videoStem(job.source_video_path);
   const csvHostPath =
     job.status === "COMPLETED" && mountConfig

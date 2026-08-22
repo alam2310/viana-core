@@ -7,7 +7,7 @@
 **Tracker mirror:** [`TRACKER.md`](TRACKER.md) § 4.stab — **must** match backlog on every Seq change — see [`STATUS_SYNC.md`](../governance/STATUS_SYNC.md)  
 **Triage owner:** Planning chat (human + coordinator agent) — assigns lane and kickoff prompt.
 
-**Status (2026-08-22):** Step 5 ✅. Open polish: **S34–S36**. Parked: S20/S24.
+**Status (2026-08-23):** Step 5 ✅. Open polish: **S34–S35**. Parked: S20/S24.
 
 ---
 

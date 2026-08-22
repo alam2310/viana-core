@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
-**Last updated:** 2026-08-22  
-**Current focus:** **Step 6** — open Seq **S34–S36** + items **6.12–6.13** (see `docs/steps/TRACKER.md`)  
+**Last updated:** 2026-08-23  
+**Current focus:** **Step 6** — open Seq **S34–S35** + items **6.12–6.13** (see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 complete).  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
@@ -40,7 +40,7 @@
 
 **Goals (Steps 1–5):** Backend prescan lifecycle → UI redesign → verify `{stem}_15min.csv`.
 
-**Parked / remaining Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md). Open Seq: [`STABILIZATION_BACKLOG.md`](steps/STABILIZATION_BACKLOG.md) (**S34, S35, S36**).
+**Parked / remaining Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md). Open Seq: [`STABILIZATION_BACKLOG.md`](steps/STABILIZATION_BACKLOG.md) (**S34, S35**).
 
 **Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. Promoted & done: I001→**6.8**, I003→**6.9**, I002→**6.10**, I006→**6.11**. Active: I007→**6.12**, I008→**6.13**. Dump only: I004 (demoted), I005 (soft subs).
 
@@ -48,12 +48,11 @@
 
 ## Next (Step 6 + open Seq)
 
-1. **S36** — false Failed when output already exists on disk.
-2. **S34** — persist job queue/history across container restart.
-3. **S35** — root-owned output artifacts (investigate UID/GID).
-4. **6.12** Track pedestrians toggle (**I007**).
-5. **6.13** Project/intake UX discovery (**I008**).
-6. **6.5** extra clip → **6.4** Playwright → **6.6** GPU CI.
+1. **S34** — persist job queue/history across container restart.
+2. **S35** — root-owned output artifacts (investigate UID/GID).
+3. **6.12** Track pedestrians toggle (**I007**).
+4. **6.13** Project/intake UX discovery (**I008**).
+5. **6.5** extra clip → **6.4** Playwright → **6.6** GPU CI.
 
 ## Still open on Step 6
 
@@ -84,6 +83,7 @@
 
 | Date | Change |
 |------|--------|
+| 2026-08-23 | **S36 (F031) fixed** — Partial/`CHECKPOINT_EXISTS` on re-intake; open Seq **S34–S35** |
 | 2026-08-22 | **S32 fixed**; open Seq **S34–S36**; added `STATUS_SYNC.md` + `make check-status-sync` anti-drift |
 | 2026-08-22 | Idea dump: **I008 → Step 6.13** — project/intake UX re-discovery (camera-folder sources, layout, simplify `project_id`) |
 | 2026-08-22 | **6.2 complete** — `POST /jobs/{id}/pause` (SIGINT + checkpoint → `PAUSED`); queue Pause/Resume/Retry prescan; Stop → Cancel; S30 refreshJobs pattern; tests `test_s62_pause.py` |

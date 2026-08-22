@@ -5,7 +5,7 @@
 
 > **Follow [`Execution path`](#execution-path) in Seq order.** One row = one unit of work. Do not skip ahead unless a dependency is `fixed` / `deferred`.
 
-**Last updated:** 2026-08-22
+**Last updated:** 2026-08-23
 
 ---
 
@@ -13,9 +13,9 @@
 
 | Blockers open | Blockers fixed | Polish open | Parked | Path done (fixed + parked) |
 |---------------|----------------|-------------|---------|----------------------------|
-| 0 | 1 (S07) | 3 (S34–S36) | 2 (S20, S24) | **33 / 36** active |
+| 0 | 1 (S07) | 2 (S34–S35) | 2 (S20, S24) | **34 / 36** active |
 
-**Counts:** Active Seq = S01–S08 + S10–S36 + ~~S09~~ (**36** rows). **S09** closed in Step 6.7 — still listed for history. Step 5 is complete; open polish: **S34**, **S35**, **S36**.
+**Counts:** Active Seq = S01–S08 + S10–S36 + ~~S09~~ (**36** rows). **S09** closed in Step 6.7 — still listed for history. Step 5 is complete; open polish: **S34**, **S35**.
 
 ---
 
@@ -59,10 +59,10 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S33** | F028 | C | no | — | Pedestrian crossings missing from `_15min.csv` aggregated counts | fixed |
 | **S34** | F029 | B | no | — | Job queue/history lost after container restart (persist orchestrator state) | open |
 | **S35** | F030 | B/C | no | — | Output artifacts owned by root — investigate container user / privileges | open |
-| **S36** | F031 | A/B | no | — | Job shows Failed + Restart when output already exists on disk | open |
+| **S36** | F031 | A/B | no | — | Job shows Failed + Restart when output already exists on disk | **fixed** |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **fixed → Step 6.7** |
 
-**Step 5:** Complete (S07 fixed). Open polish: **S34**, **S35**, **S36**. Parked: S20/S24.
+**Step 5:** Complete (S07 fixed). Open polish: **S34**, **S35**. Parked: S20/S24.
 
 ---
 
@@ -104,7 +104,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S33** | 1. Complete a job with Pedestrian crossings in `_events.csv` 2. Open `{stem}_15min.csv` 3. Search for Pedestrian / class counts | **Expected:** 15-min aggregate includes Pedestrian counts (in/out) like other counted classes. **Actual (before):** Pedestrian rows absent (`aggregate: false`). **After:** `Pedestrian.aggregate: true`; `_15min` = vehicles + pedestrians; tests assert in/out + zero-fill; `hiv000001_inframe` raw 4 in / 6 out matches aggregate. | `configs/classes.yaml`; `events_15min.schema.json` description; `docs/ui/OUTPUT_PATHS.md`; `test_aggregate.py` / `test_config_loaders.py` | this chat | `.venv/bin/pytest tests/viana/test_aggregate.py tests/viana/test_config_loaders.py …` (26 passed); clip verify on `data/viana-outputs/nh44/hiv000001_inframe_events.csv` |
 | **S34** | 1. Intake several jobs through prescan / processing 2. `docker restart viana_core` (or recreate container) 3. Open Job Queue in UI | **Expected:** prior jobs and statuses remain visible; in-flight work resumes or fails cleanly from persisted state. **Actual:** queue is empty — `JobPool._jobs` is in-memory only; restart wipes job history (see F029). | `src/orchestrator/workers/pool.py`; `_meta/jobs/` (S29); optional ADR for persistence format | — | Step 6 polish |
 | **S35** | 1. Run a job to `COMPLETED` 2. On the host, `ls -la` project output dir (CSVs, `_processed.mp4`, `_meta/`) | **Expected:** deliverables owned by the operator/host user (or a documented service UID) so files can be read/moved without `sudo`. **Actual:** artifacts are **root:root** (container runs as root; no `user:` in compose). Investigate whether to run orchestrator/engine as non-root, map UID/GID, or fix permissions on write (see F030). | `docker-compose.yml`, `Dockerfile`, `docs/ops/ENVIRONMENT_SETUP.md`; engine/orchestrator write paths | — | Step 6 polish |
-| **S36** | 1. Process a video to completion (or leave a complete checkpoint + `_events.csv` on disk) 2. Re-intake / re-confirm / re-run the same stem without `start_fresh` 3. Inspect Job Queue status and actions | **Expected:** job reflects success — e.g. **Completed** with **Open output** (or explicit “already processed”), not a failure. **Actual:** engine hits `CheckpointExistsError` (“checkpoint already complete”); orchestrator maps to **FAILED**; UI shows **Failed** + **Restart (Overwrite)** even though deliverables exist (see F031). Related: S34 re-intake after container restart. | `process.py` `CheckpointExistsError`; `pool.py` `_finalize`; `job-status.ts` `canStartFresh` / `canOpenOutput`; intake/confirm paths | — | Step 6 polish |
+| **S36** | 1. Process a video to completion (leave checkpoint on disk) 2. Re-intake the same stem 3. Inspect Job Queue | **Expected:** not Failed; operator can Restart (Overwrite) or Cancel. **Actual (before):** `CheckpointExistsError` → **FAILED** + Restart. **After:** intake detects any prior checkpoint → **`CHECKPOINT_EXISTS`** (UI **Partial**); Review disabled; Restart wipes → prescan → review → GPU; Cancel OK. Complete/incomplete treated the same; no Open output on Partial. | contracts `CHECKPOINT_EXISTS`; `pool.intake` / `start_fresh`; `job-status.ts` Partial; queue columns | `a7e6b6a` | `pytest tests/orchestrator/` (S36 cases) + UI smoke |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `parked` · `wontfix`  
@@ -468,19 +468,13 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 ---
 
-## F031 design note (FAILED when output already exists)
+## F031 design note (FAILED when output already exists) — **fixed S36**
 
-**Observed:** For a video whose output already exists on disk (complete checkpoint and/or deliverables), the Job Queue shows **Failed** with **Restart (Overwrite)** — misleading when processing actually succeeded earlier.
+**Observed:** Re-intake of a stem with an existing checkpoint showed **Failed** + **Restart (Overwrite)** after `CheckpointExistsError`.
 
-**Likely path:** `viana run` without `start_fresh` raises `CheckpointExistsError` when checkpoint is complete; worker exit → `_finalize` sets **FAILED** with the error text. UI enables `canStartFresh` for **FAILED** (and **PAUSED**) but `canOpenOutput` only on **COMPLETED**.
+**Shipped (2026-08-23):** New job status **`CHECKPOINT_EXISTS`** (UI **Partial**). Detected **before pre-scan** when any checkpoint file exists (complete or incomplete — same treatment). Queue: Review disabled; **Restart (Overwrite)** and **Cancel** only; no Open output. Restart wipes sidecars and re-enters **prescan → review → GPU**. Aligns with S34 later (persist/rediscover) without hydrating as COMPLETED.
 
-**Fix direction (confirm product intent):**
-1. On intake / prescan confirm / spawn: if stem has complete checkpoint + expected deliverables, set job **COMPLETED** (or skip GPU spawn) instead of running into `CheckpointExistsError`.
-2. Treat “already complete” engine exit as **COMPLETED**, not **FAILED**, when artifacts validate.
-3. UI: show **Open output** (and drop failure styling) when status is COMPLETED or when API exposes `checkpoint_exists` + complete run_result; keep **Restart (Overwrite)** only as an explicit re-run action, not the primary recovery for a false failure.
-4. Align with **S34** job persistence — rediscovered on-disk outputs should hydrate status, not appear as a new failed job.
-
-**Scope:** Lane A/B (+ engine message handling). No new API enum unless contract review says otherwise.
+**Scope:** Lane A/B (+ contract enum). Commit `a7e6b6a`.
 
 ---
 
@@ -488,6 +482,7 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 | Date | Change |
 |------|--------|
+| 2026-08-23 | **S36 (F031) fixed:** `CHECKPOINT_EXISTS` / UI Partial on intake when prior checkpoint exists; Restart → wipe → prescan; open polish **S34–S35** |
 | 2026-08-22 | Governance: [`STATUS_SYNC.md`](../governance/STATUS_SYNC.md) + `scripts/check_status_sync.py` / `make check-status-sync` — mandatory sync when Seq changes |
 | 2026-08-22 | Added **S36 (F031)** correct job status when output files already exist (avoid Failed + Restart Overwrite) |
 | 2026-08-22 | Added **S34 (F029)** persist job queue/history across container restart |

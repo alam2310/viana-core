@@ -13,3 +13,7 @@
 * **Stale Cached State Hazards:** Never read global state from a localized variable cache outside of a thread lock boundary while yielding or blocking. This explicitly leads to race condition states when multiple threads manipulate the process pool simultaneously, particularly breaking GPU allocation isolation constraints. Always access up-to-date state synchronously under the thread lock right when it is needed. Prefer updating occupancy caches inside the status setter under the same RLock.
 * **Batch under one lock:** For `_drain_prescan`, compute available slots once and collect a batch of jobs before releasing the lock and starting threads — avoids O(K×N) rescans in a `while True` loop.
 - Replaced recursive `rglob` with targeted `glob` in `resolve_preview_path`
+
+## 2024-05-18 - Vectorizing PyTorch tensor accesses in post-processing
+**Learning:** Calling `.tolist()` or accessing individual slices of PyTorch tensors inside a for-loop creates massive overhead, especially when processing numerous detections per frame in post-processing stages.
+**Action:** Move tensors to CPU and convert them to numpy arrays once before the loop (e.g., `boxes.xyxy.cpu().numpy()`), then iterate and index into those numpy arrays to construct objects. This significantly reduces the overhead of interacting with PyTorch tensors element-by-element.

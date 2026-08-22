@@ -21,6 +21,7 @@ from viana.io.paths import (
     resolve_artifact,
     wipe_run_sidecars,
 )
+from viana.io.pause import consume_pause_request, install_cooperative_pause_handlers
 from viana.io.run_result import RunResult, RunResultArtifacts, completed_now, save_run_result
 from viana.io.telemetry import TelemetryMessage, emit_telemetry_stderr
 from viana.stages.crossing import Crossing
@@ -179,6 +180,7 @@ def run_moving_count(
     OSD OCR is prescan-only (S21); the process loop interpolates from that anchor.
     """
     emit = emit or emit_telemetry_stderr
+    install_cooperative_pause_handlers()
     defaults = (defaults or load_engine_defaults()).apply_task_overrides(job.task_parameters)
     taxonomy = taxonomy or load_class_taxonomy()
     video_stem = job.source_video_path.stem
@@ -286,6 +288,7 @@ def run_moving_count(
                 assert frame_iter is not None
                 iterator: Iterator[VideoFrame] = iter(frame_iter)
                 for frame in iterator:
+                    consume_pause_request()
                     if frame.index < start_index:
                         continue
                     last_index = frame.index

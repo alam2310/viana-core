@@ -44,7 +44,11 @@ def interrupt_process_tree(proc: Any) -> None:
             pass
     pid = getattr(proc, "pid", None)
     if isinstance(pid, int) and pid > 0:
-        _signal_group(pid, signal.SIGINT)
+        try:
+            pgid = os.getpgid(pid)
+        except OSError:
+            pgid = pid
+        _signal_group(pgid, signal.SIGINT)
     else:
         _call(proc, "terminate")
 

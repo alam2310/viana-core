@@ -424,3 +424,31 @@ def test_invalid_geometry_releases_owned_frame_feed(
             emit=lambda _msg: None,
         )
     assert feed.closed
+
+
+def test_cooperative_pause_saves_checkpoint(tmp_path: Path) -> None:
+    """Operator pause flag stops between frames and writes a resume checkpoint."""
+    from viana.io.pause import signal_pause_pending
+
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"")
+    job = _job(tmp_path, video)
+
+    def detect_with_pause(frame: VideoFrame) -> tuple[list[Detection], list[Detection]]:
+        if frame.index == 1:
+            signal_pause_pending()
+        return _detect(frame)
+
+    result = run_moving_count(
+        job,
+        resume=False,
+        frames=(_meta(), _frames()),
+        detector=detect_with_pause,
+        renderer=RecordingRenderer(),
+        emit=lambda _msg: None,
+    )
+    assert result.status == "CANCELLED"
+    assert result.error_message == "interrupted"
+    checkpoint = load_checkpoint(artifact_paths(tmp_path, "clip")["checkpoint"])
+    assert not checkpoint.is_complete()
+    assert checkpoint.current_frame >= 1

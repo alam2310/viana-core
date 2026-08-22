@@ -42,7 +42,7 @@
 
 **Parked / remaining Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md). Open Seq: [`STABILIZATION_BACKLOG.md`](steps/STABILIZATION_BACKLOG.md) (**S32**).
 
-**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. Promoted & done: I001→**6.8**, I003→**6.9**, I002→**6.10**, I006→**6.11**. Dump only: I004 (demoted), I005 (soft subs).
+**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. Promoted & done: I001→**6.8**, I003→**6.9**, I002→**6.10**, I006→**6.11**. Active: I007→**6.12**. Dump only: I004 (demoted), I005 (soft subs).
 
 ---
 
@@ -56,6 +56,7 @@
 
 | Item | Notes |
 |------|--------|
+| 6.12 Track pedestrians toggle (**I007**) | Prescan checkbox `track_pedestrians`; skip pedestrian YOLO + exclude from `_15min.csv` when false; schema/API/engine/E2E |
 | 6.2 Pause / resume / PAUSED UX | After S30; needs checkpoint path |
 | 6.4 Browser / Playwright | After S31/6.11 (both done) |
 | 6.5 Extra camera clip | Beyond `hiv000001` |
@@ -79,6 +80,7 @@
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | Idea dump: **I007 → Step 6.12** — prescan `track_pedestrians` toggle; skip pedestrian detect + exclude from `_15min.csv`; contracts/API/engine/E2E |
 | 2026-08-22 | **S29 (F024):** ADR 003 keep layout — flat deliverables; `_meta/{stem}/` sidecars; legacy checkpoint resolve for 6.2; COMPLETED deletes prescan JPEG only |
 | 2026-08-22 | **S30 (F025):** start-fresh/resume mutate + `GET /jobs` healthy; 502 = proxy while engine down + unhandled `refreshJobs`; UI banner + GET retry + compose `nofile` |
 | 2026-08-22 | **S31 + 6.11 complete** — prescan Confirm/Confirming…; `render_video` toggle (default true); `test_video` false skips `_processed.mp4` |

@@ -69,12 +69,8 @@ def test_zero_fill_includes_pedestrian() -> None:
     assert "Jeep" in names
     car_in = next(row for row in rows if row.class_name == "Car" and row.direction == "in")
     jeep_in = next(row for row in rows if row.class_name == "Jeep" and row.direction == "in")
-    ped_in = next(
-        row for row in rows if row.class_name == "Pedestrian" and row.direction == "in"
-    )
-    ped_out = next(
-        row for row in rows if row.class_name == "Pedestrian" and row.direction == "out"
-    )
+    ped_in = next(row for row in rows if row.class_name == "Pedestrian" and row.direction == "in")
+    ped_out = next(row for row in rows if row.class_name == "Pedestrian" and row.direction == "out")
     assert car_in.count == 2
     assert jeep_in.count == 0
     assert ped_in.count == 2

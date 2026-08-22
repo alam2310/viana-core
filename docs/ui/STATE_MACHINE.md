@@ -27,6 +27,6 @@ stateDiagram-v2
 
 ## Checkpoint
 
-- File: `{output_dir}/{stem}.checkpoint.json`
-- `checkpoint_exists: true` only for PAUSED/FAILED with checkpoint on disk
+- File: `{output_dir}/_meta/{stem}/checkpoint.json` (ADR 003). Legacy flat `{output_dir}/{stem}.checkpoint.json` is still read for PAUSED resume.
+- `checkpoint_exists: true` only for PAUSED/FAILED with an **incomplete** checkpoint on disk
 - Engine never auto-resumes on plain `POST /jobs` if checkpoint exists → API returns **409**

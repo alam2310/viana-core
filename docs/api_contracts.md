@@ -191,14 +191,18 @@ Fixtures: `packages/contracts/fixtures/telemetry_progress.json`
 
 ## 9. Engine disk artifacts (not HTTP)
 
-Written under `{output_dir}/` per video stem. Schemas:
+Layout and retention: **ADR 003** (`docs/adr/003-output-artifact-layout.md`). Operator deliverables stay flat under `{output_dir}/`; resume and orchestrator sidecars under `{output_dir}/_meta/`.
 
-| File | Schema |
-|------|--------|
-| `{stem}_events.csv` | `events_raw.schema.json` |
-| `{stem}_15min.csv` | `events_15min.schema.json` |
-| `{stem}.checkpoint.json` | `checkpoint.schema.json` |
-| `{stem}.run_result.json` | `run_result.schema.json` |
+| File | Schema | Location |
+|------|--------|----------|
+| `{stem}_events.csv` | `events_raw.schema.json` | project root (debug) |
+| `{stem}_events_report.csv` | `events_report.schema.json` | project root |
+| `{stem}_15min.csv` | `events_15min.schema.json` | project root |
+| `checkpoint.json` | `checkpoint.schema.json` | `_meta/{stem}/` (legacy flat `{stem}.checkpoint.json` still read) |
+| `time_map.json` | `time_map.schema.json` | `_meta/{stem}/` |
+| `run_result.json` | `run_result.schema.json` | `_meta/{stem}/` |
+| `{job_id}.job.json` | `job_config.schema.json` | `_meta/jobs/` |
+| `prescan/{prescan_id}_preview.jpg` | — | ephemeral; deleted on COMPLETED |
 
 **CSV headers (S32):** properties order in those schemas is the file header.
 
@@ -213,7 +217,7 @@ Fixture: `packages/contracts/fixtures/checkpoint_resume.json`. Time map fixture:
 
 The orchestrator writes this file after assigning `job_id`, `gpu_device`, and `output_dir`. The UI must **not** send `JobConfig` on `POST /jobs` (use `job_submit.schema.json` only).
 
-`python -m viana run --config job.json` processes the video (events CSV, checkpoint, time map, optional FFmpeg `{stem}_processed.mp4`). `viana resume` continues from `{stem}.checkpoint.json` only when `resume=true`. Telemetry JSON lines go to **stderr**; the final `RunResult` is stdout.
+`python -m viana run --config job.json` processes the video (events CSV, checkpoint under `_meta/{stem}/`, time map, optional FFmpeg `{stem}_processed.mp4`). `viana resume` continues from the checkpoint (canonical or legacy flat path) only when `resume=true`. Telemetry JSON lines go to **stderr**; the final `RunResult` is stdout.
 
 Do **not** compute 15-minute bins in this loop — use `viana aggregate` (ADR 001).
 

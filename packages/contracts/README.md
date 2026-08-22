@@ -38,9 +38,9 @@ See `docs/governance/AI_SDLC.md`.
 | `events_15min.schema.json` | `{stem}_15min.csv` columns |
 | `calibration_profile.schema.json` | Project profiles |
 | `telemetry.schema.json` | WebSocket messages |
-| `checkpoint.schema.json` | `{stem}.checkpoint.json` (engine resume) |
-| `run_result.schema.json` | `{stem}.run_result.json` (final outcome) |
-| `time_map.schema.json` | `{stem}.time_map.json` (OCR / user wall-clock anchors) |
+| `checkpoint.schema.json` | `_meta/{stem}/checkpoint.json` (legacy flat `{stem}.checkpoint.json` still read) |
+| `run_result.schema.json` | `_meta/{stem}/run_result.json` |
+| `time_map.schema.json` | `_meta/{stem}/time_map.json` (OCR / user wall-clock anchors) |
 | `classes.schema.json` | `configs/classes.yaml` (YOLO id → reporting hierarchy) |
 | `engine_defaults.schema.json` | `configs/engine_defaults.yaml` (thresholds, model paths) |
 

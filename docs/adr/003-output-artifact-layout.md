@@ -15,20 +15,30 @@ After a successful `COMPLETED` run, project `output_dir` mixed operator delivera
 
 ## Inventory (intake → prescan → run → aggregate)
 
-| Path (pre-S29 flat) | Writer | Stage | Class |
-|---------------------|--------|-------|-------|
-| `{stem}_events.csv` | engine `EventsWriter` | run | **operator deliverable** |
-| `{stem}_15min.csv` | engine `aggregate` (auto or CLI) | aggregate | **operator deliverable** |
+| Path | Writer | Stage | Class |
+|------|--------|-------|-------|
+| *(source video)* | intake mount | intake | **not an output artifact** |
+| `prescan/{prescan_id}_preview.jpg` | engine `run_prescan` | prescan | **ephemeral** — review UI + S01 disk fallback while `AWAITING_REVIEW`; **deleted on COMPLETED** |
+| `{job_id}.job.json` | orchestrator `_write_job_config` | spawn (run/resume) | **orchestrator-only** — CLI spawn config |
+| `{stem}_events.csv` | engine `EventsCsvWriter` | run | **operator deliverable (debug)** — full engine fields (S32) |
+| `{stem}_events_report.csv` | engine `write_events_report_csv` | run (on COMPLETED) | **operator deliverable** — trimmed report derived from events |
 | `{stem}_processed.mp4` | engine `FfmpegRenderer` (if `render_video`) | run | **operator deliverable** |
-| `{stem}.checkpoint.json` | engine process loop | run | **resume-required** while incomplete (PAUSED/FAILED/PROCESSING); keep after COMPLETED for complete-run detection + aggregate guard |
-| `{stem}.time_map.json` | engine on success | run | **ephemeral / audit** (events already carry wall times; not needed to resume) |
-| `{stem}.run_result.json` | engine terminal | run | **orchestrator-only** (stdout also carries RunResult) |
-| `{stem}.manifest.json` | (reserved; not written today) | — | **ephemeral / audit** |
-| `{job_id}.job.json` | orchestrator `_write_job_config` | spawn | **orchestrator-only** |
-| `prescan/{prescan_id}_preview.jpg` | engine prescan | prescan | **ephemeral** (review UI; S01 disk fallback while `AWAITING_REVIEW`) |
+| `checkpoint.json` under `_meta/{stem}/` | engine process loop | run | **resume-required** while incomplete (Step 6.2 PAUSED); **kept** after COMPLETED for complete-run detection + aggregate guard |
+| `time_map.json` under `_meta/{stem}/` | engine on success | run | **ephemeral / audit** — wall-clock anchors; not needed to resume |
+| `run_result.json` under `_meta/{stem}/` | engine terminal | run | **orchestrator-only** — stdout also carries `RunResult` |
+| `manifest.json` under `_meta/{stem}/` | (reserved) | — | **ephemeral / audit** |
+| `{stem}_15min.csv` | engine `aggregate` (auto or CLI) | aggregate | **operator deliverable** |
 | `profiles/{profile_id}.json` | API / engine profiles | any | **operator deliverable** (project-shared calibration) |
 
-Source video under intake mounts is **not** an output artifact.
+**Pre-S29 flat sidecars** (`{stem}.checkpoint.json`, `{stem}.time_map.json`, `{stem}.run_result.json`, `{job_id}.job.json` at project root) are **read-only compat** — never mass-deleted; new writes use `_meta/` (see below).
+
+### Rejected layouts (documented before any wipe)
+
+| Alternative | Why rejected |
+|-------------|--------------|
+| Delete all sidecars on COMPLETED | Breaks complete-checkpoint detection (S36), audit, future S34 job persistence |
+| `{stem}/.work/` nested under stem | Looks like an operator report folder; breaks flat “Open output” |
+| Mass delete historical COMPLETED trees | Unsafe; legacy flat checkpoints must remain readable for PAUSED resume |
 
 ## Decision
 
@@ -42,16 +52,17 @@ Source video under intake mounts is **not** an output artifact.
 
 ```
 {parent_dir}/{project_id}/
-  {stem}_events.csv
+  {stem}_events.csv              # debug (full fields)
+  {stem}_events_report.csv       # operator report (S32)
   {stem}_15min.csv
-  {stem}_processed.mp4          # optional
+  {stem}_processed.mp4           # optional
   profiles/{profile_id}.json
   prescan/{prescan_id}_preview.jpg   # ephemeral; removed on COMPLETED
   _meta/{stem}/
     checkpoint.json
     time_map.json
     run_result.json
-    manifest.json               # reserved
+    manifest.json                # reserved
   _meta/jobs/
     {job_id}.job.json
 ```

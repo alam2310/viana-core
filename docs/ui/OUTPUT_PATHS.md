@@ -17,7 +17,7 @@ Default: `/data/viana-outputs`
 | File | Description |
 |------|-------------|
 | `{stem}_events.csv` | Raw crossing events |
-| `{stem}_15min.csv` | Clock 15-min aggregation (vehicle classes, zero-filled) |
+| `{stem}_15min.csv` | Clock 15-min aggregation (vehicles + pedestrians, zero-filled) |
 | `{stem}_processed.mp4` | Annotated video (colors: `docs/ui/OVERLAY_COLORS.md`) |
 | `{stem}.manifest.json` | Job snapshot, `partial` flag |
 | `{stem}.time_map.json` | OCR time anchors |

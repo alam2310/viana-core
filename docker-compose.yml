@@ -58,3 +58,9 @@ services:
     
     # 5. Shared Memory (Crucial for PyTorch/Dataloaders)
     shm_size: '8gb'
+
+    # Soft nofile often defaults to 1024; raise to avoid S22-style EMFILE → API 502.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536

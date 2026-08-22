@@ -111,6 +111,7 @@ export function Dashboard() {
   const [browseOutputDir, setBrowseOutputDir] = useState(false);
   const [mountConfig, setMountConfig] = useState<MountConfig | null>(null);
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
+  const [jobsRefreshError, setJobsRefreshError] = useState<string | null>(null);
   const [theme, setTheme] = useState<UiTheme>("light");
   const [containerStatus, setContainerStatus] = useState<ContainerStatus | null>(
     null,
@@ -119,28 +120,37 @@ export function Dashboard() {
   const projectValid = PROJECT_ID_PATTERN.test(projectId);
   const orchestratorUp = apiReachable === true && containerStatus?.running === true;
 
-  const refreshJobs = useCallback(async (id = projectId) => {
-    const list = await listJobs(id);
-    setJobs((prev) =>
-      list.map((incoming) => {
-        const existing = prev.find((job) => job.job_id === incoming.job_id);
-        const prevCount = existing?.progress?.crossing_count;
-        const nextCount = incoming.progress?.crossing_count;
-        if (
-          typeof prevCount === "number" &&
-          (typeof nextCount !== "number" || prevCount > nextCount)
-        ) {
-          return {
-            ...incoming,
-            progress: incoming.progress
-              ? { ...incoming.progress, crossing_count: prevCount }
-              : existing?.progress,
-          };
-        }
-        return incoming;
-      }),
-    );
-    return list;
+  /** Never throws — pollers must not surface unhandled ApiClientError (S30 / F025). */
+  const refreshJobs = useCallback(async (id = projectId): Promise<boolean> => {
+    try {
+      const list = await listJobs(id);
+      setJobs((prev) =>
+        list.map((incoming) => {
+          const existing = prev.find((job) => job.job_id === incoming.job_id);
+          const prevCount = existing?.progress?.crossing_count;
+          const nextCount = incoming.progress?.crossing_count;
+          if (
+            typeof prevCount === "number" &&
+            (typeof nextCount !== "number" || prevCount > nextCount)
+          ) {
+            return {
+              ...incoming,
+              progress: incoming.progress
+                ? { ...incoming.progress, crossing_count: prevCount }
+                : existing?.progress,
+            };
+          }
+          return incoming;
+        }),
+      );
+      setJobsRefreshError(null);
+      return true;
+    } catch (err) {
+      setJobsRefreshError(
+        err instanceof Error ? err.message : String(err),
+      );
+      return false;
+    }
   }, [projectId]);
 
   function applyTheme(nextTheme: UiTheme): void {
@@ -243,7 +253,12 @@ export function Dashboard() {
         source_video_paths: paths,
         ...(resolvedOutput ? { output_dir: resolvedOutput } : {}),
       });
-      await refreshJobs();
+      const refreshed = await refreshJobs();
+      if (!refreshed) {
+        setError(
+          "Intake succeeded, but the job list could not be refreshed. It should update shortly.",
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -256,7 +271,12 @@ export function Dashboard() {
     setError(null);
     try {
       await startFreshJob(jobId);
-      await refreshJobs();
+      const refreshed = await refreshJobs();
+      if (!refreshed) {
+        setError(
+          "Restart accepted, but the job list could not be refreshed. It should update shortly.",
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -334,6 +354,16 @@ export function Dashboard() {
               right or wait a few seconds if it is still starting.
             </>
           )}
+        </p>
+      ) : null}
+
+      {apiReachable === true &&
+      containerStatus?.running !== false &&
+      jobsRefreshError ? (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+          Job list refresh failed briefly (
+          {formatJobErrorMessage(jobsRefreshError) ?? jobsRefreshError}).
+          Showing the last known queue; retrying automatically.
         </p>
       ) : null}
 

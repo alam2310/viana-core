@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-22
-**Current focus:** **Step 6** — hardening + remaining stabilization polish (**S29–S33**; see `docs/steps/TRACKER.md`)
+**Current focus:** **Step 6** — hardening + remaining stabilization polish (**S29, S32**; see `docs/steps/TRACKER.md`)
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 complete).
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
@@ -40,29 +40,27 @@
 
 **Goals (Steps 1–5):** Backend prescan lifecycle → UI redesign → verify `{stem}_15min.csv`.
 
-**Parked / remaining Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md). Open Seq: [`STABILIZATION_BACKLOG.md`](steps/STABILIZATION_BACKLOG.md) (**S29–S33**).
+**Parked / remaining Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md). Open Seq: [`STABILIZATION_BACKLOG.md`](steps/STABILIZATION_BACKLOG.md) (**S29, S32**).
 
-**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. Promoted: I001→**6.8**, I003→**6.9**, I002→**6.10**, I006→**6.11**. Dump only: I004 (demoted), I005 (soft subs).
+**Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. Promoted & done: I001→**6.8**, I003→**6.9**, I002→**6.10**, I006→**6.11**. Dump only: I004 (demoted), I005 (soft subs).
 
 ---
 
 ## Next (Step 6 + open Seq)
 
-1. **S30** — triage API 502 on restart/resume (before 6.2).
-2. **S33** — Pedestrian in `_15min.csv` (`aggregate: true`).
-3. **S31 + 6.11** — prescan Confirm + `render_video` toggle.
-4. **6.2** pause/resume UX (after S30) → **S29** output layout → **S32** CSV trim.
-5. **6.5** extra clip → **6.4** Playwright → **6.6** GPU CI.
+1. **S29** — output layout / leftover artifacts after COMPLETED.
+2. **S32** — CSV schema trim (`_events` / `_15min`).
+3. **6.2** pause/resume UX (checkpoint path; S30 502 triage done).
+4. **6.5** extra clip → **6.4** Playwright → **6.6** GPU CI.
 
 ## Still open on Step 6
 
 | Item | Notes |
 |------|--------|
 | 6.2 Pause / resume / PAUSED UX | After S30; needs checkpoint path |
-| 6.4 Browser / Playwright | After S31/6.11 |
+| 6.4 Browser / Playwright | After S31/6.11 (both done) |
 | 6.5 Extra camera clip | Beyond `hiv000001` |
 | 6.6 GPU tests in CI | No GPU in GitHub Actions |
-| 6.11 `render_video` toggle | Promoted I006; UI only |
 
 **Parked (not Step 6 until re-promoted):** S20/S24 live-edge player; idea dump I004 / I005.
 
@@ -82,6 +80,9 @@
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | **S30 (F025):** start-fresh/resume mutate + `GET /jobs` healthy; 502 = proxy while engine down + unhandled `refreshJobs`; UI banner + GET retry + compose `nofile` |
+| 2026-08-22 | **S31 + 6.11 complete** — prescan Confirm/Confirming…; `render_video` toggle (default true); `test_video` false skips `_processed.mp4` |
+| 2026-08-22 | **S33 (F028) fixed:** Pedestrian included in `_15min.csv` (`aggregate: true`); schema/docs say vehicles + pedestrians |
 | 2026-08-22 | Doc sync: Next/focus → Step 6 + open Seq S29–S33; removed stale “Next: Step 5” |
 | 2026-08-21 | Idea dump: **I006 → Step 6.11** — prescan-review `render_video` toggle (existing API/engine field) |
 | 2026-08-21 | **Render perf/size:** async FFmpeg writer (copy-on-enqueue + drain on close); H.264 NVENC cq 32 / p4; libx264 CRF 34 / veryfast (replaces cq 28 / p7) |

@@ -35,7 +35,7 @@ async function proxy(request: Request, context: RouteContext): Promise<NextRespo
   }
 
   try {
-    const response = await fetch(upstream, init);
+    const response = await fetchUpstream(upstream, init, request.method);
     const outHeaders = new Headers();
     const respType = response.headers.get("Content-Type");
     if (respType) {
@@ -54,6 +54,26 @@ async function proxy(request: Request, context: RouteContext): Promise<NextRespo
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ detail: message }, { status: 502 });
+  }
+}
+
+/** One short retry on GET/HEAD when the orchestrator is briefly unreachable (restart blip). */
+async function fetchUpstream(
+  upstream: URL,
+  init: RequestInit,
+  method: string,
+): Promise<Response> {
+  try {
+    return await fetch(upstream, init);
+  } catch (err) {
+    const idempotent = method === "GET" || method === "HEAD";
+    if (!idempotent) {
+      throw err;
+    }
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 200);
+    });
+    return await fetch(upstream, init);
   }
 }
 

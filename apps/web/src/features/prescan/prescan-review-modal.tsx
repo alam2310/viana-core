@@ -104,6 +104,8 @@ export function PrescanReviewModal({
   const [applyToOthers, setApplyToOthers] = useState(false);
   const [saveAsProfile, setSaveAsProfile] = useState(false);
   const [profileId, setProfileId] = useState("session");
+  /** Matches API/engine default (`job_prescan_confirm` / `job_submit` schema). */
+  const [renderVideo, setRenderVideo] = useState(true);
 
   const previewUrl = previewPath
     ? previewImageUrl(previewPath, previewToken)
@@ -223,7 +225,7 @@ export function PrescanReviewModal({
       counting_line: clampLine(counting, meta.width, meta.height),
       confidence_threshold: 0.75,
       use_heuristic_truck_split: true,
-      render_video: true,
+      render_video: renderVideo,
       telemetry_detail: true,
     };
 
@@ -311,24 +313,14 @@ export function PrescanReviewModal({
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
       <div className="my-4 w-full max-w-5xl rounded-lg bg-card p-5 shadow-xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Prescan review</h2>
-            <p className="mt-1 font-mono text-xs text-muted">
-              {job.source_video_path}
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              Edit metadata and lines, then confirm when ready.
-            </p>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={onClose}
-          >
-            Close
-          </Button>
+        <div>
+          <h2 className="text-lg font-semibold">Prescan review</h2>
+          <p className="mt-1 font-mono text-xs text-muted">
+            {job.source_video_path}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Edit metadata and lines, then confirm when ready.
+          </p>
         </div>
 
         {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
@@ -459,6 +451,21 @@ export function PrescanReviewModal({
                   />
                 </label>
               ) : null}
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={renderVideo}
+                  onChange={(event) => setRenderVideo(event.target.checked)}
+                />
+                <span>
+                  Render processed video
+                  <span className="mt-0.5 block text-xs text-muted">
+                    When off, skips `_processed.mp4` encode (faster). CSV and
+                    events still produce.
+                  </span>
+                </span>
+              </label>
               <div className="mt-auto flex justify-end gap-2">
                 <Button
                   type="button"
@@ -472,7 +479,7 @@ export function PrescanReviewModal({
                   disabled={allIssues.length > 0 || loading || rescanning}
                   onClick={() => void submitConfirm()}
                 >
-                  {loading ? "Submitting…" : "Submit"}
+                  {loading ? "Confirming…" : "Confirm"}
                 </Button>
               </div>
             </div>

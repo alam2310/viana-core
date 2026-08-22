@@ -552,9 +552,7 @@ def _write_prior_checkpoint(output_dir: Path, *, current: int = 100, total: int 
     return paths["checkpoint"]
 
 
-def test_s36_intake_checkpoint_exists_skips_prescan(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_s36_intake_checkpoint_exists_skips_prescan(client: TestClient, tmp_path: Path) -> None:
     """Prior checkpoint (complete or not) → CHECKPOINT_EXISTS before prescan (S36)."""
     output_dir = project_output_dir(tmp_path, "nh48")
     _write_prior_checkpoint(output_dir, current=10, total=100)
@@ -625,9 +623,7 @@ def test_s36_start_fresh_from_checkpoint_exists_enters_prescan(
     assert client.get(f"/jobs/{job_id}").json()["status"] == "AWAITING_REVIEW"
 
 
-def test_s36_confirm_rejected_while_checkpoint_exists(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_s36_confirm_rejected_while_checkpoint_exists(client: TestClient, tmp_path: Path) -> None:
     """Partial jobs cannot skip to confirm/GPU without Restart (Overwrite)."""
     output_dir = project_output_dir(tmp_path, "nh48")
     _write_prior_checkpoint(output_dir)

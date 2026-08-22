@@ -242,8 +242,10 @@ class WorkerPool:
                 job_id = f"job_{uuid.uuid4().hex[:12]}"
                 stem = path.stem
                 prior_ckpt = resolve_artifact(output_dir, stem, "checkpoint").is_file()
+                # Intake response only allows these two statuses (JobIntakeItem / schema).
+                status: Literal["PRESCAN_PENDING", "CHECKPOINT_EXISTS"]
                 if prior_ckpt:
-                    status: JobStatusLiteral = "CHECKPOINT_EXISTS"
+                    status = "CHECKPOINT_EXISTS"
                 else:
                     status = "PRESCAN_PENDING"
                 job = JobRecord(

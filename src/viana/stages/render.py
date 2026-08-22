@@ -371,18 +371,3 @@ class FfmpegRenderer:
             terminate_process_tree(proc, close_pipes=True)
             return
         close_stdio(proc)
-
-
-class RecordingRenderer:
-    """Test helper that records write counts."""
-
-    def __init__(self) -> None:
-        self.frames: list[int] = []
-
-    def write(self, frame: VideoFrame, result: FrameCVResult) -> None:
-        """Record the frame index."""
-        _ = result
-        self.frames.append(frame.index)
-
-    def close(self) -> None:
-        """Nothing to flush."""

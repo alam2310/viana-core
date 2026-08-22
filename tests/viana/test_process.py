@@ -17,10 +17,24 @@ from viana.io.paths import artifact_paths, legacy_artifact_paths
 from viana.stages.crossing import Crossing
 from viana.stages.prescan import VideoMeta
 from viana.stages.process import CheckpointExistsError, crossing_to_event, run_moving_count
-from viana.stages.render import RecordingRenderer
 from viana.stages.time_map import TimeMap, load_time_map, time_map_from_metadata
 from viana.stages.track import IoUTracker
 from viana.stages.video import VideoFrame
+
+
+class RecordingRenderer:
+    """Test helper that records write counts."""
+
+    def __init__(self) -> None:
+        self.frames: list[int] = []
+
+    def write(self, frame: VideoFrame, result: object) -> None:
+        """Record the frame index."""
+        _ = result
+        self.frames.append(frame.index)
+
+    def close(self) -> None:
+        """Nothing to flush."""
 
 
 @pytest.fixture(autouse=True)

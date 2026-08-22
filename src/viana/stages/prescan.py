@@ -290,37 +290,6 @@ def sample_opening_frame(
         capture.release()
 
 
-def find_best_frame_offset(
-    source: Path,
-    *,
-    requested_offset_sec: float,
-    scan_sec: float,
-    step_sec: float,
-    luminance_threshold: float,
-    min_osd_score: float = 20.0,
-    probe_start_sec: float = 2.0,
-) -> float:
-    """Pick a bright frame with visible top OSD in the opening scan window (G7).
-
-    When ``requested_offset_sec`` is > 0 the caller's scrub position wins.
-    Otherwise scan a short opening window, skip dark frames, and prefer the
-    offset with the strongest top-band OSD variance (CCTV overlays fade in
-    after t=0).
-    """
-    if requested_offset_sec > 0:
-        return requested_offset_sec
-    sampled = sample_opening_frame(
-        source,
-        requested_offset_sec=0.0,
-        scan_sec=scan_sec,
-        step_sec=step_sec,
-        luminance_threshold=luminance_threshold,
-        min_osd_score=min_osd_score,
-        probe_start_sec=probe_start_sec,
-    )
-    return sampled.frame_offset_sec
-
-
 def sample_video_cv2(source: Path, frame_offset_sec: float) -> SampledVideo:
     """Open ``source`` with OpenCV and grab a frame at ``frame_offset_sec``."""
     if not source.is_file():

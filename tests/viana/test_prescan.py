@@ -353,20 +353,6 @@ def test_run_prescan_writes_preview_and_response(tmp_path: Path) -> None:
     assert result.preview_url == str(preview)
 
 
-def test_find_best_frame_offset_respects_explicit_scrub() -> None:
-    """User scrub offset bypasses dark-frame auto-skip (G7)."""
-    from viana.stages.prescan import find_best_frame_offset
-
-    offset = find_best_frame_offset(
-        Path("/nonexistent.mp4"),
-        requested_offset_sec=12.5,
-        scan_sec=30.0,
-        step_sec=1.0,
-        luminance_threshold=28.0,
-    )
-    assert offset == 12.5
-
-
 def test_osd_band_score_is_high_on_striped_metadata_roi() -> None:
     """Top-left contrast (OSD) scores above the dark-frame min."""
     np = __import__("pytest").importorskip("numpy")

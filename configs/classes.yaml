@@ -1,5 +1,5 @@
 # YOLO class id → analytics hierarchy (single source of truth at inference time).
-# aggregate: include class in {stem}_15min.csv reports
+# aggregate: include class in {stem}_15min.csv reports (vehicles + pedestrians)
 
 classes:
   - id: 0
@@ -84,7 +84,7 @@ classes:
     category: Passenger
     class_type: Slow
     sub_class: Pedestrian
-    aggregate: false
+    aggregate: true
 
   - id: 12
     name: MCV

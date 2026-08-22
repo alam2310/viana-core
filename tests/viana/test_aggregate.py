@@ -35,8 +35,8 @@ def _event(**overrides: object) -> RawCrossingEventRow:
     return RawCrossingEventRow.model_validate(payload)
 
 
-def test_zero_fill_and_exclude_pedestrian() -> None:
-    """Clock window includes all aggregatable classes; Pedestrian is omitted."""
+def test_zero_fill_includes_pedestrian() -> None:
+    """Clock window includes all aggregatable classes, including Pedestrian."""
     taxonomy = load_class_taxonomy()
     events = [
         _event(),
@@ -48,16 +48,38 @@ def test_zero_fill_and_exclude_pedestrian() -> None:
             direction="out",
             wall_time="2026-03-15T09:08:00Z",
         ),
+        _event(
+            track_id=4,
+            class_name="Pedestrian",
+            class_id=11,
+            direction="in",
+            wall_time="2026-03-15T09:10:00Z",
+        ),
+        _event(
+            track_id=5,
+            class_name="Pedestrian",
+            class_id=11,
+            direction="in",
+            wall_time="2026-03-15T09:11:00Z",
+        ),
     ]
     rows = build_aggregate_rows(events, taxonomy)
     names = {row.class_name for row in rows}
-    assert "Pedestrian" not in names
+    assert "Pedestrian" in names
     assert "Car" in names
     assert "Jeep" in names
     car_in = next(row for row in rows if row.class_name == "Car" and row.direction == "in")
     jeep_in = next(row for row in rows if row.class_name == "Jeep" and row.direction == "in")
+    ped_in = next(
+        row for row in rows if row.class_name == "Pedestrian" and row.direction == "in"
+    )
+    ped_out = next(
+        row for row in rows if row.class_name == "Pedestrian" and row.direction == "out"
+    )
     assert car_in.count == 2
     assert jeep_in.count == 0
+    assert ped_in.count == 2
+    assert ped_out.count == 1
     assert car_in.window_start == "09:00"
     assert car_in.window_end == "09:15"
     assert car_in.date == "15-03-2026"
@@ -66,6 +88,10 @@ def test_zero_fill_and_exclude_pedestrian() -> None:
     assert windows == {"09:00"}
     aggregatable = len(taxonomy.aggregatable())
     assert len(rows) == aggregatable * 2
+    # Counts match raw Pedestrian events (2 in + 1 out).
+    ped_events = [e for e in events if e.class_name == "Pedestrian"]
+    assert sum(1 for e in ped_events if e.direction == "in") == ped_in.count
+    assert sum(1 for e in ped_events if e.direction == "out") == ped_out.count
 
 
 def test_spans_two_clock_windows() -> None:

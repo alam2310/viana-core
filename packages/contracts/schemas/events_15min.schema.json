@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://viana.local/schemas/events_15min.schema.json",
   "title": "Aggregate15MinRow",
-  "description": "One row in {stem}_15min.csv (vehicle classes only, zero-filled grid)",
+  "description": "One row in {stem}_15min.csv (vehicle classes + pedestrians, zero-filled grid)",
   "type": "object",
   "additionalProperties": false,
   "required": [

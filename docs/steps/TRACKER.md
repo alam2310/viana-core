@@ -85,7 +85,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 Open: **S29–S33**; parked S20/S24 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
+| **4.stab** Stabilization path | 🔄 Open: **S29–S32**; S33 fixed; parked S20/S24 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
 ### Stabilization execution path (mirror — SoT is backlog)
 
@@ -122,7 +122,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S30 | F025 — API 502 on restart/resume from queue | A/B | **open** |
 | S31 | F026 — prescan Close vs Confirm | A | **open** |
 | S32 | F027 — trim raw events + 15-min CSV columns | C/D | **open** |
-| S33 | F028 — Pedestrian missing from `_15min.csv` | C | **open** |
+| S33 | F028 — Pedestrian missing from `_15min.csv` | C | fixed |
 | ~~S09~~ | F006 — intake path validation | B | **fixed (6.7)** |
 
 ---
@@ -161,6 +161,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | **S33 (F028) fixed** — Pedestrian in `_15min.csv` (`aggregate: true`); vehicles + pedestrians documented |
 | 2026-08-22 | Doc sync: 4.stab + execution mirror match backlog (open **S29–S33**; S25–S28 fixed); Step 5 gate text no longer “in parallel polish” |
 | 2026-08-21 | Promoted **I006 → 6.11** — expose `render_video` in prescan review; existing API/engine field (expect perf win when false) |
 | 2026-08-21 | **6.7 complete (S09 / F006)** — intake (and `POST /jobs`) rewrites host paths onto compose mounts (`/data`, `/app/ViAna`) or **400**s unreadable paths; extra drive via `VIANA_INTAKE_ROOTS` + `VIANA_PATH_MAPS`. Tests: `tests/orchestrator/test_s67_intake_paths.py` |

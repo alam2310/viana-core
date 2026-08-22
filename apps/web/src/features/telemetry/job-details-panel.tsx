@@ -122,9 +122,9 @@ export function JobDetailsPanel({
     );
   }
 
-  // PAUSED stores error_message="interrupted" as an internal marker — not an operator error.
+  // PAUSED/CANCELLED may keep error_message="interrupted" as an internal marker — not an operator error.
   const errorText =
-    job.status === "PAUSED"
+    job.status === "PAUSED" || job.status === "CANCELLED"
       ? null
       : formatJobErrorMessage(job.error_message);
   const stem = videoStem(job.source_video_path);

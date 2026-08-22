@@ -69,16 +69,20 @@ class UltralyticsDualDetector:
         boxes = results[0].boxes
         if boxes is None:
             return detections
-        for box in boxes:
-            xyxy = box.xyxy[0].tolist()
+        xyxys = boxes.xyxy.cpu().numpy()
+        confs = boxes.conf.cpu().numpy()
+        clss = boxes.cls.cpu().numpy()
+
+        for i in range(len(boxes)):
+            xyxy = xyxys[i]
             detections.append(
                 Detection(
                     x1=float(xyxy[0]),
                     y1=float(xyxy[1]),
                     x2=float(xyxy[2]),
                     y2=float(xyxy[3]),
-                    confidence=float(box.conf[0]),
-                    class_id=int(box.cls[0]),
+                    confidence=float(confs[i]),
+                    class_id=int(clss[i]),
                 )
             )
         return detections

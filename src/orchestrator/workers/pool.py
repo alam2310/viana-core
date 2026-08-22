@@ -112,6 +112,7 @@ class WorkerPool:
         self._threads: list[threading.Thread] = []
         self._occupied_gpus: set[str] = set()
         self._running_prescans: int = 0
+        self._drain_lock = threading.Lock()
 
     def _set_job_status(self, job: JobRecord, new_status: JobStatusLiteral) -> None:
         """Update status and occupancy caches under ``_lock``; wake status waiters."""
@@ -124,6 +125,9 @@ class WorkerPool:
                 self._running_prescans -= 1
             if new_status == "PRESCAN_RUNNING":
                 self._running_prescans += 1
+
+            if new_status == "READY":
+                job.progress = None
 
             if old_status == "PROCESSING" and job.gpu_device is not None:
                 self._occupied_gpus.discard(job.gpu_device)
@@ -184,6 +188,11 @@ class WorkerPool:
         ckpt = resolve_artifact(job.output_dir, job.source_video_path.stem, "checkpoint")
         exists = ckpt.is_file()
         checkpoint_exists = exists and job.status in {"PAUSED", "FAILED"}
+        progress = (
+            job.progress
+            if job.status in {"PROCESSING", "PAUSED", "COMPLETED"}
+            else None
+        )
         return JobStatus(
             job_id=job.job_id,
             status=job.status,
@@ -194,7 +203,7 @@ class WorkerPool:
             checkpoint_exists=checkpoint_exists,
             gpu_device=job.gpu_device,
             queue_position=job.queue_position,
-            progress=job.progress,
+            progress=progress,
             error_message=job.error_message,
             proposed_metadata=job.proposed_metadata,
             proposed_lines=job.proposed_lines,
@@ -590,21 +599,22 @@ class WorkerPool:
     def _drain(self) -> None:
         """Start queued READY jobs while GPUs are free."""
         while True:
-            with self._lock:
-                device = self.assign_gpu(self._occupied_gpu_ids())
-                if device is None:
-                    self._refresh_queue_positions()
-                    return
-                job = self._pop_next_ready_locked()
-                if job is None:
-                    self._refresh_queue_positions()
-                    return
-                job.gpu_device = device
-                self._set_job_status(job, "PROCESSING")
-                if job.processing_started_monotonic is None:
-                    job.processing_started_monotonic = time.monotonic()
-                    job.processing_ended_monotonic = None
-                job.queue_position = 0
+            with self._drain_lock:
+                with self._lock:
+                    device = self.assign_gpu(self._occupied_gpu_ids())
+                    if device is None:
+                        self._refresh_queue_positions()
+                        return
+                    job = self._pop_next_ready_locked()
+                    if job is None:
+                        self._refresh_queue_positions()
+                        return
+                    job.gpu_device = device
+                    self._set_job_status(job, "PROCESSING")
+                    if job.processing_started_monotonic is None:
+                        job.processing_started_monotonic = time.monotonic()
+                        job.processing_ended_monotonic = None
+                    job.queue_position = 0
             try:
                 self._spawn(job)
             except (OSError, ValueError, RuntimeError) as exc:

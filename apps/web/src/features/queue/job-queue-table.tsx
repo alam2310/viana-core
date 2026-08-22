@@ -48,6 +48,9 @@ function progressPct(job: JobStatusResponse): number | null {
   if (job.status === "COMPLETED") {
     return 100;
   }
+  if (job.status !== "PROCESSING" && job.status !== "PAUSED") {
+    return null;
+  }
   const total = job.progress?.total_frames;
   const current = job.progress?.current_frame;
   if (!total || total <= 0 || current === undefined) {

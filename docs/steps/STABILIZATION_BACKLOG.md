@@ -13,9 +13,9 @@
 
 | Blockers open | Blockers fixed | Polish open | Parked | Path done (fixed + parked) |
 |---------------|----------------|-------------|---------|----------------------------|
-| 0 | 1 (S07) | 0 | 2 (S20, S24) | **32 / 32** active |
+| 0 | 1 (S07) | 2 | 2 (S20, S24) | **32 / 34** active |
 
-**Counts:** Active Seq = S01–S08 + S10–S33 (**32**). **S09** closed in Step 6.7 — not counted. Step 5 is complete; remaining open rows are Step 6 polish.
+**Counts:** Active Seq = S01–S08 + S10–S35 (**34**). **S09** closed in Step 6.7 — not counted. Step 5 is complete; open polish: **S34**, **S35**.
 
 ---
 
@@ -57,9 +57,11 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S31** | F026 | A | no | — | Prescan review: remove duplicate Close; rename Submit → Confirm | **fixed** |
 | **S32** | F027 | C/D | no | — | Relook raw events + 15-min CSV schemas — keep only necessary columns | **fixed** |
 | **S33** | F028 | C | no | — | Pedestrian crossings missing from `_15min.csv` aggregated counts | fixed |
+| **S34** | F029 | B | no | — | Job queue/history lost after container restart (persist orchestrator state) | open |
+| **S35** | F030 | B/C | no | — | Output artifacts owned by root — investigate container user / privileges | open |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **fixed → Step 6.7** |
 
-**Step 5:** Complete (S07 fixed). Open Seq polish is empty (S32 fixed 2026-08-22). Parked: S20/S24.
+**Step 5:** Complete (S07 fixed). Open polish: **S34**, **S35**. Parked: S20/S24.
 
 ---
 
@@ -99,6 +101,8 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S31** | 1. Open prescan review modal 2. Inspect header Close vs footer Cancel 3. Inspect primary footer button label | **Expected:** one dismiss control; primary action reads **Confirm**. **Actual (before):** header **Close** duplicates footer **Cancel**; primary button says **Submit**. **After:** header Close removed; footer **Cancel** + **Confirm** / **Confirming…**. | `apps/web/src/features/prescan/prescan-review-modal.tsx` | this commit | modal smoke (browser) |
 | **S32** | 1. Inspect `{stem}_events.csv` and `{stem}_15min.csv` headers after a COMPLETED run 2. Cross-check `events_raw` / `events_15min` schemas + writers/parsers | **Expected:** CSV columns match operator/report needs only; no redundant or unused fields. **Actual (before):** taxonomy duplicates + box debug on both CSVs. **After:** S32 keep set — events 14 cols; 15min 8 cols (`date`+`HH:MM` S15; Pedestrian still aggregatable S33). Dropped `category`/`class_type`/`sub_class`/`raw_*`/`ocr_confidence`/`norm_area`/`anchor_*`. | schemas + `csv_schema.py` + writers + aggregate + `parse-15min-csv.ts` | this chat | `pytest tests/viana/test_csv_schema.py tests/viana/test_events_csv.py tests/viana/test_aggregate.py tests/viana/test_process.py` |
 | **S33** | 1. Complete a job with Pedestrian crossings in `_events.csv` 2. Open `{stem}_15min.csv` 3. Search for Pedestrian / class counts | **Expected:** 15-min aggregate includes Pedestrian counts (in/out) like other counted classes. **Actual (before):** Pedestrian rows absent (`aggregate: false`). **After:** `Pedestrian.aggregate: true`; `_15min` = vehicles + pedestrians; tests assert in/out + zero-fill; `hiv000001_inframe` raw 4 in / 6 out matches aggregate. | `configs/classes.yaml`; `events_15min.schema.json` description; `docs/ui/OUTPUT_PATHS.md`; `test_aggregate.py` / `test_config_loaders.py` | this chat | `.venv/bin/pytest tests/viana/test_aggregate.py tests/viana/test_config_loaders.py …` (26 passed); clip verify on `data/viana-outputs/nh44/hiv000001_inframe_events.csv` |
+| **S34** | 1. Intake several jobs through prescan / processing 2. `docker restart viana_core` (or recreate container) 3. Open Job Queue in UI | **Expected:** prior jobs and statuses remain visible; in-flight work resumes or fails cleanly from persisted state. **Actual:** queue is empty — `JobPool._jobs` is in-memory only; restart wipes job history (see F029). | `src/orchestrator/workers/pool.py`; `_meta/jobs/` (S29); optional ADR for persistence format | — | Step 6 polish |
+| **S35** | 1. Run a job to `COMPLETED` 2. On the host, `ls -la` project output dir (CSVs, `_processed.mp4`, `_meta/`) | **Expected:** deliverables owned by the operator/host user (or a documented service UID) so files can be read/moved without `sudo`. **Actual:** artifacts are **root:root** (container runs as root; no `user:` in compose). Investigate whether to run orchestrator/engine as non-root, map UID/GID, or fix permissions on write (see F030). | `docker-compose.yml`, `Dockerfile`, `docs/ops/ENVIRONMENT_SETUP.md`; engine/orchestrator write paths | — | Step 6 polish |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine · `D` contract · `TBD`  
 **Status:** `open` · `in_progress` · `fixed` · `deferred` · `parked` · `wontfix`  
@@ -430,10 +434,44 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 ---
 
+## F029 design note (job history survives restart)
+
+**Observed:** After `docker restart` / container recreate, the Job Queue is empty — all prior jobs disappear from the UI even though output artifacts may still exist on disk.
+
+**Root cause (today):** `JobPool` keeps `JobRecord` state in process memory (`_jobs`, `_queue`, `_prescan_queue`). No load-on-startup path.
+
+**Investigation / fix options:**
+1. Persist job registry + queue order to disk (e.g. extend `_meta/jobs/` from S29/ADR 003) on every state transition; reload on orchestrator startup.
+2. Define recovery rules: terminal jobs (`COMPLETED`/`FAILED`/`CANCELLED`) vs resumable (`PAUSED`/`READY`/`PROCESSING` → fail or re-queue).
+3. Do not rely on UI localStorage — backend must own history (see `DISCOVERY.md` § job status model).
+4. Add orchestrator test: write N jobs → simulate restart (new pool instance) → `GET /jobs` returns same records.
+
+**Scope:** Lane B. No Step 5 blocker.
+
+---
+
+## F030 design note (root-owned output files)
+
+**Observed:** Files under the mounted output directory (`/data/viana-outputs` → host `data/`) are created as **root:root**, blocking normal host-user edit/delete without elevated privileges.
+
+**Likely cause:** `docker-compose.yml` runs `viana_core` as root (no `user:` directive); orchestrator spawns `python -m viana` subprocesses inheriting the same UID.
+
+**Investigation:**
+1. Confirm ownership on deliverables vs `_meta/` sidecars after a COMPLETED run (`ls -la` on host).
+2. Options: `user: "${UID}:${GID}"` in compose (watch GPU/device access); dedicated `viana` user in Dockerfile with matching host UID; or `os.chown`/`umask` on write (fragile across bind mounts).
+3. Document chosen approach in `ENVIRONMENT_SETUP.md` / deployment guide.
+4. Ensure prescan/GPU workers and ffmpeg outputs inherit the same policy.
+
+**Scope:** Lane B/C (+ docs). No Step 5 blocker.
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | Added **S34 (F029)** persist job queue/history across container restart |
+| 2026-08-22 | Added **S35 (F030)** investigate root-owned output artifacts; container user/privileges |
 | 2026-08-22 | **S32 (F027) fixed:** trimmed `_events` / `_15min` columns (drop taxonomy duplicates + geometry debug); S15 date/HH:MM and S33 Pedestrian kept |
 | 2026-08-22 | **S29 (F024) fixed:** ADR 003 keep layout — deliverables flat; `_meta/{stem}/` + `_meta/jobs/`; legacy checkpoint resolve for 6.2; COMPLETED deletes prescan JPEG only |
 | 2026-08-22 | **S30 (F025) fixed:** job start-fresh/resume mutate + `GET /jobs` healthy; 502 was proxy during engine-down blip + unhandled `refreshJobs`; UI banner + GET retry + compose `nofile` 65536 |

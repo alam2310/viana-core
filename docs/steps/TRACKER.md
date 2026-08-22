@@ -85,7 +85,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 Open: **S29, S30, S32**; S31+S33 fixed; parked S20/S24 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
+| **4.stab** Stabilization path | 🔄 Open: **S29, S32**; S30+S31+S33 fixed; parked S20/S24 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
 ### Stabilization execution path (mirror — SoT is backlog)
 
@@ -161,6 +161,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | **S30 (F025) fixed** — start-fresh/resume mutate healthy; 502 was engine-down proxy blip + unhandled `refreshJobs`; UI harden + compose `nofile` |
 | 2026-08-22 | **6.11 + S31 complete** — prescan Confirm + `render_video` toggle (default true); short run `test_video` with false skips `_processed.mp4` |
 | 2026-08-22 | **S33 (F028) fixed** — Pedestrian in `_15min.csv` (`aggregate: true`); vehicles + pedestrians documented |
 | 2026-08-22 | Doc sync: 4.stab + execution mirror match backlog (open **S29–S33**; S25–S28 fixed); Step 5 gate text no longer “in parallel polish” |

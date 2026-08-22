@@ -81,7 +81,7 @@ def resume_job(job_id: str) -> JobSubmitResponse:
 
 @router.post("/jobs/{job_id}/start-fresh", response_model=JobSubmitResponse)
 def start_fresh_job(job_id: str) -> JobSubmitResponse:
-    """Delete checkpoint via engine start_fresh and restart."""
+    """Wipe prior artifacts; ``CHECKPOINT_EXISTS`` re-enters prescan, else GPU run."""
     return get_pool().start_fresh(job_id)
 
 

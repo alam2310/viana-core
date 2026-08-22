@@ -7,6 +7,7 @@ export type JobStatus =
   | "PRESCAN_PENDING"
   | "PRESCAN_RUNNING"
   | "PRESCAN_FAILED"
+  | "CHECKPOINT_EXISTS"
   | "AWAITING_REVIEW"
   | "READY"
   | "PROCESSING"
@@ -66,7 +67,7 @@ export interface JobIntakeRequest {
 
 export interface JobIntakeItem {
   job_id: string;
-  status: "PRESCAN_PENDING";
+  status: "PRESCAN_PENDING" | "CHECKPOINT_EXISTS";
   source_video_path: string;
   output_dir: string;
   queue_position: number;

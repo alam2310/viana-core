@@ -44,7 +44,7 @@ from viana.config.job import (
     JobSubmitRequest as EngineSubmit,
 )
 from viana.io.checkpoint import load_checkpoint, utc_now_iso
-from viana.io.paths import job_config_path, resolve_artifact
+from viana.io.paths import job_config_path, resolve_artifact, wipe_run_sidecars
 from viana.io.proc import close_stdio, interrupt_process_tree, open_fd_count, terminate_process_tree
 
 logger = get_logger(__name__)
@@ -187,7 +187,7 @@ class WorkerPool:
         """Build JobStatus including disk checkpoint flag."""
         ckpt = resolve_artifact(job.output_dir, job.source_video_path.stem, "checkpoint")
         exists = ckpt.is_file()
-        checkpoint_exists = exists and job.status in {"PAUSED", "FAILED"}
+        checkpoint_exists = exists and job.status in {"PAUSED", "FAILED", "CHECKPOINT_EXISTS"}
         progress = job.progress if job.status in {"PROCESSING", "PAUSED", "COMPLETED"} else None
         return JobStatus(
             job_id=job.job_id,
@@ -223,7 +223,7 @@ class WorkerPool:
         )
 
     def intake(self, body: JobIntakeRequest) -> JobIntakeResponse:
-        """Register one job per video path at ``PRESCAN_PENDING`` (Step 3 runs prescan)."""
+        """Register videos: ``PRESCAN_PENDING`` or ``CHECKPOINT_EXISTS`` (S36) before prescan."""
         try:
             source_paths = resolve_intake_paths(body.source_video_paths)
         except IntakePathError as exc:
@@ -240,23 +240,41 @@ class WorkerPool:
         with self._lock:
             for path in source_paths:
                 job_id = f"job_{uuid.uuid4().hex[:12]}"
+                stem = path.stem
+                prior_ckpt = resolve_artifact(output_dir, stem, "checkpoint").is_file()
+                if prior_ckpt:
+                    status: JobStatusLiteral = "CHECKPOINT_EXISTS"
+                else:
+                    status = "PRESCAN_PENDING"
                 job = JobRecord(
                     job_id=job_id,
-                    status="PRESCAN_PENDING",
+                    status=status,
                     source_video_path=path,
                     project_id=body.project_id,
                     output_dir=output_dir,
                     created_at=utc_now_iso(),
                 )
                 self._jobs[job_id] = job
-                self._prescan_queue.append(job_id)
-                self._refresh_prescan_queue_positions()
+                queue_position = 0
+                if status == "PRESCAN_PENDING":
+                    self._prescan_queue.append(job_id)
+                    self._refresh_prescan_queue_positions()
+                    queue_position = job.prescan_queue_position
+                else:
+                    job.queue_position = 0
+                    logger.info(
+                        "job_checkpoint_exists",
+                        job_id=job_id,
+                        stem=stem,
+                        project_id=body.project_id,
+                    )
                 items.append(
                     JobIntakeItem(
                         job_id=job_id,
+                        status=status,
                         source_video_path=str(path),
                         output_dir=str(output_dir),
-                        queue_position=job.prescan_queue_position,
+                        queue_position=queue_position,
                     )
                 )
         logger.info("jobs_intake", count=len(items), project_id=body.project_id)
@@ -453,10 +471,37 @@ class WorkerPool:
         return self.to_submit_response(self.get_job(job_id))
 
     def start_fresh(self, job_id: str) -> JobSubmitResponse:
-        """Wipe checkpoint via engine start_fresh and ``viana run``."""
+        """Wipe prior run artifacts and restart.
+
+        ``CHECKPOINT_EXISTS`` (S36): wipe → ``PRESCAN_PENDING`` (normal prescan → review → GPU).
+        ``PAUSED`` / ``FAILED``: wipe via engine ``start_fresh`` and ``viana run``.
+        """
         job = self.get_job(job_id)
         if job.status == "PROCESSING":
             conflict("job is already processing")
+        if job.status == "CHECKPOINT_EXISTS":
+            wipe_run_sidecars(job.output_dir, job.source_video_path.stem)
+            job.submit = None
+            job.command = "run"
+            job.confirmed_metadata = None
+            job.confirmed_task_parameters = None
+            job.proposed_metadata = None
+            job.proposed_lines = None
+            job.proposed_preview_url = None
+            job.progress = None
+            job.error_message = None
+            job.crossing_count = 0
+            job.processing_started_monotonic = None
+            job.processing_ended_monotonic = None
+            job.gpu_device = None
+            self._set_job_status(job, "PRESCAN_PENDING")
+            with self._lock:
+                if job.job_id not in self._prescan_queue:
+                    self._prescan_queue.append(job.job_id)
+                self._refresh_prescan_queue_positions()
+            self._drain_prescan()
+            logger.info("job_start_fresh_to_prescan", job_id=job_id)
+            return self.to_submit_response(self.get_job(job_id))
         if job.submit is None:
             bad_request("job has no submit payload; confirm prescan first")
         job.submit = job.submit.model_copy(update={"resume": False, "start_fresh": True})

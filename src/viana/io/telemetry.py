@@ -12,6 +12,7 @@ JobRuntimeStatus = Literal[
     "PRESCAN_PENDING",
     "PRESCAN_RUNNING",
     "PRESCAN_FAILED",
+    "CHECKPOINT_EXISTS",
     "AWAITING_REVIEW",
     "READY",
     "PROCESSING",

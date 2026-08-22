@@ -19,7 +19,9 @@
       "additionalProperties": false,
       "properties": {
         "job_id": { "type": "string" },
-        "status": { "const": "PRESCAN_PENDING" },
+        "status": {
+          "enum": ["PRESCAN_PENDING", "CHECKPOINT_EXISTS"]
+        },
         "source_video_path": { "type": "string" },
         "output_dir": { "type": "string" },
         "queue_position": { "type": "integer", "minimum": 0 }

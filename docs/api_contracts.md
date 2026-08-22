@@ -87,7 +87,7 @@ Engine CLI: `python -m viana prescan --source … --project-id … [--frame-offs
 
 ## 5b. POST /jobs/intake — JobIntakeRequest
 
-Register one or more video paths for backend prescan. Creates jobs at `PRESCAN_PENDING` (Step 3 worker runs prescan → `AWAITING_REVIEW`).
+Register one or more video paths for backend prescan. Creates jobs at `PRESCAN_PENDING` (Step 3 worker runs prescan → `AWAITING_REVIEW`), or `CHECKPOINT_EXISTS` when a prior checkpoint for that stem is already on disk (S36 — no prescan until Restart Overwrite).
 
 ```json
 {
@@ -138,7 +138,7 @@ Response: full `JobStatus` with `confirmed_metadata` and `confirmed_task_paramet
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/jobs/intake` | Register path(s) → `PRESCAN_PENDING` (400 if path not in a container bind-mount) |
+| POST | `/jobs/intake` | Register path(s) → `PRESCAN_PENDING` or `CHECKPOINT_EXISTS` (400 if path not in a container bind-mount) |
 | PATCH | `/jobs/{id}/prescan` | Confirm review → `READY` |
 | POST | `/jobs/{id}/prescan/retry` | `PRESCAN_FAILED` → `PRESCAN_PENDING` |
 | GET | `/jobs/{id}/prescan/preview` | Re-run prescan OCR at `frame_offset_sec` (**Re-scan OCR** button only; frame scrub uses `source.mp4`) |
@@ -160,7 +160,7 @@ Response: full `JobStatus` with `confirmed_metadata` and `confirmed_task_paramet
 |--------|------|-------------|
 | POST | `/jobs/{id}/pause` | Cooperative pause → checkpoint → `PAUSED` |
 | POST | `/jobs/{id}/resume` | Explicit resume from checkpoint (`PAUSED` only) |
-| POST | `/jobs/{id}/start-fresh` | Delete checkpoint, restart |
+| POST | `/jobs/{id}/start-fresh` | Wipe prior artifacts; from `CHECKPOINT_EXISTS` → `PRESCAN_PENDING`; from `PAUSED`/`FAILED` → GPU `run` |
 | DELETE | `/jobs/{id}` | Cancel job |
 | POST | `/jobs/{id}/aggregate` | Re-build `_15min.csv` |
 | WS | `/ws/jobs` | Telemetry stream |
@@ -185,7 +185,7 @@ Stored at: `{output.parent_dir}/{project_id}/profiles/{profile_id}.json` (schema
 }
 ```
 
-**JobStatus values:** `PRESCAN_PENDING`, `PRESCAN_RUNNING`, `PRESCAN_FAILED`, `AWAITING_REVIEW`, `READY`, `PROCESSING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`. Legacy `PENDING` removed.
+**JobStatus values:** `PRESCAN_PENDING`, `PRESCAN_RUNNING`, `PRESCAN_FAILED`, `CHECKPOINT_EXISTS`, `AWAITING_REVIEW`, `READY`, `PROCESSING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`. Legacy `PENDING` removed.
 
 Fixtures: `packages/contracts/fixtures/telemetry_progress.json`
 

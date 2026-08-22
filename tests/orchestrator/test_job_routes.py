@@ -534,6 +534,112 @@ def test_post_jobs_intake_creates_prescan_pending(client: TestClient) -> None:
     }
 
 
+def _write_prior_checkpoint(output_dir: Path, *, current: int = 100, total: int = 100) -> Path:
+    """Write a checkpoint file (complete or incomplete) for S36 intake detection."""
+    paths = artifact_paths(output_dir, STEM)
+    save_checkpoint(
+        paths["checkpoint"],
+        Checkpoint(
+            job_id="job_prior",
+            project_id="nh48",
+            source_video_path=Path(SOURCE),
+            video_stem=STEM,
+            current_frame=current,
+            total_frames=total,
+            saved_at="2026-03-15T10:00:00Z",
+        ),
+    )
+    return paths["checkpoint"]
+
+
+def test_s36_intake_checkpoint_exists_skips_prescan(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """Prior checkpoint (complete or not) → CHECKPOINT_EXISTS before prescan (S36)."""
+    output_dir = project_output_dir(tmp_path, "nh48")
+    _write_prior_checkpoint(output_dir, current=10, total=100)
+
+    response = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    assert response.status_code == 201
+    item = response.json()["jobs"][0]
+    assert item["status"] == "CHECKPOINT_EXISTS"
+    assert item["queue_position"] == 0
+    job_id = item["job_id"]
+    detail = client.get(f"/jobs/{job_id}").json()
+    assert detail["status"] == "CHECKPOINT_EXISTS"
+    assert detail["checkpoint_exists"] is True
+    # Must not enter the prescan worker.
+    assert detail["status"] not in {"PRESCAN_RUNNING", "AWAITING_REVIEW", "PRESCAN_FAILED"}
+
+
+def test_s36_intake_complete_checkpoint_same_as_incomplete(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """Complete and incomplete checkpoints both map to CHECKPOINT_EXISTS."""
+    output_dir = project_output_dir(tmp_path, "nh48")
+    _write_prior_checkpoint(output_dir, current=100, total=100)
+    response = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    assert response.json()["jobs"][0]["status"] == "CHECKPOINT_EXISTS"
+
+
+def test_s36_start_fresh_from_checkpoint_exists_enters_prescan(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Restart (Overwrite) from Partial wipes sidecars and re-queues prescan."""
+    output_dir = project_output_dir(tmp_path, "nh48")
+    ckpt = _write_prior_checkpoint(output_dir, current=50, total=100)
+    events = artifact_paths(output_dir, STEM)["events"]
+    events.write_text("track_id\n1\n", encoding="utf-8")
+    assert ckpt.is_file()
+
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    job_id = intake.json()["jobs"][0]["job_id"]
+    assert client.get(f"/jobs/{job_id}").json()["status"] == "CHECKPOINT_EXISTS"
+
+    preview = tmp_path / "nh48" / "prescan" / "prescan_abc_preview.jpg"
+    preview.parent.mkdir(parents=True, exist_ok=True)
+    preview.write_bytes(b"\xff\xd8\xff")
+    stdout = _prescan_stdout(preview)
+
+    def fake_run(args: Any, timeout: float | None = None, **_kwargs: Any) -> CompletedProcess[str]:
+        if args and args[0] == "prescan":
+            return CompletedProcess(args=list(args), returncode=0, stdout=stdout, stderr="")
+        return CompletedProcess(args=list(args), returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("orchestrator.workers.pool.run_viana", fake_run)
+
+    response = client.post(f"/jobs/{job_id}/start-fresh")
+    assert response.status_code == 200
+    assert not ckpt.is_file()
+    assert not events.is_file()
+    get_pool().wait_for_status(job_id, "AWAITING_REVIEW", "PRESCAN_FAILED", timeout=5.0)
+    assert client.get(f"/jobs/{job_id}").json()["status"] == "AWAITING_REVIEW"
+
+
+def test_s36_confirm_rejected_while_checkpoint_exists(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """Partial jobs cannot skip to confirm/GPU without Restart (Overwrite)."""
+    output_dir = project_output_dir(tmp_path, "nh48")
+    _write_prior_checkpoint(output_dir)
+    intake = client.post(
+        "/jobs/intake",
+        json={"project_id": "nh48", "source_video_paths": [SOURCE]},
+    )
+    job_id = intake.json()["jobs"][0]["job_id"]
+    response = client.patch(f"/jobs/{job_id}/prescan", json=CONFIRM_BODY)
+    assert response.status_code == 400
+
+
 def test_post_jobs_intake_output_dir_override(client: TestClient, tmp_path: Path) -> None:
     """Intake accepts browsable output_dir override (G20)."""
     custom = tmp_path / "custom-out"

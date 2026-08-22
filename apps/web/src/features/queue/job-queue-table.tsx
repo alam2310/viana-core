@@ -156,15 +156,19 @@ export function JobQueueTable({
           scrollbarGutter: "stable",
         }}
       >
-        <table className="w-full table-fixed text-left text-sm leading-tight">
+        {/*
+          Video 14% / Submitted 12% / Status 12%; remaining columns share the rest evenly.
+          Video uses ellipsis; status labels stay fully visible. Same px-2.5 gutter on every cell.
+        */}
+        <table className="w-full min-w-[64rem] table-fixed text-left text-sm leading-tight">
           <colgroup>
-            <col style={{ width: "16%" }} />
-            <col style={{ width: "13%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "5%" }} />
-            <col style={{ width: "9%" }} />
-            <col style={{ width: "9%" }} />
             <col style={{ width: "14%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "12%" }} />
             <col style={{ width: "12%" }} />
             <col style={{ width: "12%" }} />
           </colgroup>
@@ -185,13 +189,7 @@ export function JobQueueTable({
               ).map((label) => (
                 <th
                   key={label}
-                  className={cn(
-                    "sticky top-0 z-10 bg-card px-3 py-1 font-medium shadow-[inset_0_-1px_0_0_var(--ui-border)]",
-                    (label === "Video Length" ||
-                      label === "Run Time" ||
-                      label === "Time Remaining") &&
-                      "whitespace-nowrap",
-                  )}
+                  className="sticky top-0 z-10 bg-card px-2.5 py-1 font-medium whitespace-nowrap shadow-[inset_0_-1px_0_0_var(--ui-border)]"
                 >
                   {label}
                 </th>
@@ -231,38 +229,38 @@ export function JobQueueTable({
                   )}
                   onClick={() => onSelectJob(job)}
                 >
-                  <td className="px-3 py-1">
+                  <td className="px-2.5 py-1 align-middle">
                     <p
-                      className="truncate font-mono text-xs leading-tight"
+                      className="truncate font-mono text-xs leading-snug"
                       title={job.source_video_path}
                     >
                       {videoStem(job.source_video_path)}
                     </p>
                   </td>
-                  <td className="px-3 py-1 text-xs text-muted whitespace-nowrap">
+                  <td className="px-2.5 py-1 text-xs text-muted whitespace-nowrap align-middle">
                     {formatSubmittedAt(job.created_at)}
                   </td>
-                  <td className="px-3 py-1">
+                  <td className="px-2.5 py-1 align-middle">
                     <span
                       title={statusHint(job.status)}
                       className={cn(
-                        "inline-block max-w-full truncate whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-medium leading-none",
+                        "inline-block whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-medium leading-none",
                         statusBadgeClass(job.status),
                       )}
                     >
                       {statusLabel(job.status)}
                     </span>
                   </td>
-                  <td className="px-3 py-1 font-mono text-xs text-muted">
+                  <td className="px-2.5 py-1 font-mono text-xs text-muted whitespace-nowrap align-middle">
                     {gpuIdFromDevice(job.gpu_device)}
                   </td>
-                  <td className="px-3 py-1 font-mono text-xs text-muted whitespace-nowrap">
+                  <td className="px-2.5 py-1 font-mono text-xs text-muted whitespace-nowrap align-middle">
                     {formatVideoLengthHms(job.video_duration_sec)}
                   </td>
-                  <td className="px-3 py-1 font-mono text-xs text-muted whitespace-nowrap">
+                  <td className="px-2.5 py-1 font-mono text-xs text-muted whitespace-nowrap align-middle">
                     {formatVideoLengthHms(runTimeSec(job))}
                   </td>
-                  <td className="px-3 py-1">
+                  <td className="px-2.5 py-1 align-middle">
                     {pct !== null ? (
                       <div className="flex min-w-0 items-center gap-2">
                         <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded bg-accent">
@@ -274,7 +272,7 @@ export function JobQueueTable({
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                        <span className="w-8 shrink-0 text-right text-xs tabular-nums">
+                        <span className="w-8 shrink-0 text-right text-xs tabular-nums whitespace-nowrap">
                           {pct}%
                         </span>
                       </div>
@@ -286,10 +284,10 @@ export function JobQueueTable({
                       <span className="text-xs text-muted">—</span>
                     )}
                   </td>
-                  <td className="px-3 py-1 text-xs tabular-nums text-muted whitespace-nowrap">
+                  <td className="px-2.5 py-1 text-xs tabular-nums text-muted whitespace-nowrap align-middle">
                     {timeRemaining(job)}
                   </td>
-                  <td className="px-3 py-1">
+                  <td className="px-2.5 py-1 align-middle">
                     <div
                       className="flex flex-nowrap items-center justify-start gap-1"
                       onClick={(event) => event.stopPropagation()}

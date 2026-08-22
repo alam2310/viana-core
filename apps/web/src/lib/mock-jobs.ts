@@ -162,9 +162,12 @@ export function mockStartFreshJob(jobId: string): JobStatusResponse | null {
   if (!existing) {
     return null;
   }
+  // S36: Partial (CHECKPOINT_EXISTS) re-enters prescan; other recoveries go READY.
+  const nextStatus =
+    existing.status === "CHECKPOINT_EXISTS" ? "PRESCAN_PENDING" : "READY";
   const updated: JobStatusResponse = {
     ...existing,
-    status: "READY",
+    status: nextStatus,
     checkpoint_exists: false,
     progress: undefined,
   };

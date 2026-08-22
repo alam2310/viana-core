@@ -18,6 +18,7 @@ JobStatusLiteral = Literal[
     "PRESCAN_PENDING",
     "PRESCAN_RUNNING",
     "PRESCAN_FAILED",
+    "CHECKPOINT_EXISTS",
     "AWAITING_REVIEW",
     "READY",
     "PROCESSING",
@@ -230,7 +231,7 @@ class JobIntakeItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     job_id: str
-    status: Literal["PRESCAN_PENDING"] = "PRESCAN_PENDING"
+    status: Literal["PRESCAN_PENDING", "CHECKPOINT_EXISTS"] = "PRESCAN_PENDING"
     source_video_path: str
     output_dir: str
     queue_position: int = Field(ge=0)

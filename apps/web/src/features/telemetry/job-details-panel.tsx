@@ -122,7 +122,11 @@ export function JobDetailsPanel({
     );
   }
 
-  const errorText = formatJobErrorMessage(job.error_message);
+  // PAUSED stores error_message="interrupted" as an internal marker — not an operator error.
+  const errorText =
+    job.status === "PAUSED"
+      ? null
+      : formatJobErrorMessage(job.error_message);
   const stem = videoStem(job.source_video_path);
   const csvHostPath =
     job.status === "COMPLETED" && mountConfig

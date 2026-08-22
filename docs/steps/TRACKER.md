@@ -155,6 +155,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 6.10 | Bind live crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session WS list length (**I002**) | ✅ |
 | 6.11 | Prescan-review `render_video` toggle; pass through confirm/submit (existing field; no new schema) (**I006**) | ✅ |
 | 6.12 | Prescan `track_pedestrians` toggle; skip pedestrian YOLO when false; exclude Pedestrian from events/`_15min.csv`; schema + API + E2E if needed (**I007**) | ⬜ |
+| 6.13 | Project/intake UX re-discovery: camera-folder source picker + analytics type; output folder widget; simplify `project_id` model (**I008**) | ⬜ |
 
 ---
 
@@ -162,6 +163,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | Promoted **I008 → 6.13** — project/intake UX re-discovery (camera-folder sources, layout, de-emphasize `project_id`) |
 | 2026-08-22 | Promoted **I007 → 6.12** — prescan `track_pedestrians` checkbox; skip pedestrian detect + `_15min.csv` rows when false; new API field + E2E |
 | 2026-08-22 | **S30 (F025) fixed** — start-fresh/resume mutate healthy; 502 was engine-down proxy blip + unhandled `refreshJobs`; UI harden + compose `nofile` |
 | 2026-08-22 | **6.11 + S31 complete** — prescan Confirm + `render_video` toggle (default true); short run `test_video` with false skips `_processed.mp4` |

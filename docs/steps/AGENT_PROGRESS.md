@@ -110,9 +110,9 @@ Update tracker after **each** sub-step 4.1–4.5.
 
 ## On completing Step 6 — Hardening (per item)
 
-Per item **6.1–6.12** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferred.
+Per item **6.1–6.13** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferred.
 
-**Done through 2026-08-22:** 6.1, 6.3, 6.7–**6.11** (I001–I003, I006). **Still open:** 6.2, 6.4, 6.5, 6.6, **6.12** (I007).
+**Done through 2026-08-22:** 6.1, 6.3, 6.7–**6.11** (I001–I003, I006). **Still open:** 6.2, 6.4, 6.5, 6.6, **6.12** (I007), **6.13** (I008).
 
 ---
 

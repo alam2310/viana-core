@@ -1,7 +1,7 @@
 # Idea dump (manual review only)
 
 **Status:** parking lot — **not** a work queue  
-**Last updated:** 2026-08-22 (I007 promoted → 6.12)  
+**Last updated:** 2026-08-22 (I008 promoted → 6.13)  
 **Owner:** human (this chat / later review)
 
 > **Agents: do not implement, prioritize, or start a Step/Seq from this file.**  
@@ -33,7 +33,7 @@ This file exists so active coding sessions stay on the current Step. Come back h
 
 ### Review ranking (2026-08-21)
 
-Human review of I001–I007. Promoted Step items **6.8–6.11 are ✅ complete**. **6.12** is the active promoted item from I007. Remaining dump rows (**I004**, **I005**) are not work until re-promoted.
+Human review of I001–I008. Promoted Step items **6.8–6.11 are ✅ complete**. Active promoted: **6.12** (I007), **6.13** (I008). Dump only: **I004** (demoted), **I005**.
 
 | Rank | ID | Decision |
 |------|----|----------|
@@ -41,9 +41,10 @@ Human review of I001–I007. Promoted Step items **6.8–6.11 are ✅ complete**
 | 2 | **I003** | **Promoted** → Step **6.9** (engine) — ✅ done |
 | 3 | **I002** | **Promoted** → Step **6.10** (UI) — ✅ done |
 | 4 | **I006** | **Promoted** → Step **6.11** (UI) — ✅ done (`render_video` toggle) |
-| 5 | **I007** | **Promoted** → Step **6.12** (UI + API + engine) — `track_pedestrians` toggle; skip pedestrian YOLO + exclude from `_15min.csv` when false |
-| 6 | **I005** | Stay in dump — mux soft event subs into `_processed.mp4` (direction set) |
-| 7 | **I004** | **Demoted** — later / aesthetics. Do not start from this dump. |
+| 5 | **I007** | **Promoted** → Step **6.12** (UI + API + engine) — `track_pedestrians` toggle |
+| 6 | **I008** | **Promoted** → Step **6.13** (UI / product) — project/intake UX re-discovery |
+| 7 | **I005** | Stay in dump — mux soft event subs into `_processed.mp4` (direction set) |
+| 8 | **I004** | **Demoted** — later / aesthetics. Do not start from this dump. |
 
 ---
 
@@ -106,6 +107,12 @@ Human review of I001–I007. Promoted Step items **6.8–6.11 are ✅ complete**
 
 **Suggested impact: high.** Engine always runs a second YOLO (`yolo11l.pt`) for pedestrians today (`ultralytics_detect.py`, `process.py`). Skipping it should improve FPS/wall time. **No existing job field** — unlike `render_video` (6.11). Needs schema-first: `task_parameters.track_pedestrians` (default `true`?) on prescan confirm / job submit; engine skips pedestrian predict + merge; aggregate must omit Pedestrian rows when false (S33 currently always aggregates Pedestrian). UI toggle in prescan review; verify `_15min.csv` + E2E on a clip with/without pedestrian crossings.
 
+### I008 — Project / intake UX re-discovery (promoted → 6.13)
+
+**Dump:** Redesign UI for project handling. Needs re-discovery. Today the **output path** sits next to the **analytics type** dropdown. Lean layout: **select input files** beside analytics type; **output folder** in the following widget. Overall **`project_id`-centric** handling feels confusing — find a simpler model. Input files usually live in a **folder tree by camera location**; intake should make choosing source paths easy.
+
+**Suggested impact: high.** Operator-facing clarity, not a perf patch. Start with discovery (`docs/ui/DISCOVERY.md` pattern): map current project bar + intake browser (`dashboard.tsx`, `path-browser.tsx`, `project-bar.tsx`); prototype row 1 = analytics type + multi-file/source picker (tree aligned to camera sites); row 2 = output destination. Decide whether `project_id` stays internal (derived from path) or becomes explicit. API/contracts only if the job grouping model changes — do not implement until promoted after discovery sign-off.
+
 ---
 
 ## Promoted / dropped
@@ -117,6 +124,7 @@ Human review of I001–I007. Promoted Step items **6.8–6.11 are ✅ complete**
 | I003 | 2026-08-21 | **promoted** → **6.9** | No in-process OSD OCR; lock clock/location to confirmed prescan. |
 | I006 | 2026-08-21 | **promoted** → **6.11** | Prescan-review `render_video` toggle; pass existing confirm/submit field (no new schema). **Implemented 2026-08-22.** |
 | I007 | 2026-08-22 | **promoted** → **6.12** | `track_pedestrians` checkbox in prescan review; new API field if missing; skip pedestrian YOLO + exclude from `_15min.csv` when false. |
+| I008 | 2026-08-22 | **promoted** → **6.13** | Project/intake UX re-discovery — camera-folder sources + analytics type row; output widget; simplify `project_id`. |
 
 ---
 
@@ -125,6 +133,8 @@ Human review of I001–I007. Promoted Step items **6.8–6.11 are ✅ complete**
 | Date | Note |
 |------|------|
 | 2026-08-22 | I007 added + promoted → **6.12** — `track_pedestrians` toggle; skip pedestrian detect + exclude from `_15min.csv`; schema/API/engine/E2E if needed. |
+| 2026-08-22 | I008 added — project/intake UX re-discovery (source tree by camera location; inputs + analytics type vs output widget; simplify `project_id`). |
+| 2026-08-22 | I008 promoted → **6.13** — UX discovery then redesign; discovery before implementation. |
 | 2026-08-22 | **I006 / 6.11 complete** — prescan `render_video` toggle (default true); Confirm/Confirming…; `test_video` false skips `_processed.mp4`. |
 | 2026-08-21 | **6.9 implemented** — process loop no longer OCR-rescans; clock/location locked to confirmed prescan/user metadata; S23 before/after documented. |
 | 2026-08-22 | I004 note: 6.8 job details exist; still demoted until re-promoted |

@@ -26,6 +26,7 @@
 | **6.10** | Bind crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session list length (**I002**) | ✅ UI |
 | **6.11** | Prescan-review `render_video` toggle; wire existing confirm/submit field (**I006**) | ✅ UI |
 | **6.12** | Prescan `track_pedestrians` toggle; skip pedestrian YOLO; exclude from `_15min.csv` when false; schema + API + E2E (**I007**) | UI + API + Engine |
+| **6.13** | Project/intake UX re-discovery + redesign: camera-folder sources, analytics-type row, output widget; simplify `project_id` (**I008**) | UI / product |
 
 Promoted from [`IDEA_DUMP.md`](IDEA_DUMP.md). Remaining dump items **I004** (demoted) and **I005** (mux soft subs) are **not** Step 6 work until re-promoted.
 
@@ -41,6 +42,7 @@ Mark each item ✅ in `TRACKER.md`. When all done or deferred, mark Step 6 ✅.
 
 | Date | Note |
 |------|------|
+| 2026-08-22 | Promoted **I008 → 6.13** — project/intake UX re-discovery (Step 1-style discovery before build); camera-folder source flow; simplify `project_id`. |
 | 2026-08-22 | Promoted **I007 → 6.12** — `track_pedestrians` in prescan review; skip pedestrian model + exclude Pedestrian from aggregate when false; contracts/API/engine/E2E. |
 | 2026-08-22 | **6.11 complete (I006 / S31):** `render_video` checkbox in prescan review (default true); Confirm/Confirming…; no schema change. Verified `test_video` COMPLETED with false → no `_processed.mp4`. |
 | 2026-08-22 | Doc sync: mark **6.8–6.10** ✅ in ordered backlog (already complete in TRACKER). |

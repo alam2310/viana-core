@@ -64,6 +64,7 @@ def artifact_paths(output_dir: Path, video_stem: str) -> dict[str, Path]:
     meta = stem_meta_dir(output_dir, video_stem)
     return {
         "events": output_dir / f"{video_stem}_events.csv",
+        "events_report": output_dir / f"{video_stem}_events_report.csv",
         "aggregate_15min": output_dir / f"{video_stem}_15min.csv",
         "processed_video": output_dir / f"{video_stem}_processed.mp4",
         "manifest": meta / "manifest.json",
@@ -103,7 +104,7 @@ def wipe_run_sidecars(output_dir: Path, video_stem: str) -> None:
     """Delete deliverables + meta sidecars for ``start_fresh`` (canonical and legacy)."""
     paths = artifact_paths(output_dir, video_stem)
     legacy = legacy_artifact_paths(output_dir, video_stem)
-    for key in ("events", "processed_video", "aggregate_15min"):
+    for key in ("events", "events_report", "processed_video", "aggregate_15min"):
         target = paths[key]
         if target.is_file():
             target.unlink()

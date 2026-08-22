@@ -33,7 +33,8 @@ See `docs/governance/AI_SDLC.md`.
 | `job_submit_response.schema.json` | POST /jobs response |
 | `job_status.schema.json` | GET /jobs/{id} response |
 | `prescan_response.schema.json` | POST /utils/prescan response |
-| `events_raw.schema.json` | `{stem}_events.csv` columns |
+| `events_raw.schema.json` | `{stem}_events.csv` columns (debug) |
+| `events_report.schema.json` | `{stem}_events_report.csv` columns |
 | `events_15min.schema.json` | `{stem}_15min.csv` columns |
 | `calibration_profile.schema.json` | Project profiles |
 | `telemetry.schema.json` | WebSocket messages |

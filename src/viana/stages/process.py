@@ -14,6 +14,7 @@ from viana.domain.boxes import Detection
 from viana.io.checkpoint import Checkpoint, load_checkpoint, save_checkpoint, utc_now_iso
 from viana.io.csv_schema import RawCrossingEventRow
 from viana.io.events import EventsCsvWriter
+from viana.io.events_report import write_events_report_csv
 from viana.io.paths import (
     artifact_paths,
     legacy_artifact_paths,
@@ -58,9 +59,10 @@ def crossing_to_event(
     crossing: Crossing,
     time_map: TimeMap,
 ) -> RawCrossingEventRow:
-    """Map a unique crossing to an events-CSV row (schema columns only)."""
+    """Map a unique crossing to a debug events-CSV row (all engine fields)."""
     vehicle = _class_or_unknown(taxonomy, crossing.class_id)
-    wall, source, _ = time_map.resolve(crossing.video_pts_ms)
+    raw = _class_or_unknown(taxonomy, crossing.raw_class_id)
+    wall, source, ocr_conf = time_map.resolve(crossing.video_pts_ms)
     date = job.metadata.user_start_date
     location = job.metadata.location
     if time_map.anchors:
@@ -78,10 +80,25 @@ def crossing_to_event(
         confidence=crossing.confidence,
         wall_time=wall,
         wall_time_source=source,
+        ocr_confidence=ocr_conf,
         date=date,
         location=location,
         class_id=crossing.class_id,
+        raw_class_id=crossing.raw_class_id,
+        raw_class_name=raw.name if raw else None,
+        category=vehicle.category if vehicle else None,
+        class_type=vehicle.class_type if vehicle else None,
+        sub_class=vehicle.sub_class if vehicle else None,
+        norm_area=crossing.norm_area,
+        anchor_x=crossing.anchor_x,
+        anchor_y=crossing.anchor_y,
     )
+
+
+def _write_report_artifacts(paths: dict[str, Path]) -> None:
+    """Build operator ``_events_report.csv`` from debug events after a successful run."""
+    if paths["events"].is_file():
+        write_events_report_csv(paths["events"], paths["events_report"])
 
 
 def _default_detector(job: JobConfig, defaults: EngineDefaults) -> FrameDetector:
@@ -194,6 +211,7 @@ def run_moving_count(
                     job.job_id, job.source_video_path, video_stem, artifacts, status="COMPLETED"
                 )
                 save_run_result(paths["run_result"], result)
+                _write_report_artifacts(paths)
                 return result
             raise CheckpointExistsError(
                 "checkpoint already complete; set start_fresh=true to re-run"
@@ -305,9 +323,7 @@ def run_moving_count(
                                     "video_pts_ms": crossing.video_pts_ms,
                                     "event_timestamp": row.wall_time,
                                     "event_timestamp_source": row.wall_time_source,
-                                    "event_timestamp_confidence": time_map.resolve(
-                                        crossing.video_pts_ms
-                                    )[2],
+                                    "event_timestamp_confidence": row.ocr_confidence,
                                 },
                             )
                         )
@@ -378,6 +394,7 @@ def run_moving_count(
             save_time_map(paths["time_map"], time_map)
             stage_sec["io"] += time.perf_counter() - t_io
             writer_renderer.close()
+            _write_report_artifacts(paths)
             artifacts = RunResultArtifacts(
                 events=str(paths["events"]),
                 time_map=str(paths["time_map"]),

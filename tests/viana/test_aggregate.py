@@ -9,7 +9,7 @@ import pytest
 
 from viana.config.classes import load_class_taxonomy
 from viana.io.checkpoint import Checkpoint, save_checkpoint, utc_now_iso
-from viana.io.csv_schema import RawCrossingEventRow, events_15min_columns
+from viana.io.csv_schema import RawCrossingEventRow
 from viana.io.events import EventsCsvWriter
 from viana.stages.aggregate import aggregate_events, build_aggregate_rows
 
@@ -28,6 +28,7 @@ def _event(**overrides: object) -> RawCrossingEventRow:
         "wall_time": "2026-03-15T09:07:00Z",
         "date": "15-03-2026",
         "location": "NH48",
+        "category": "Passenger",
         "class_id": 0,
     }
     payload.update(overrides)
@@ -82,7 +83,8 @@ def test_zero_fill_includes_pedestrian() -> None:
     assert car_in.window_start == "09:00"
     assert car_in.window_end == "09:15"
     assert car_in.date == "15-03-2026"
-    assert car_in.partial is False
+    assert car_in.category == "Passenger"
+    assert car_in.class_type == "Light Fast"
     windows = {row.window_start for row in rows}
     assert windows == {"09:00"}
     aggregatable = len(taxonomy.aggregatable())
@@ -131,6 +133,5 @@ def test_incomplete_checkpoint_requires_partial(tmp_path: Path) -> None:
         events_path, out_path, taxonomy, partial=True, checkpoint_path=ckpt_path
     )
     assert rows
-    assert all(row.partial for row in rows if row.window_start == "09:00")
-    header = out_path.read_text(encoding="utf-8").splitlines()[0].split(",")
-    assert tuple(header) == events_15min_columns()
+    header = out_path.read_text(encoding="utf-8").splitlines()[0]
+    assert header.startswith("Date,Window Start,Window End")

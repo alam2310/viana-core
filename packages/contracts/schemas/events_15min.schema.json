@@ -2,20 +2,22 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://viana.local/schemas/events_15min.schema.json",
   "title": "Aggregate15MinRow",
-  "description": "One row in {stem}_15min.csv (vehicle classes + pedestrians, zero-filled grid). window_start/window_end are HH:MM (S15). class_name includes Pedestrian when aggregate:true (S33).",
+  "description": "One row in {stem}_15min.csv (vehicles + pedestrians, zero-filled). Human-readable CSV headers; window columns are HH:MM (S15).",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "window_start", "window_end", "date", "class_name", "direction", "count", "partial"
+    "date", "window_start", "window_end", "location",
+    "class_name", "category", "class_type", "direction", "count"
   ],
   "properties": {
-    "window_start": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
-    "window_end": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
-    "date": { "type": "string" },
-    "location": { "type": "string" },
-    "class_name": { "type": "string" },
-    "direction": { "enum": ["in", "out"] },
-    "count": { "type": "integer", "minimum": 0 },
-    "partial": { "type": "boolean" }
+    "date": { "type": "string", "description": "CSV header: Date" },
+    "window_start": { "type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "CSV header: Window Start" },
+    "window_end": { "type": "string", "pattern": "^\\d{2}:\\d{2}$", "description": "CSV header: Window End" },
+    "location": { "type": "string", "description": "CSV header: Location" },
+    "class_name": { "type": "string", "description": "CSV header: Class Name" },
+    "category": { "type": "string", "description": "CSV header: Category" },
+    "class_type": { "type": "string", "description": "CSV header: Class Type" },
+    "direction": { "enum": ["in", "out"], "description": "CSV header: Direction" },
+    "count": { "type": "integer", "minimum": 0, "description": "CSV header: Count" }
   }
 }

@@ -10,6 +10,8 @@ from pathlib import Path
 from viana.config.classes import ClassTaxonomy
 from viana.io.checkpoint import load_checkpoint
 from viana.io.csv_schema import (
+    EVENTS_15MIN_CSV_HEADERS,
+    EVENTS_15MIN_FIELD_TO_HEADER,
     Aggregate15MinRow,
     CrossingDirection,
     RawCrossingEventRow,
@@ -74,6 +76,7 @@ def build_aggregate_rows(
     last_window_partial: bool = False,
 ) -> list[Aggregate15MinRow]:
     """Zero-fill a class × direction grid for each 15-minute clock window."""
+    _ = last_window_partial  # gate only; ``partial`` column removed from operator CSV
     aggregatable = taxonomy.aggregatable()
     allowed = {item.name for item in aggregatable}
     timed: list[tuple[datetime, RawCrossingEventRow]] = []
@@ -104,48 +107,45 @@ def build_aggregate_rows(
         if window not in meta:
             meta[window] = (event.date, event.location)
 
+    class_by_name = {item.name: item for item in aggregatable}
     rows: list[Aggregate15MinRow] = []
-    last_start = windows[-1]
     for window_start in windows:
         window_end = window_start + WINDOW
         date, location = meta.get(window_start, (None, None))
         resolved_date = date or window_start.strftime("%d-%m-%Y")
-        is_partial = last_window_partial and window_start == last_start
         for vehicle in aggregatable:
+            info = class_by_name[vehicle.name]
             for direction in DIRECTIONS:
                 rows.append(
                     Aggregate15MinRow(
+                        date=resolved_date,
                         window_start=format_window(window_start),
                         window_end=format_window(window_end),
-                        date=resolved_date,
+                        location=location,
                         class_name=vehicle.name,
+                        category=info.category,
+                        class_type=info.class_type,
                         direction=direction,
                         count=counts[(window_start, vehicle.name, direction)],
-                        partial=is_partial,
-                        location=location,
                     )
                 )
     return rows
 
 
 def write_aggregate_csv(path: Path, rows: list[Aggregate15MinRow]) -> None:
-    """Write ``{stem}_15min.csv`` in schema column order."""
+    """Write ``{stem}_15min.csv`` with human-readable headers."""
     path.parent.mkdir(parents=True, exist_ok=True)
     columns = list(events_15min_columns())
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns)
+        writer = csv.DictWriter(handle, fieldnames=list(EVENTS_15MIN_CSV_HEADERS))
         writer.writeheader()
         for row in rows:
             dumped = row.model_dump()
             record: dict[str, str] = {}
-            for column in columns:
-                value = dumped[column]
-                if value is None:
-                    record[column] = ""
-                elif isinstance(value, bool):
-                    record[column] = "true" if value else "false"
-                else:
-                    record[column] = str(value)
+            for key in columns:
+                header = EVENTS_15MIN_FIELD_TO_HEADER[key]
+                value = dumped[key]
+                record[header] = "" if value is None else str(value)
             writer.writerow(record)
 
 

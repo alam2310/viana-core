@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viana.local/schemas/events_report.schema.json",
+  "title": "ReportCrossingEventRow",
+  "description": "One row in {stem}_events_report.csv — operator reporting export (derived from debug events at COMPLETED).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "video_filename", "date", "time", "location",
+    "class_id", "class_name", "category", "class_type", "direction"
+  ],
+  "properties": {
+    "video_filename": { "type": "string", "description": "CSV header: Video Filename" },
+    "date": { "type": "string", "description": "DD-MM-YYYY from prescan/user metadata" },
+    "time": { "type": "string", "description": "HH:MM:SS from wall_time (UTC)" },
+    "location": { "type": "string" },
+    "class_id": { "type": "integer", "description": "CSV header: Class Id" },
+    "class_name": { "type": "string", "description": "CSV header: Class Name" },
+    "category": { "type": "string", "description": "CSV header: Category" },
+    "class_type": { "type": "string", "description": "CSV header: Class Type" },
+    "direction": { "enum": ["in", "out"] }
+  }
+}

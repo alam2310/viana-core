@@ -12,11 +12,14 @@ from viana.config.files import contracts_schemas_dir
 from viana.io.csv_schema import (
     EVENTS_15MIN_SCHEMA,
     EVENTS_RAW_SCHEMA,
+    EVENTS_REPORT_SCHEMA,
     Aggregate15MinRow,
     RawCrossingEventRow,
+    ReportCrossingEventRow,
     csv_columns_from_schema,
     events_15min_columns,
     events_raw_columns,
+    events_report_columns,
     load_json_schema,
     validate_csv_header,
 )
@@ -45,26 +48,29 @@ def test_aggregate_fields_match_schema() -> None:
     assert events_15min_columns() == csv_columns_from_schema(schema)
 
 
-def test_s32_dropped_debug_and_taxonomy_columns() -> None:
-    """Operator CSVs omit hierarchy duplicates and box-debug fields (F027)."""
+def test_report_event_fields_match_schema() -> None:
+    """Pydantic report row fields equal events_report.schema.json properties."""
+    events_report_columns.cache_clear()
+    schema = load_json_schema(EVENTS_REPORT_SCHEMA)
+    assert set(ReportCrossingEventRow.model_fields) == set(schema["properties"])
+    assert events_report_columns() == csv_columns_from_schema(schema)
+
+
+def test_raw_debug_schema_includes_geometry_and_taxonomy() -> None:
+    """Debug events CSV retains full engine field set."""
     events_raw_columns.cache_clear()
-    events_15min_columns.cache_clear()
-    dropped = {
+    cols = set(events_raw_columns())
+    for name in (
         "ocr_confidence",
         "raw_class_id",
-        "raw_class_name",
         "category",
         "class_type",
         "sub_class",
         "norm_area",
         "anchor_x",
         "anchor_y",
-    }
-    assert dropped.isdisjoint(events_raw_columns())
-    assert dropped.isdisjoint(events_15min_columns())
-    assert "date" in events_raw_columns()
-    assert "date" in events_15min_columns()
-    assert events_15min_columns()[:3] == ("window_start", "window_end", "date")
+    ):
+        assert name in cols
 
 
 def test_validate_csv_header_accepts_schema_order() -> None:
@@ -120,13 +126,14 @@ def test_aggregate_row_count_non_negative() -> None:
     """15-min counts cannot be negative."""
     with pytest.raises(ValidationError):
         Aggregate15MinRow(
+            date="15-03-2026",
             window_start="09:00",
             window_end="09:15",
-            date="15-03-2026",
             class_name="Car",
+            category="Passenger",
+            class_type="Light Fast",
             direction="in",
             count=-1,
-            partial=False,
         )
 
 

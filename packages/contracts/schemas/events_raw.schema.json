@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://viana.local/schemas/events_raw.schema.json",
   "title": "RawCrossingEventRow",
-  "description": "One row in {stem}_events.csv (operator event log; S32). Taxonomy hierarchy and box geometry are not columns — look up class_id in classes.yaml.",
+  "description": "One row in {stem}_events.csv — full debug export (all engine fields).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -20,11 +20,20 @@
     "wall_time_source": {
       "enum": ["ocr_recalibrated", "ocr_anchor", "user_fallback", "unavailable", null]
     },
+    "ocr_confidence": { "type": ["number", "null"] },
     "date": { "type": "string" },
     "location": { "type": "string" },
     "class_id": { "type": "integer" },
     "class_name": { "type": "string" },
+    "raw_class_id": { "type": "integer" },
+    "raw_class_name": { "type": "string" },
+    "category": { "type": "string" },
+    "class_type": { "type": "string" },
+    "sub_class": { "type": "string" },
     "direction": { "enum": ["in", "out"] },
-    "confidence": { "type": "number" }
+    "confidence": { "type": "number" },
+    "norm_area": { "type": "integer" },
+    "anchor_x": { "type": "number" },
+    "anchor_y": { "type": "number" }
   }
 }

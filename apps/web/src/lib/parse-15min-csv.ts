@@ -59,6 +59,16 @@ function parseCsvLine(line: string): string[] {
   return fields;
 }
 
+function colIndex(header: string[], ...names: string[]): number {
+  for (const name of names) {
+    const idx = header.indexOf(name);
+    if (idx >= 0) {
+      return idx;
+    }
+  }
+  return -1;
+}
+
 export function parse15MinCsv(text: string): Aggregate15MinRow[] {
   const trimmed = text.trim();
   if (!trimmed) {
@@ -70,14 +80,12 @@ export function parse15MinCsv(text: string): Aggregate15MinRow[] {
   }
 
   const header = parseCsvLine(lines[0]);
-  const col = (name: string) => header.indexOf(name);
-  const startIdx = col("window_start");
-  const endIdx = col("window_end");
-  const dateIdx = col("date");
-  const classIdx = col("class_name");
-  const directionIdx = col("direction");
-  const countIdx = col("count");
-  // S15: date + HH:MM windows. S32 dropped category/class_type/sub_class; lookup by name.
+  const dateIdx = colIndex(header, "Date", "date");
+  const startIdx = colIndex(header, "Window Start", "window_start");
+  const endIdx = colIndex(header, "Window End", "window_end");
+  const classIdx = colIndex(header, "Class Name", "class_name");
+  const directionIdx = colIndex(header, "Direction", "direction");
+  const countIdx = colIndex(header, "Count", "count");
 
   if (
     startIdx < 0 ||

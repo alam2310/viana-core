@@ -20,7 +20,8 @@ Layout and retention: **ADR 003** (`docs/adr/003-output-artifact-layout.md`).
 
 | File | Description |
 |------|-------------|
-| `{stem}_events.csv` | Raw crossing events |
+| `{stem}_events.csv` | Raw crossing events (**full debug** — all engine fields) |
+| `{stem}_events_report.csv` | Operator event report (derived at COMPLETED) |
 | `{stem}_15min.csv` | Clock 15-min aggregation (vehicles + pedestrians, zero-filled) |
 | `{stem}_processed.mp4` | Annotated video when `render_video` (colors: `docs/ui/OVERLAY_COLORS.md`) |
 

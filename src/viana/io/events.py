@@ -46,6 +46,12 @@ def _parse_optional_int(value: str) -> int | None:
     return int(value)
 
 
+def _parse_optional_float(value: str) -> float | None:
+    if value == "":
+        return None
+    return float(value)
+
+
 def csv_dict_to_event(record: dict[str, str]) -> RawCrossingEventRow:
     """Parse one CSV record into a validated event row."""
     wall_source = record.get("wall_time_source") or ""
@@ -71,9 +77,18 @@ def csv_dict_to_event(record: dict[str, str]) -> RawCrossingEventRow:
         "confidence": float(record["confidence"]),
         "wall_time": record.get("wall_time") or None,
         "wall_time_source": source,
+        "ocr_confidence": _parse_optional_float(record.get("ocr_confidence", "")),
         "date": record.get("date") or None,
         "location": record.get("location") or None,
         "class_id": _parse_optional_int(record.get("class_id", "")),
+        "raw_class_id": _parse_optional_int(record.get("raw_class_id", "")),
+        "raw_class_name": record.get("raw_class_name") or None,
+        "category": record.get("category") or None,
+        "class_type": record.get("class_type") or None,
+        "sub_class": record.get("sub_class") or None,
+        "norm_area": _parse_optional_int(record.get("norm_area", "")),
+        "anchor_x": _parse_optional_float(record.get("anchor_x", "")),
+        "anchor_y": _parse_optional_float(record.get("anchor_y", "")),
     }
     return RawCrossingEventRow.model_validate(payload)
 

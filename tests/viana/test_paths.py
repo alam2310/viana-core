@@ -34,6 +34,7 @@ def test_artifact_paths_keep_layout() -> None:
 
     expected = {
         "events": Path("/data/viana-outputs/test_project_123/clip_01_events.csv"),
+        "events_report": Path("/data/viana-outputs/test_project_123/clip_01_events_report.csv"),
         "aggregate_15min": Path("/data/viana-outputs/test_project_123/clip_01_15min.csv"),
         "processed_video": Path("/data/viana-outputs/test_project_123/clip_01_processed.mp4"),
         "manifest": meta / "manifest.json",

@@ -833,6 +833,10 @@ class WorkerPool:
             job = self._jobs.get(job_id)
             if job is not None:
                 payload.setdefault("status", job.status)
+                # Operator pause: engine RunResult is CANCELLED; do not publish that
+                # status over WS or the queue briefly shows Cancelled before PAUSED.
+                if job.pause_requested and payload.get("status") == "CANCELLED":
+                    payload["status"] = "PAUSED"
                 data = payload.get("data")
                 if payload.get("telemetry_type") == "MOVING_EVENT":
                     job.crossing_count += 1

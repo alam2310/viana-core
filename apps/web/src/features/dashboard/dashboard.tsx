@@ -48,6 +48,24 @@ import {
   type UiTheme,
 } from "@/lib/prefs";
 
+/** Terminal statuses must come from GET /jobs — not WS LOG lines (pause emits CANCELLED). */
+const TELEMETRY_STATUS_BLOCKLIST = new Set([
+  "CANCELLED",
+  "FAILED",
+  "COMPLETED",
+]);
+
+function statusFromTelemetry(
+  job: JobStatusResponse,
+  message: TelemetryMessage,
+): JobStatusResponse["status"] {
+  const next = message.status;
+  if (next == null || TELEMETRY_STATUS_BLOCKLIST.has(next)) {
+    return job.status;
+  }
+  return next;
+}
+
 function applyTelemetryToJob(
   job: JobStatusResponse,
   message: TelemetryMessage,
@@ -56,7 +74,7 @@ function applyTelemetryToJob(
     return job;
   }
   if (message.telemetry_type !== "PROGRESS") {
-    return { ...job, status: message.status ?? job.status };
+    return { ...job, status: statusFromTelemetry(job, message) };
   }
   const data = message.data;
   const current =
@@ -74,7 +92,7 @@ function applyTelemetryToJob(
   if (current === undefined || total === undefined) {
     return {
       ...job,
-      status: message.status ?? job.status,
+      status: statusFromTelemetry(job, message),
       progress:
         job.progress && crossingCount !== undefined
           ? { ...job.progress, crossing_count: crossingCount }
@@ -83,7 +101,7 @@ function applyTelemetryToJob(
   }
   return {
     ...job,
-    status: message.status ?? job.status,
+    status: statusFromTelemetry(job, message),
     progress: {
       current_frame: current,
       total_frames: total,

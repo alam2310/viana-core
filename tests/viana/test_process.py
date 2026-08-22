@@ -439,16 +439,26 @@ def test_cooperative_pause_saves_checkpoint(tmp_path: Path) -> None:
             signal_pause_pending()
         return _detect(frame)
 
+    emitted: list[object] = []
+
     result = run_moving_count(
         job,
         resume=False,
         frames=(_meta(), _frames()),
         detector=detect_with_pause,
         renderer=RecordingRenderer(),
-        emit=lambda _msg: None,
+        emit=emitted.append,
     )
     assert result.status == "CANCELLED"
     assert result.error_message == "interrupted"
+    pause_logs = [
+        msg
+        for msg in emitted
+        if getattr(msg, "telemetry_type", None) == "LOG"
+        and getattr(msg, "data", {}).get("message") == "interrupted"
+    ]
+    assert pause_logs, "expected interrupted LOG telemetry"
+    assert pause_logs[-1].status == "PAUSED"
     checkpoint = load_checkpoint(artifact_paths(tmp_path, "clip")["checkpoint"])
     assert not checkpoint.is_complete()
     assert checkpoint.current_frame >= 1

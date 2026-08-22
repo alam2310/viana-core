@@ -445,10 +445,12 @@ def run_moving_count(
                 error_message="interrupted",
             )
             save_run_result(paths["run_result"], result)
+            # RunResult stays CANCELLED (schema); telemetry uses PAUSED so the UI
+            # does not flash Cancelled before the orchestrator remaps status.
             emit(
                 TelemetryMessage(
                     job_id=job.job_id,
-                    status="CANCELLED",
+                    status="PAUSED",
                     telemetry_type="LOG",
                     data={"message": "interrupted"},
                 )

@@ -73,7 +73,7 @@ export function EngineControls({
   const running = status?.running === true;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-accent px-3 py-2">
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
       {label ? (
         <span className="shrink-0 text-sm font-medium">{label}</span>
       ) : null}
@@ -81,6 +81,7 @@ export function EngineControls({
       <div className="flex items-center gap-1">
         <RoundIconButton
           label={running ? "Restart analytics engine" : "Start analytics engine"}
+          variant="neutral"
           disabled={busy}
           onClick={() => void onStartOrRestart()}
         >
@@ -88,6 +89,7 @@ export function EngineControls({
         </RoundIconButton>
         <RoundIconButton
           label="Stop analytics engine"
+          variant="neutral"
           disabled={busy || !running}
           onClick={() => void onStop()}
         >

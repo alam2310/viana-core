@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 const VARIANT_CLASS = {
   default: "text-muted hover:bg-accent",
+  /** Theme-neutral wash — visible on accent/card chips in light and dark. */
+  neutral: "text-muted hover:bg-black/10 dark:hover:bg-white/10",
   success:
     "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/70",
   info: "text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/70",

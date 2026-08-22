@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Parked | Path done (fixed + parked) |
 |---------------|----------------|-------------|---------|----------------------------|
-| 0 | 1 (S07) | 1 (S32) | 2 (S20, S24) | **31 / 32** active |
+| 0 | 1 (S07) | 0 | 2 (S20, S24) | **32 / 32** active |
 
 **Counts:** Active Seq = S01–S08 + S10–S33 (**32**). **S09** closed in Step 6.7 — not counted. Step 5 is complete; remaining open rows are Step 6 polish.
 
@@ -55,11 +55,11 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S29** | F024 | B/C | no | — | Excess leftover files in output dir after successful COMPLETED (strategy + layout) | **fixed** |
 | **S30** | F025 | A/B | no | — | UI API 502 (`fetch failed`) when restarting/resuming a job from the queue | **fixed** |
 | **S31** | F026 | A | no | — | Prescan review: remove duplicate Close; rename Submit → Confirm | **fixed** |
-| **S32** | F027 | C/D | no | — | Relook raw events + 15-min CSV schemas — keep only necessary columns | open |
+| **S32** | F027 | C/D | no | — | Relook raw events + 15-min CSV schemas — keep only necessary columns | **fixed** |
 | **S33** | F028 | C | no | — | Pedestrian crossings missing from `_15min.csv` aggregated counts | fixed |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **fixed → Step 6.7** |
 
-**Step 5:** Complete (S07 fixed). Continue open Seq (**S32**) as Step 6 polish; respect **Depends**.
+**Step 5:** Complete (S07 fixed). Open Seq polish is empty (S32 fixed 2026-08-22). Parked: S20/S24.
 
 ---
 
@@ -97,7 +97,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S29** | 1. Run a job to `COMPLETED` 2. List project `output_dir` for that stem | **Expected:** operator-facing deliverables are clear; ephemeral/intermediate artifacts are cleaned or isolated. **Actual (before):** many leftovers remain (JSON sidecars, prescan images, etc.) cluttering the output tree. **After:** ADR 003 keep layout — deliverables flat; sidecars under `_meta/{stem}/` + `_meta/jobs/`; legacy flat checkpoints still readable for 6.2 PAUSED resume; COMPLETED deletes only that job’s prescan JPEG. | `docs/adr/003-output-artifact-layout.md`, `paths.py`, `OUTPUT_PATHS.md`, process/pool | this chat | `pytest tests/viana/test_paths.py tests/viana/test_process.py` + orchestrator 409/legacy |
 | **S30** | 1. From Job Queue, Restart (Overwrite) / API resume on a PAUSED job 2. Also restart analytics engine from header controls while dashboard polls | **Expected:** mutate succeeds or clear API error; `GET /jobs` polling keeps working; no unhandled `ApiClientError`. **Actual (before):** Next.js threw `ApiClientError` **API 502: fetch failed** from `parseJson` → `Dashboard.refreshJobs` (poll `void refreshJobs()`). **Triage (2026-08-22):** `POST …/start-fresh` and `POST …/resume` stay healthy (~0.2s); concurrent `GET /jobs` OK; no EMFILE/crash in container logs (orch FD ~15–19). Soft `nofile` was **1024**. Reproduced 502 only while `viana_core` is down (engine Restart/Stop) — Next proxy `{detail:"fetch failed"}`. **After:** `refreshJobs` never throws (amber banner + keep last queue); orchestrator proxy one GET/HEAD retry; compose `ulimits.nofile` 65536. No 6.2 pause UX in this fix. | `dashboard.tsx`; `api/orchestrator/[[...path]]/route.ts`; `docker-compose.yml` | `b5a592d` | start-fresh/resume + poll; `docker restart` → proxy 502 without UI throw |
 | **S31** | 1. Open prescan review modal 2. Inspect header Close vs footer Cancel 3. Inspect primary footer button label | **Expected:** one dismiss control; primary action reads **Confirm**. **Actual (before):** header **Close** duplicates footer **Cancel**; primary button says **Submit**. **After:** header Close removed; footer **Cancel** + **Confirm** / **Confirming…**. | `apps/web/src/features/prescan/prescan-review-modal.tsx` | this commit | modal smoke (browser) |
-| **S32** | 1. Inspect `{stem}_events.csv` and `{stem}_15min.csv` headers after a COMPLETED run 2. Cross-check `events_raw` / `events_15min` schemas + writers/parsers | **Expected:** CSV columns match operator/report needs only; no redundant or unused fields. **Actual:** schemas carry a wide column set (class taxonomy duplicates, debug anchors, etc.) — relook and trim to necessary (see F027). Contract-first if columns change. | `packages/contracts/schemas/events_raw.schema.json`, `events_15min.schema.json`; `csv_schema.py` / aggregate / UI parsers | — | Step 4 / hardening UI chat |
+| **S32** | 1. Inspect `{stem}_events.csv` and `{stem}_15min.csv` headers after a COMPLETED run 2. Cross-check `events_raw` / `events_15min` schemas + writers/parsers | **Expected:** CSV columns match operator/report needs only; no redundant or unused fields. **Actual (before):** taxonomy duplicates + box debug on both CSVs. **After:** S32 keep set — events 14 cols; 15min 8 cols (`date`+`HH:MM` S15; Pedestrian still aggregatable S33). Dropped `category`/`class_type`/`sub_class`/`raw_*`/`ocr_confidence`/`norm_area`/`anchor_*`. | schemas + `csv_schema.py` + writers + aggregate + `parse-15min-csv.ts` | this chat | `pytest tests/viana/test_csv_schema.py tests/viana/test_events_csv.py tests/viana/test_aggregate.py tests/viana/test_process.py` |
 | **S33** | 1. Complete a job with Pedestrian crossings in `_events.csv` 2. Open `{stem}_15min.csv` 3. Search for Pedestrian / class counts | **Expected:** 15-min aggregate includes Pedestrian counts (in/out) like other counted classes. **Actual (before):** Pedestrian rows absent (`aggregate: false`). **After:** `Pedestrian.aggregate: true`; `_15min` = vehicles + pedestrians; tests assert in/out + zero-fill; `hiv000001_inframe` raw 4 in / 6 out matches aggregate. | `configs/classes.yaml`; `events_15min.schema.json` description; `docs/ui/OUTPUT_PATHS.md`; `test_aggregate.py` / `test_config_loaders.py` | this chat | `.venv/bin/pytest tests/viana/test_aggregate.py tests/viana/test_config_loaders.py …` (26 passed); clip verify on `data/viana-outputs/nh44/hiv000001_inframe_events.csv` |
 
 **Lane:** `A` UI · `B` API/orchestrator · `C` engine · `D` contract · `TBD`  
@@ -372,17 +372,49 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 **Goal:** Relook `_events.csv` (raw) and `_15min.csv` so each column is justified for operators, aggregation, or a documented internal need — drop the rest.
 
-**Current surfaces:**
-- Raw: `packages/contracts/schemas/events_raw.schema.json` (e.g. ids, timing, wall_time*, class taxonomy, anchors, confidence…)
-- 15-min: `packages/contracts/schemas/events_15min.schema.json` (window/date/location, class taxonomy, direction, count, partial)
+**Approved (2026-08-22, S32):** operator CSVs only. Taxonomy hierarchy stays in `classes.yaml` (not denormalized onto every row). Box geometry and OCR confidence stay in-engine / WS / time_map — not the deliverable CSV. S15 `date` + `HH:MM` windows and S33 Pedestrian aggregatable **kept**. Existing on-disk CSVs with the old header will not re-aggregate until the job is re-run (`start_fresh` or new intake).
 
-**Review asks:**
-1. List every column with producer + consumer (engine write, aggregate, UI, external report).
-2. Mark keep / drop / optional-debug (debug may move to a separate artifact, not the operator CSV).
-3. Especially scrutinize overlapping class fields (`class_name` vs `category` / `class_type` / `sub_class` / raw_*), geometry (`anchor_x`/`y`, `norm_area`), and duplicate location/date on both files.
-4. If columns change: schema → engine writers → aggregate → UI parsers (CONTRACT_SYNC); note S15 date/HH:MM decisions stay unless explicitly revisited.
+### `_events.csv` inventory
 
-**Scope:** Lane C/D (+ A if UI parsers change). Design/approval before deleting columns.
+| Column | Producer | Consumer | Decision |
+|--------|----------|----------|----------|
+| `event_id` | `crossing_to_event` uuid4 | CSV identity | **keep** |
+| `job_id` | job config | join / support | **keep** |
+| `video_file` | source name | standalone CSV | **keep** |
+| `track_id` | crossing | operator / WS | **keep** |
+| `frame_index` | crossing | seek / WS | **keep** |
+| `video_pts_ms` | crossing | clock / WS / I005 | **keep** |
+| `wall_time` | time_map | **aggregate bins** | **keep** |
+| `wall_time_source` | time_map | clock audit | **keep** |
+| `ocr_confidence` | time_map | WS `event_timestamp_confidence` only | **drop** (debug; often empty after S23) |
+| `date` | metadata / anchors | aggregate `date` (S15) | **keep** |
+| `location` | metadata / anchors | aggregate copy; site | **keep** |
+| `class_id` | taxonomy | lookup `classes.yaml` | **keep** |
+| `class_name` | taxonomy | aggregate + UI 15-min | **keep** |
+| `raw_class_id` / `raw_class_name` | heuristic pre-split | tests only | **drop** (debug) |
+| `category` / `class_type` / `sub_class` | `classes.yaml` | none in UI | **drop** (duplicate of class_id) |
+| `direction` | crossing | aggregate + UI | **keep** |
+| `confidence` | detector | quality | **keep** |
+| `norm_area` / `anchor_x` / `anchor_y` | crossing | none in UI | **drop** (geometry debug) |
+
+**Keep header:** `event_id,job_id,video_file,track_id,frame_index,video_pts_ms,wall_time,wall_time_source,date,location,class_id,class_name,direction,confidence`
+
+### `_15min.csv` inventory
+
+| Column | Producer | Consumer | Decision |
+|--------|----------|----------|----------|
+| `window_start` / `window_end` | aggregate `HH:MM` | UI parser (S15) | **keep** |
+| `date` | event date or window day | UI parser (S15) | **keep** |
+| `location` | first event in window | Excel standalone report | **keep** (not in UI parser) |
+| `class_name` | aggregatable taxonomy (incl. Pedestrian, S33) | UI `vehicleClass` | **keep** |
+| `category` / `class_type` / `sub_class` | taxonomy | unused | **drop** |
+| `direction` | in/out grid | UI in/out | **keep** |
+| `count` | Counter | UI | **keep** |
+| `partial` | incomplete last window | operators | **keep** |
+
+**Keep header:** `window_start,window_end,date,location,class_name,direction,count,partial`
+
+**Scope:** Lane C/D (+ A parser already name-based). CONTRACT_SYNC: schema → `csv_schema.py` → writers → aggregate → `parse-15min-csv.ts`.
 
 ---
 
@@ -402,6 +434,7 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | **S32 (F027) fixed:** trimmed `_events` / `_15min` columns (drop taxonomy duplicates + geometry debug); S15 date/HH:MM and S33 Pedestrian kept |
 | 2026-08-22 | **S29 (F024) fixed:** ADR 003 keep layout — deliverables flat; `_meta/{stem}/` + `_meta/jobs/`; legacy checkpoint resolve for 6.2; COMPLETED deletes prescan JPEG only |
 | 2026-08-22 | **S30 (F025) fixed:** job start-fresh/resume mutate + `GET /jobs` healthy; 502 was proxy during engine-down blip + unhandled `refreshJobs`; UI banner + GET retry + compose `nofile` 65536 |
 | 2026-08-22 | **S31 (F026) fixed:** prescan review — single Cancel dismiss; primary **Confirm** / **Confirming…** (with Step 6.11 `render_video` toggle) |

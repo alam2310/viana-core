@@ -60,8 +60,7 @@ def crossing_to_event(
 ) -> RawCrossingEventRow:
     """Map a unique crossing to an events-CSV row (schema columns only)."""
     vehicle = _class_or_unknown(taxonomy, crossing.class_id)
-    raw = _class_or_unknown(taxonomy, crossing.raw_class_id)
-    wall, source, ocr_conf = time_map.resolve(crossing.video_pts_ms)
+    wall, source, _ = time_map.resolve(crossing.video_pts_ms)
     date = job.metadata.user_start_date
     location = job.metadata.location
     if time_map.anchors:
@@ -79,18 +78,9 @@ def crossing_to_event(
         confidence=crossing.confidence,
         wall_time=wall,
         wall_time_source=source,
-        ocr_confidence=ocr_conf,
         date=date,
         location=location,
         class_id=crossing.class_id,
-        raw_class_id=crossing.raw_class_id,
-        raw_class_name=raw.name if raw else None,
-        category=vehicle.category if vehicle else None,
-        class_type=vehicle.class_type if vehicle else None,
-        sub_class=vehicle.sub_class if vehicle else None,
-        norm_area=crossing.norm_area,
-        anchor_x=crossing.anchor_x,
-        anchor_y=crossing.anchor_y,
     )
 
 
@@ -315,7 +305,9 @@ def run_moving_count(
                                     "video_pts_ms": crossing.video_pts_ms,
                                     "event_timestamp": row.wall_time,
                                     "event_timestamp_source": row.wall_time_source,
-                                    "event_timestamp_confidence": row.ocr_confidence,
+                                    "event_timestamp_confidence": time_map.resolve(
+                                        crossing.video_pts_ms
+                                    )[2],
                                 },
                             )
                         )

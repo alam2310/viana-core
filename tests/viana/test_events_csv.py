@@ -23,9 +23,6 @@ def _event(**overrides: object) -> RawCrossingEventRow:
         "direction": "in",
         "confidence": 0.91,
         "wall_time": "2026-03-15T09:07:12Z",
-        "category": "Passenger",
-        "class_type": "Light Fast",
-        "sub_class": "Car",
         "class_id": 0,
     }
     payload.update(overrides)

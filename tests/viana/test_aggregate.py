@@ -28,7 +28,6 @@ def _event(**overrides: object) -> RawCrossingEventRow:
         "wall_time": "2026-03-15T09:07:00Z",
         "date": "15-03-2026",
         "location": "NH48",
-        "category": "Passenger",
         "class_id": 0,
     }
     payload.update(overrides)

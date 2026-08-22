@@ -35,4 +35,4 @@ Label format: `{class_name} #{track_id}` using `classes.yaml` **name** (not `sub
 
 Unknown class id: light gray `#dcdcdc`.
 
-`category`, `class_type`, and `sub_class` are **not drawn** on the video. They are filled on `{stem}_events.csv` by looking up the same `classes.yaml` row as `class_id`.
+`category`, `class_type`, and `sub_class` are **not drawn** on the video and are **not** `{stem}_events.csv` columns (S32). Look them up from `classes.yaml` via `class_id` / `class_name`.

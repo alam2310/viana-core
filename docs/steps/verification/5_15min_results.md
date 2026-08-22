@@ -39,7 +39,7 @@ Evidence from container read:
 
 - Row count including header: `29` (1 header + 28 data rows)
 - Header:
-  - `window_start,window_end,date,location,class_name,category,class_type,sub_class,direction,count,partial`
+  - `window_start,window_end,date,location,class_name,direction,count,partial` (S32; was 11 cols with taxonomy duplicates)
 - First data row:
   - `02:15,02:30,18-10-2024,LITO-RARARANKI,Car,Passenger,Light Fast,Car,in,12,false`
 - Last data row:

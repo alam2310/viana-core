@@ -104,9 +104,7 @@ def test_run_writes_events_checkpoint_and_run_result(tmp_path: Path) -> None:
     events = read_events(paths["events"])
     assert len(events) == 1
     assert events[0].class_name == "Car"
-    assert events[0].category == "Passenger"
-    assert events[0].class_type == "Light Fast"
-    assert events[0].sub_class == "Car"
+    assert events[0].class_id == 0
     assert events[0].direction == "in"
     assert events[0].wall_time_source == "user_fallback"
     assert not paths["aggregate_15min"].exists()
@@ -287,8 +285,8 @@ def test_cli_run_prints_run_result(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
     assert payload["job_id"] == "job_test_001"
 
 
-def test_crossing_hierarchy_matches_classes_yaml(tmp_path: Path) -> None:
-    """category / class_type / sub_class come from the same classes.yaml row as class_id."""
+def test_crossing_uses_classes_yaml_name(tmp_path: Path) -> None:
+    """class_name / class_id come from classes.yaml; hierarchy is not a CSV column (S32)."""
     job = _job(tmp_path, tmp_path / "clip.mp4")
     crossing = Crossing(
         track_id=1,
@@ -310,10 +308,11 @@ def test_crossing_hierarchy_matches_classes_yaml(tmp_path: Path) -> None:
         TimeMap(job_id=job.job_id, video_stem="clip"),
     )
     assert row.class_name == "Bus"
-    assert row.category == "Passenger"
-    assert row.class_type == "Heavy Fast"
-    assert row.sub_class == "Bus"
-    assert row.raw_class_name == "Heavy Truck"
+    assert row.class_id == 6
+    dumped = row.model_dump()
+    assert "category" not in dumped
+    assert "raw_class_name" not in dumped
+    assert "anchor_x" not in dumped
 
 
 def test_crossing_interpolates_confirmed_metadata_clock(tmp_path: Path) -> None:

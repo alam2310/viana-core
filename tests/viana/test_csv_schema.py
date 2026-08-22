@@ -30,6 +30,7 @@ def test_load_json_schema_not_found() -> None:
 
 def test_raw_event_fields_match_schema() -> None:
     """Pydantic event row fields equal events_raw.schema.json properties."""
+    events_raw_columns.cache_clear()
     schema = load_json_schema(EVENTS_RAW_SCHEMA)
     assert set(RawCrossingEventRow.model_fields) == set(schema["properties"])
     assert events_raw_columns() == csv_columns_from_schema(schema)
@@ -38,9 +39,32 @@ def test_raw_event_fields_match_schema() -> None:
 
 def test_aggregate_fields_match_schema() -> None:
     """Pydantic 15-min row fields equal events_15min.schema.json properties."""
+    events_15min_columns.cache_clear()
     schema = load_json_schema(EVENTS_15MIN_SCHEMA)
     assert set(Aggregate15MinRow.model_fields) == set(schema["properties"])
     assert events_15min_columns() == csv_columns_from_schema(schema)
+
+
+def test_s32_dropped_debug_and_taxonomy_columns() -> None:
+    """Operator CSVs omit hierarchy duplicates and box-debug fields (F027)."""
+    events_raw_columns.cache_clear()
+    events_15min_columns.cache_clear()
+    dropped = {
+        "ocr_confidence",
+        "raw_class_id",
+        "raw_class_name",
+        "category",
+        "class_type",
+        "sub_class",
+        "norm_area",
+        "anchor_x",
+        "anchor_y",
+    }
+    assert dropped.isdisjoint(events_raw_columns())
+    assert dropped.isdisjoint(events_15min_columns())
+    assert "date" in events_raw_columns()
+    assert "date" in events_15min_columns()
+    assert events_15min_columns()[:3] == ("window_start", "window_end", "date")
 
 
 def test_validate_csv_header_accepts_schema_order() -> None:

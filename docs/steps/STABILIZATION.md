@@ -7,7 +7,7 @@
 **Tracker mirror:** [`TRACKER.md`](TRACKER.md) § 4.stab — keep in sync when closing Seq  
 **Triage owner:** Planning chat (human + coordinator agent) — assigns lane and kickoff prompt.
 
-**Status (2026-08-22):** Step 5 ✅. Open polish: **S32**. Parked: S20/S24. S29+S33 fixed.
+**Status (2026-08-22):** Step 5 ✅. Seq polish complete (S29–S33). Parked: S20/S24.
 
 ---
 
@@ -75,7 +75,7 @@ When a fix lands:
 |-------|-------|
 | `TRACKER.md` **Current Step** | **6** |
 | Steps 1–5 | ✅ |
-| Open Seq | S32 (polish) — SoT [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
+| Open Seq | none (polish done) — parked S20/S24; SoT [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
 ---
 

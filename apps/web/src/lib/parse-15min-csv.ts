@@ -77,6 +77,7 @@ export function parse15MinCsv(text: string): Aggregate15MinRow[] {
   const classIdx = col("class_name");
   const directionIdx = col("direction");
   const countIdx = col("count");
+  // S15: date + HH:MM windows. S32 dropped category/class_type/sub_class; lookup by name.
 
   if (
     startIdx < 0 ||

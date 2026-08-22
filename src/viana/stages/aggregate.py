@@ -104,7 +104,6 @@ def build_aggregate_rows(
         if window not in meta:
             meta[window] = (event.date, event.location)
 
-    class_by_name = {item.name: item for item in aggregatable}
     rows: list[Aggregate15MinRow] = []
     last_start = windows[-1]
     for window_start in windows:
@@ -113,7 +112,6 @@ def build_aggregate_rows(
         resolved_date = date or window_start.strftime("%d-%m-%Y")
         is_partial = last_window_partial and window_start == last_start
         for vehicle in aggregatable:
-            info = class_by_name[vehicle.name]
             for direction in DIRECTIONS:
                 rows.append(
                     Aggregate15MinRow(
@@ -125,9 +123,6 @@ def build_aggregate_rows(
                         count=counts[(window_start, vehicle.name, direction)],
                         partial=is_partial,
                         location=location,
-                        category=info.category,
-                        class_type=info.class_type,
-                        sub_class=info.sub_class,
                     )
                 )
     return rows

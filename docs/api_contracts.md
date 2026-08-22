@@ -194,9 +194,15 @@ Written under `{output_dir}/` per video stem. Schemas:
 
 | File | Schema |
 |------|--------|
+| `{stem}_events.csv` | `events_raw.schema.json` |
+| `{stem}_15min.csv` | `events_15min.schema.json` |
 | `{stem}.checkpoint.json` | `checkpoint.schema.json` |
 | `{stem}.run_result.json` | `run_result.schema.json` |
-| `{stem}.run_result.json` | `run_result.schema.json` |
+
+**CSV headers (S32):** properties order in those schemas is the file header.
+
+- `_events.csv`: `event_id,job_id,video_file,track_id,frame_index,video_pts_ms,wall_time,wall_time_source,date,location,class_id,class_name,direction,confidence`
+- `_15min.csv`: `window_start,window_end,date,location,class_name,direction,count,partial` (`window_*` are `HH:MM`; `date` required — S15). Pedestrian is a `class_name` when `aggregate: true` (S33).
 
 Fixture: `packages/contracts/fixtures/checkpoint_resume.json`. Time map fixture: `time_map.json`.
 

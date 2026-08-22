@@ -74,18 +74,9 @@ class RawCrossingEventRow(BaseModel):
     confidence: float
     wall_time: str | None = None
     wall_time_source: WallTimeSource | None = None
-    ocr_confidence: float | None = None
     date: str | None = None
     location: str | None = None
     class_id: int | None = None
-    raw_class_id: int | None = None
-    raw_class_name: str | None = None
-    category: str | None = None
-    class_type: str | None = None
-    sub_class: str | None = None
-    norm_area: int | None = None
-    anchor_x: float | None = None
-    anchor_y: float | None = None
 
 
 class Aggregate15MinRow(BaseModel):
@@ -101,6 +92,3 @@ class Aggregate15MinRow(BaseModel):
     count: int = Field(ge=0)
     partial: bool
     location: str | None = None
-    category: str | None = None
-    class_type: str | None = None
-    sub_class: str | None = None

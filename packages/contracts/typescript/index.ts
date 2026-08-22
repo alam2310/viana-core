@@ -295,6 +295,38 @@ export type WallTimeSource =
   | "user_fallback"
   | "unavailable";
 
+export type CrossingDirection = "in" | "out";
+
+/** One row in `{stem}_events.csv` (`events_raw.schema.json`, S32). */
+export interface RawCrossingEventRow {
+  event_id: string;
+  job_id: string;
+  video_file: string;
+  track_id: number;
+  frame_index: number;
+  video_pts_ms: number;
+  wall_time?: string | null;
+  wall_time_source?: WallTimeSource | null;
+  date?: string | null;
+  location?: string | null;
+  class_id?: number | null;
+  class_name: string;
+  direction: CrossingDirection;
+  confidence: number;
+}
+
+/** One row in `{stem}_15min.csv` (`events_15min.schema.json`, S15 + S32). */
+export interface Aggregate15MinCsvRow {
+  window_start: string;
+  window_end: string;
+  date: string;
+  location?: string | null;
+  class_name: string;
+  direction: CrossingDirection;
+  count: number;
+  partial: boolean;
+}
+
 export interface TimeAnchor {
   video_pts_ms: number;
   wall_time: string;

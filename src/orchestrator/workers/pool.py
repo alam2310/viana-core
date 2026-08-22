@@ -188,11 +188,7 @@ class WorkerPool:
         ckpt = resolve_artifact(job.output_dir, job.source_video_path.stem, "checkpoint")
         exists = ckpt.is_file()
         checkpoint_exists = exists and job.status in {"PAUSED", "FAILED"}
-        progress = (
-            job.progress
-            if job.status in {"PROCESSING", "PAUSED", "COMPLETED"}
-            else None
-        )
+        progress = job.progress if job.status in {"PROCESSING", "PAUSED", "COMPLETED"} else None
         return JobStatus(
             job_id=job.job_id,
             status=job.status,

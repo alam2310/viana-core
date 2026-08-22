@@ -121,7 +121,7 @@ def test_ready_clears_progress_and_api_omits_it() -> None:
         status="PAUSED",
         source_video_path=Path(SOURCE),
         project_id="nh48",
-        output_dir=Path("/tmp/nh48"),
+        output_dir=Path("/data/viana-outputs/nh48"),
         progress=JobProgress(current_frame=50, total_frames=100, crossing_count=3),
     )
     pool._set_job_status(job, "READY")

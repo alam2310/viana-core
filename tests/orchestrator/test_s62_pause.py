@@ -136,9 +136,7 @@ def test_cancel_while_processing_stays_cancelled(
     assert pool.get_job(job_id).status == "CANCELLED"
 
 
-def test_pause_then_resume(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_pause_then_resume(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     job_id, holds = _start_processing(client, monkeypatch)
     _write_checkpoint(client, job_id)
     client.post(f"/jobs/{job_id}/pause")
@@ -162,9 +160,7 @@ def test_pause_rejected_when_not_processing(
     assert again.status_code == 409
 
 
-def test_resume_requires_paused(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_resume_requires_paused(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     job_id, _holds = _start_processing(client, monkeypatch)
     blocked = client.post(f"/jobs/{job_id}/resume")
     assert blocked.status_code == 409

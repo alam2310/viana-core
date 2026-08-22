@@ -14,7 +14,12 @@ from viana.domain.boxes import Detection
 from viana.io.checkpoint import Checkpoint, load_checkpoint, save_checkpoint, utc_now_iso
 from viana.io.csv_schema import RawCrossingEventRow
 from viana.io.events import EventsCsvWriter
-from viana.io.paths import artifact_paths
+from viana.io.paths import (
+    artifact_paths,
+    legacy_artifact_paths,
+    resolve_artifact,
+    wipe_run_sidecars,
+)
 from viana.io.run_result import RunResult, RunResultArtifacts, completed_now, save_run_result
 from viana.io.telemetry import TelemetryMessage, emit_telemetry_stderr
 from viana.stages.crossing import Crossing
@@ -89,13 +94,6 @@ def crossing_to_event(
     )
 
 
-def _wipe_run_artifacts(paths: dict[str, Path]) -> None:
-    for key in ("events", "checkpoint", "processed_video", "time_map", "run_result", "manifest"):
-        target = paths[key]
-        if target.is_file():
-            target.unlink()
-
-
 def _default_detector(job: JobConfig, defaults: EngineDefaults) -> FrameDetector:
     model = UltralyticsDualDetector(
         defaults.models.vehicle,
@@ -151,6 +149,10 @@ def _save_progress_checkpoint(
             events_rows_written=events_rows,
         ),
     )
+    # Prefer canonical ``_meta`` path; drop legacy flat sidecar after migrate write.
+    legacy = legacy_artifact_paths(job.output_dir, video_stem)["checkpoint"]
+    if legacy.is_file() and legacy.resolve() != paths["checkpoint"].resolve():
+        legacy.unlink()
 
 
 def run_moving_count(
@@ -179,18 +181,19 @@ def run_moving_count(
     job.output_dir.mkdir(parents=True, exist_ok=True)
 
     if job.start_fresh:
-        _wipe_run_artifacts(paths)
+        wipe_run_sidecars(job.output_dir, video_stem)
 
     checkpoint: Checkpoint | None = None
     start_index = 0
-    ckpt_path = paths["checkpoint"]
+    ckpt_path = resolve_artifact(job.output_dir, video_stem, "checkpoint")
     if ckpt_path.is_file():
         checkpoint = load_checkpoint(ckpt_path)
         if checkpoint.is_complete() and not job.start_fresh:
             if resume:
+                time_map_path = resolve_artifact(job.output_dir, video_stem, "time_map")
                 artifacts = RunResultArtifacts(
                     events=str(paths["events"]) if paths["events"].is_file() else None,
-                    time_map=str(paths["time_map"]) if paths["time_map"].is_file() else None,
+                    time_map=str(time_map_path) if time_map_path.is_file() else None,
                     processed_video=(
                         str(paths["processed_video"])
                         if paths["processed_video"].is_file()
@@ -211,7 +214,7 @@ def run_moving_count(
             start_index = checkpoint.current_frame
 
     if resume and checkpoint is None:
-        raise MissingCheckpointError(f"Checkpoint not found: {ckpt_path}")
+        raise MissingCheckpointError(f"Checkpoint not found: {paths['checkpoint']}")
 
     supplied_frames = frames is not None
     frame_iter: Iterable[VideoFrame] | None = None

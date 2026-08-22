@@ -22,7 +22,12 @@ from orchestrator.models import (
     JobSubmitRequest,
     JobSubmitResponse,
 )
-from orchestrator.preview_registry import preview_http_url, register_preview, rewrite_preview_url
+from orchestrator.preview_registry import (
+    preview_http_url,
+    register_preview,
+    resolve_preview_path,
+    rewrite_preview_url,
+)
 from orchestrator.settings import resolve_output_dir
 from viana.config.job import (
     JobConfig,
@@ -39,7 +44,7 @@ from viana.config.job import (
     JobSubmitRequest as EngineSubmit,
 )
 from viana.io.checkpoint import load_checkpoint, utc_now_iso
-from viana.io.paths import artifact_paths
+from viana.io.paths import job_config_path, resolve_artifact
 from viana.io.proc import close_stdio, open_fd_count, terminate_process_tree
 
 logger = get_logger(__name__)
@@ -175,7 +180,7 @@ class WorkerPool:
 
     def to_status(self, job: JobRecord) -> JobStatus:
         """Build JobStatus including disk checkpoint flag."""
-        ckpt = artifact_paths(job.output_dir, job.source_video_path.stem)["checkpoint"]
+        ckpt = resolve_artifact(job.output_dir, job.source_video_path.stem, "checkpoint")
         exists = ckpt.is_file()
         checkpoint_exists = exists and job.status in {"PAUSED", "FAILED"}
         return JobStatus(
@@ -357,7 +362,7 @@ class WorkerPool:
             bad_request(str(exc))
         output_dir = resolve_output_dir(body.project_id, body.output_dir)
         stem = source_video_path.stem
-        ckpt_path = artifact_paths(output_dir, stem)["checkpoint"]
+        ckpt_path = resolve_artifact(output_dir, stem, "checkpoint")
         if ckpt_path.is_file() and not body.resume and not body.start_fresh:
             conflict(CHECKPOINT_CONFLICT)
         if body.resume and not ckpt_path.is_file():
@@ -407,7 +412,7 @@ class WorkerPool:
             conflict("job is already processing")
         if job.submit is None:
             bad_request("job has no submit payload; confirm prescan first")
-        ckpt_path = artifact_paths(job.output_dir, job.source_video_path.stem)["checkpoint"]
+        ckpt_path = resolve_artifact(job.output_dir, job.source_video_path.stem, "checkpoint")
         if not ckpt_path.is_file():
             not_found(f"checkpoint not found: {ckpt_path}")
         job.submit = job.submit.model_copy(update={"resume": True, "start_fresh": False})
@@ -709,7 +714,8 @@ class WorkerPool:
             payload["resume"] = True
             payload["start_fresh"] = False
         config = JobConfig.model_validate(payload)
-        path = job.output_dir / f"{job.job_id}.job.json"
+        path = job_config_path(job.output_dir, job.job_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
         dumped = json.dumps(config.model_dump(mode="json"), indent=2) + "\n"
         path.write_text(dumped, encoding="utf-8")
         job.config_path = path
@@ -819,7 +825,7 @@ class WorkerPool:
             if job.status == "CANCELLED":
                 _release_gpu_slot(job)
                 return
-            ckpt_path = artifact_paths(job.output_dir, job.source_video_path.stem)["checkpoint"]
+            ckpt_path = resolve_artifact(job.output_dir, job.source_video_path.stem, "checkpoint")
             result = _parse_run_result(stdout)
             terminal = False
             if result is not None:
@@ -830,6 +836,7 @@ class WorkerPool:
                     job.error_message = err if isinstance(err, str) else None
                     if status == "COMPLETED":
                         aggregate_target = job
+                        _delete_job_prescan_preview(job)
                     terminal = True
             if not terminal:
                 if returncode < 0:
@@ -860,6 +867,7 @@ class WorkerPool:
                     return
                 self._set_job_status(job, "COMPLETED")
                 aggregate_target = job
+                _delete_job_prescan_preview(job)
             _release_gpu_slot(job)
         if aggregate_target is not None:
             self._auto_aggregate(aggregate_target)
@@ -969,6 +977,30 @@ def _parse_run_result(stdout: str) -> dict[str, Any] | None:
         except json.JSONDecodeError:
             return None
     return payload if isinstance(payload, dict) else None
+
+
+def _delete_job_prescan_preview(job: JobRecord) -> None:
+    """Remove ephemeral review JPEG after COMPLETED (ADR 003). Never touches checkpoints."""
+    url = job.proposed_preview_url
+    if not url:
+        return
+    # Expected: /utils/prescan/{prescan_id}/preview.jpg
+    parts = [p for p in url.split("/") if p]
+    try:
+        idx = parts.index("prescan")
+        prescan_id = parts[idx + 1]
+    except (ValueError, IndexError):
+        return
+    path = resolve_preview_path(prescan_id)
+    if path is not None and path.is_file():
+        try:
+            path.unlink()
+        except OSError:
+            logger.warning(
+                "prescan_preview_delete_failed",
+                job_id=job.job_id,
+                path=str(path),
+            )
 
 
 _pool: WorkerPool | None = None

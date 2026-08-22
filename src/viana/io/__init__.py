@@ -9,7 +9,7 @@ from viana.io.csv_schema import (
     validate_csv_header,
 )
 from viana.io.events import EventsCsvWriter, read_events
-from viana.io.paths import artifact_paths, project_output_dir
+from viana.io.paths import artifact_paths, project_output_dir, resolve_artifact, wipe_run_sidecars
 from viana.io.run_result import RunResult, load_run_result, save_run_result
 
 __all__ = [
@@ -25,7 +25,9 @@ __all__ = [
     "load_run_result",
     "project_output_dir",
     "read_events",
+    "resolve_artifact",
     "save_checkpoint",
     "save_run_result",
     "validate_csv_header",
+    "wipe_run_sidecars",
 ]

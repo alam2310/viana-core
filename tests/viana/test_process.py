@@ -13,7 +13,7 @@ from viana.config.job import JobConfig, JobMetadata, LineSegment, ViAnaTaskParam
 from viana.domain.boxes import Detection
 from viana.io.checkpoint import load_checkpoint
 from viana.io.events import read_events
-from viana.io.paths import artifact_paths
+from viana.io.paths import artifact_paths, legacy_artifact_paths
 from viana.stages.crossing import Crossing
 from viana.stages.prescan import VideoMeta
 from viana.stages.process import CheckpointExistsError, crossing_to_event, run_moving_count
@@ -216,6 +216,44 @@ def test_resume_skips_already_processed_frames(tmp_path: Path) -> None:
     assert result.status == "COMPLETED"
     assert len(read_events(paths["events"])) == 1
     assert load_checkpoint(paths["checkpoint"]).is_complete()
+
+
+def test_resume_finds_legacy_flat_checkpoint(tmp_path: Path) -> None:
+    """Pre-S29 ``{stem}.checkpoint.json`` must still resume (6.2 / ADR 003)."""
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"")
+    job = _job(tmp_path, video)
+    # Partial progress written the old flat way; events already on disk.
+    paths = artifact_paths(tmp_path, "clip")
+    run_moving_count(
+        job,
+        resume=False,
+        frames=(_meta(), _frames()[:2]),
+        detector=_detect,
+        renderer=RecordingRenderer(),
+        emit=lambda _msg: None,
+    )
+    # Move checkpoint back to legacy flat path to simulate pre-layout tree.
+    canonical = paths["checkpoint"]
+    legacy = legacy_artifact_paths(tmp_path, "clip")["checkpoint"]
+    legacy.write_text(canonical.read_text(encoding="utf-8"), encoding="utf-8")
+    canonical.unlink()
+    assert not canonical.is_file()
+    assert legacy.is_file()
+
+    job_resume = job.model_copy(update={"resume": True})
+    result = run_moving_count(
+        job_resume,
+        resume=True,
+        frames=(_meta(), _frames()),
+        detector=_detect,
+        renderer=RecordingRenderer(),
+        emit=lambda _msg: None,
+    )
+    assert result.status == "COMPLETED"
+    assert paths["checkpoint"].is_file()
+    assert load_checkpoint(paths["checkpoint"]).is_complete()
+    assert not legacy.is_file()  # migrated off legacy after first progress write
 
 
 def test_cli_run_prints_run_result(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

@@ -85,7 +85,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 Open: **S29–S33**; parked S20/S24 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
+| **4.stab** Stabilization path | 🔄 Open: **S32**; S29+S30+S31+S33 fixed; parked S20/S24 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
 ### Stabilization execution path (mirror — SoT is backlog)
 
@@ -118,11 +118,11 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S26 | F021 — queue action icon slots | A | fixed |
 | S27 | F022 — drain next READY after FAILED | B | fixed |
 | S28 | F023 — missed crossings on class flicker | C | fixed |
-| S29 | F024 — excess leftovers in output dir after COMPLETED | B/C | **open** |
-| S30 | F025 — API 502 on restart/resume from queue | A/B | **open** |
-| S31 | F026 — prescan Close vs Confirm | A | **open** |
+| S29 | F024 — excess leftovers in output dir after COMPLETED | B/C | **fixed** |
+| S30 | F025 — API 502 on restart/resume from queue | A/B | **fixed** |
+| S31 | F026 — prescan Close vs Confirm | A | **fixed** |
 | S32 | F027 — trim raw events + 15-min CSV columns | C/D | **open** |
-| S33 | F028 — Pedestrian missing from `_15min.csv` | C | **open** |
+| S33 | F028 — Pedestrian missing from `_15min.csv` | C | fixed |
 | ~~S09~~ | F006 — intake path validation | B | **fixed (6.7)** |
 
 ---
@@ -153,7 +153,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 6.8 | Job details: drop Live Monitor widget/action; Live Crossings in details; row click opens details (**I001**) | ✅ |
 | 6.9 | Disable in-process OSD OCR; wall-clock/location from confirmed prescan only (**I003**) | ✅ |
 | 6.10 | Bind live crossing total to existing `crossing_count` (JobStatus / WS PROGRESS), not session WS list length (**I002**) | ✅ |
-| 6.11 | Prescan-review `render_video` toggle; pass through confirm/submit (existing field; no new schema) (**I006**) | ⬜ |
+| 6.11 | Prescan-review `render_video` toggle; pass through confirm/submit (existing field; no new schema) (**I006**) | ✅ |
 
 ---
 
@@ -161,6 +161,10 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | **S30 (F025) fixed** — start-fresh/resume mutate healthy; 502 was engine-down proxy blip + unhandled `refreshJobs`; UI harden + compose `nofile` |
+| 2026-08-22 | **6.11 + S31 complete** — prescan Confirm + `render_video` toggle (default true); short run `test_video` with false skips `_processed.mp4` |
+| 2026-08-22 | **S33 (F028) fixed** — Pedestrian in `_15min.csv` (`aggregate: true`); vehicles + pedestrians documented |
+| 2026-08-22 | **S29 (F024) fixed:** ADR 003 output keep layout (`_meta/`); open Seq now **S32** only |
 | 2026-08-22 | Doc sync: 4.stab + execution mirror match backlog (open **S29–S33**; S25–S28 fixed); Step 5 gate text no longer “in parallel polish” |
 | 2026-08-21 | Promoted **I006 → 6.11** — expose `render_video` in prescan review; existing API/engine field (expect perf win when false) |
 | 2026-08-21 | **6.7 complete (S09 / F006)** — intake (and `POST /jobs`) rewrites host paths onto compose mounts (`/data`, `/app/ViAna`) or **400**s unreadable paths; extra drive via `VIANA_INTAKE_ROOTS` + `VIANA_PATH_MAPS`. Tests: `tests/orchestrator/test_s67_intake_paths.py` |

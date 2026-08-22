@@ -13,7 +13,7 @@ from viana.io.paths import artifact_paths
 
 
 class Checkpoint(BaseModel):
-    """Engine resume state written to ``{stem}.checkpoint.json``."""
+    """Engine resume state written to ``_meta/{stem}/checkpoint.json`` (ADR 003)."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -47,7 +47,7 @@ def utc_now_iso() -> str:
 
 
 def checkpoint_path(output_dir: Path, video_stem: str) -> Path:
-    """Return the standard checkpoint path for a video stem."""
+    """Return the canonical checkpoint write path (``_meta/{stem}/checkpoint.json``)."""
     return artifact_paths(output_dir, video_stem)["checkpoint"]
 
 

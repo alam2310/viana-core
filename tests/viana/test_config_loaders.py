@@ -27,10 +27,10 @@ def test_load_committed_classes_yaml() -> None:
     assert taxonomy.id_to_name()[0] == "Car"
     pedestrian = taxonomy.by_id(11)
     assert pedestrian.name == "Pedestrian"
-    assert pedestrian.aggregate is False
+    assert pedestrian.aggregate is True
     aggregatable = taxonomy.aggregatable()
-    assert len(aggregatable) == 14
-    assert all(item.id != 11 for item in aggregatable)
+    assert len(aggregatable) == 15
+    assert any(item.id == 11 for item in aggregatable)
     assert taxonomy.by_name("Heavy Truck").id == 7
 
 

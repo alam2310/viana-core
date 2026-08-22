@@ -277,6 +277,29 @@ def test_post_jobs_409_on_incomplete_checkpoint(client: TestClient, tmp_path: Pa
     assert CHECKPOINT_CONFLICT in response.json()["detail"]
 
 
+def test_post_jobs_409_on_legacy_flat_checkpoint(client: TestClient, tmp_path: Path) -> None:
+    """Pre-S29 flat checkpoint must still 409 (no silent resume)."""
+    from viana.io.paths import legacy_artifact_paths
+
+    output_dir = project_output_dir(tmp_path, "nh48")
+    ckpt = legacy_artifact_paths(output_dir, STEM)["checkpoint"]
+    save_checkpoint(
+        ckpt,
+        Checkpoint(
+            job_id="job_old",
+            project_id="nh48",
+            source_video_path=Path(SOURCE),
+            video_stem=STEM,
+            current_frame=10,
+            total_frames=100,
+            saved_at="2026-03-15T10:00:00Z",
+        ),
+    )
+    response = client.post("/jobs", json=VALID_SUBMIT)
+    assert response.status_code == 409
+    assert CHECKPOINT_CONFLICT in response.json()["detail"]
+
+
 def test_start_fresh_allowed_with_checkpoint(client: TestClient, tmp_path: Path) -> None:
     """start_fresh=true bypasses 409 and spawns viana run."""
     output_dir = project_output_dir(tmp_path, "nh48")
@@ -975,3 +998,61 @@ def test_processing_duration_helper_freezes_after_end(tmp_path: Path) -> None:
     job.processing_started_monotonic = 100.0
     job.processing_ended_monotonic = 101.25
     assert _processing_duration_sec(job) == 1.25
+
+
+def test_s30_resume_and_start_fresh_keep_list_jobs(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """S30: resume/start-fresh mutates succeed and GET /jobs stays healthy."""
+    holds: list[HoldPopen] = []
+
+    def start(_args: object) -> HoldPopen:
+        proc = HoldPopen()
+        proc.stdout = io.StringIO("")  # no RunResult → signal exit can become PAUSED
+        holds.append(proc)
+        return proc
+
+    monkeypatch.setattr("orchestrator.workers.pool.start_viana_process", start)
+    reset_pool()
+
+    created = client.post("/jobs", json=VALID_SUBMIT)
+    assert created.status_code == 201
+    job_id = created.json()["job_id"]
+    pool = get_pool()
+    pool.wait_for_status(job_id, "PROCESSING", timeout=5.0)
+    assert client.get("/jobs?project_id=nh48").status_code == 200
+
+    output_dir = Path(client.get(f"/jobs/{job_id}").json()["output_dir"])
+    ckpt = artifact_paths(output_dir, STEM)["checkpoint"]
+    save_checkpoint(
+        ckpt,
+        Checkpoint(
+            job_id=job_id,
+            project_id="nh48",
+            source_video_path=Path(SOURCE),
+            video_stem=STEM,
+            current_frame=10,
+            total_frames=100,
+            saved_at="2026-03-15T10:00:00Z",
+        ),
+    )
+    holds[0].terminate()
+    pool.wait_for_status(job_id, "PAUSED", timeout=5.0)
+
+    resumed = client.post(f"/jobs/{job_id}/resume")
+    assert resumed.status_code == 200
+    assert resumed.json()["status"] == "PROCESSING"
+    listed = client.get("/jobs?project_id=nh48")
+    assert listed.status_code == 200
+    assert any(row["job_id"] == job_id for row in listed.json())
+
+    holds[1].terminate()
+    pool.wait_for_status(job_id, "PAUSED", timeout=5.0)
+
+    fresh = client.post(f"/jobs/{job_id}/start-fresh")
+    assert fresh.status_code == 200
+    assert fresh.json()["status"] == "PROCESSING"
+    assert client.get("/jobs?project_id=nh48").status_code == 200
+    holds[2].release()
+    pool.wait_for_status(job_id, "COMPLETED", "FAILED", "CANCELLED", timeout=5.0)
+    assert client.get(f"/jobs/{job_id}").status_code == 200

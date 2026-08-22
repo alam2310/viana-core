@@ -37,7 +37,15 @@ export function RoundIconButton({
   size?: "xs" | "sm" | "md";
 }) {
   return (
-    <span className="inline-flex shrink-0" title={label}>
+    // Cursor lives on the wrapper: UA stylesheet uses arrow on <button>, and
+    // many browsers ignore cursor styles on disabled form controls.
+    <span
+      className={cn(
+        "inline-flex shrink-0",
+        disabled ? "cursor-not-allowed" : "cursor-pointer",
+      )}
+      title={label}
+    >
       <button
         type="button"
         title={label}
@@ -46,7 +54,9 @@ export function RoundIconButton({
         className={cn(
           "inline-flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border",
           size === "xs" ? "h-6 w-6" : size === "sm" ? "h-8 w-8" : "h-9 w-9",
-          disabled ? DISABLED_CLASS : VARIANT_CLASS[variant],
+          disabled
+            ? cn(DISABLED_CLASS, "pointer-events-none")
+            : cn("cursor-pointer", VARIANT_CLASS[variant]),
         )}
         onClick={onClick}
       >

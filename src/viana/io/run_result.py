@@ -24,7 +24,7 @@ class RunResultArtifacts(BaseModel):
 
 
 class RunResult(BaseModel):
-    """``{stem}.run_result.json`` — engine outcome for the orchestrator."""
+    """``_meta/{stem}/run_result.json`` — engine outcome for the orchestrator."""
 
     model_config = ConfigDict(extra="forbid")
 

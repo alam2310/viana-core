@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from viana.config.defaults import load_engine_defaults
 from viana.config.job import PROJECT_ID_PATTERN, JobConfig, load_job_config
-from viana.io.paths import artifact_paths, project_output_dir
+from viana.io.paths import artifact_paths, project_output_dir, resolve_artifact
 from viana.io.run_result import RunResult
 from viana.stages.ocr import optional_easyocr_reader
 from viana.stages.prescan import run_prescan
@@ -156,7 +156,7 @@ def aggregate(
             paths["aggregate_15min"],
             load_class_taxonomy(),
             partial=partial,
-            checkpoint_path=paths["checkpoint"],
+            checkpoint_path=resolve_artifact(resolved_output, source.stem, "checkpoint"),
         )
     except (OSError, ValueError, FileNotFoundError) as exc:
         typer.echo(f"Aggregation failed: {exc}", err=True)

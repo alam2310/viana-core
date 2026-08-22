@@ -13,7 +13,7 @@
 
 | Blockers open | Blockers fixed | Polish open | Parked | Path done (fixed + parked) |
 |---------------|----------------|-------------|---------|----------------------------|
-| 0 | 1 (S07) | 2 (S29, S32) | 2 (S20, S24) | **30 / 32** active |
+| 0 | 1 (S07) | 1 (S32) | 2 (S20, S24) | **31 / 32** active |
 
 **Counts:** Active Seq = S01–S08 + S10–S33 (**32**). **S09** closed in Step 6.7 — not counted. Step 5 is complete; remaining open rows are Step 6 polish.
 
@@ -52,14 +52,14 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S26** | F021 | A | no | — | Standardize Job Queue action icons (stable slots; enable/disable by status) | **fixed** |
 | **S27** | F022 | B | no | — | After a job FAILED, next READY job did not start despite free GPU | **fixed** |
 | **S28** | F023 | C | no | — | Missed counting-line events when class flicker drops the box for 1–2 frames | fixed |
-| **S29** | F024 | B/C | no | — | Excess leftover files in output dir after successful COMPLETED (strategy + layout) | open |
+| **S29** | F024 | B/C | no | — | Excess leftover files in output dir after successful COMPLETED (strategy + layout) | **fixed** |
 | **S30** | F025 | A/B | no | — | UI API 502 (`fetch failed`) when restarting/resuming a job from the queue | **fixed** |
 | **S31** | F026 | A | no | — | Prescan review: remove duplicate Close; rename Submit → Confirm | **fixed** |
 | **S32** | F027 | C/D | no | — | Relook raw events + 15-min CSV schemas — keep only necessary columns | open |
 | **S33** | F028 | C | no | — | Pedestrian crossings missing from `_15min.csv` aggregated counts | fixed |
 | ~~**S09**~~ | F006 | B | no | — | API rejects container-unreadable intake paths | **fixed → Step 6.7** |
 
-**Step 5:** Complete (S07 fixed). Continue open Seq (**S29, S32**) as Step 6 polish; respect **Depends**.
+**Step 5:** Complete (S07 fixed). Continue open Seq (**S32**) as Step 6 polish; respect **Depends**.
 
 ---
 
@@ -94,7 +94,7 @@ Work **top to bottom**. **Depends** = prior Seq that must be `fixed` or `deferre
 | **S26** | 1. Queue a non-reviewable job (e.g. `PRESCAN_PENDING` / `PROCESSING`) — only Stop shows 2. Move same job to `AWAITING_REVIEW` / `READY` — Review appears left of Stop 3. Compare Actions column across rows | **Expected:** action icons stay in fixed positions. **Actual (before):** Actions mounted only when valid, so Stop jumped. **After:** non-completed rows always show **Review**, **Restart (Overwrite)**, **Stop** (muted when N/A; tooltip is the action name, no “Unavailable” prefix). `COMPLETED` shows **Open output** only. Retry prescan and Resume are not queue actions. | `job-queue-table.tsx`; `RoundIconButton` disabled + dark variants; `docs/ui/REDESIGN.md` / `COMPONENT_MAP.md` | uncommitted | typecheck + slot enable matrix vs `JobStatus` |
 | **S27** | 1. Confirm ≥2 jobs so one is `PROCESSING` and the next is `READY` 2. Let the first job fail (engine/worker error → `FAILED`) 3. Observe GPU free and next job status | **Expected:** when a GPU slot frees on terminal `FAILED` (or equivalent), `_drain` starts the next FIFO `READY` job without operator intervention. **Actual (before):** previous job failed; GPU appeared free; next job stayed waiting. **After (2026-08-21):** `_drain` skips stale/non-READY queue heads; `_monitor`/`_finalize` always drain after FAILED (and spawn failure / missing process); `_release_gpu_slot` clears `gpu_device` + `process` so occupancy cannot stick. | `src/orchestrator/workers/pool.py`; `tests/orchestrator/test_s27_drain.py` | this commit | `pytest tests/orchestrator/test_s27_drain.py` (fail→next + stale-head skip) |
 | **S28** | 1. Process `hiv00013_shimoga.mp4` (`job_0349289d5fe6`) 2. Watch white SUV/Jeep approach counting line ~06:44:50 3. Inspect `_events.csv` | **Expected:** one Jeep (or Car) crossing around 06:44:50. **Actual (before):** overlay showed `Car #3` then Jeep with class flicker; track absent from events (gap 06:44:43→06:45:01). Replay: track present frame 254 (side &lt; 0), missing 255–256, back at 257 already past line — `CrossingState` cleared `_previous` on any absence so no event. **After:** retain last bottom-center up to `max_gap_frames=15`; same window emits Jeep `in` at frame 257 (~06:44:52). | `src/viana/stages/crossing.py`, `tests/viana/test_track_crossing.py` | uncommitted | unit tests + shimoga window replay |
-| **S29** | 1. Run a job to `COMPLETED` 2. List project `output_dir` for that stem | **Expected:** operator-facing deliverables are clear; ephemeral/intermediate artifacts are cleaned or isolated. **Actual:** many leftovers remain (JSON sidecars, prescan images, etc.) cluttering the output tree — inventory all files written before success and decide keep vs delete vs relocate (see F024). | `artifact_paths` / `prescan_dir` / profiles; engine write sites; ADR or docs for retention | — | Step 4 / hardening UI chat |
+| **S29** | 1. Run a job to `COMPLETED` 2. List project `output_dir` for that stem | **Expected:** operator-facing deliverables are clear; ephemeral/intermediate artifacts are cleaned or isolated. **Actual (before):** many leftovers remain (JSON sidecars, prescan images, etc.) cluttering the output tree. **After:** ADR 003 keep layout — deliverables flat; sidecars under `_meta/{stem}/` + `_meta/jobs/`; legacy flat checkpoints still readable for 6.2 PAUSED resume; COMPLETED deletes only that job’s prescan JPEG. | `docs/adr/003-output-artifact-layout.md`, `paths.py`, `OUTPUT_PATHS.md`, process/pool | this chat | `pytest tests/viana/test_paths.py tests/viana/test_process.py` + orchestrator 409/legacy |
 | **S30** | 1. From Job Queue, Restart (Overwrite) / API resume on a PAUSED job 2. Also restart analytics engine from header controls while dashboard polls | **Expected:** mutate succeeds or clear API error; `GET /jobs` polling keeps working; no unhandled `ApiClientError`. **Actual (before):** Next.js threw `ApiClientError` **API 502: fetch failed** from `parseJson` → `Dashboard.refreshJobs` (poll `void refreshJobs()`). **Triage (2026-08-22):** `POST …/start-fresh` and `POST …/resume` stay healthy (~0.2s); concurrent `GET /jobs` OK; no EMFILE/crash in container logs (orch FD ~15–19). Soft `nofile` was **1024**. Reproduced 502 only while `viana_core` is down (engine Restart/Stop) — Next proxy `{detail:"fetch failed"}`. **After:** `refreshJobs` never throws (amber banner + keep last queue); orchestrator proxy one GET/HEAD retry; compose `ulimits.nofile` 65536. No 6.2 pause UX in this fix. | `dashboard.tsx`; `api/orchestrator/[[...path]]/route.ts`; `docker-compose.yml` | `b5a592d` | start-fresh/resume + poll; `docker restart` → proxy 502 without UI throw |
 | **S31** | 1. Open prescan review modal 2. Inspect header Close vs footer Cancel 3. Inspect primary footer button label | **Expected:** one dismiss control; primary action reads **Confirm**. **Actual (before):** header **Close** duplicates footer **Cancel**; primary button says **Submit**. **After:** header Close removed; footer **Cancel** + **Confirm** / **Confirming…**. | `apps/web/src/features/prescan/prescan-review-modal.tsx` | this commit | modal smoke (browser) |
 | **S32** | 1. Inspect `{stem}_events.csv` and `{stem}_15min.csv` headers after a COMPLETED run 2. Cross-check `events_raw` / `events_15min` schemas + writers/parsers | **Expected:** CSV columns match operator/report needs only; no redundant or unused fields. **Actual:** schemas carry a wide column set (class taxonomy duplicates, debug anchors, etc.) — relook and trim to necessary (see F027). Contract-first if columns change. | `packages/contracts/schemas/events_raw.schema.json`, `events_15min.schema.json`; `csv_schema.py` / aggregate / UI parsers | — | Step 4 / hardening UI chat |
@@ -331,16 +331,14 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 **Observed:** After a successful job, the project output directory still contains many non-deliverable files (JSON sidecars, prescan images, etc.).
 
-**Work:**
-1. Inventory every path written from intake → prescan → run → aggregate (start from `artifact_paths`, `prescan_dir`, `profiles_dir`, job JSON, checkpoints, run_result, time_map, preview JPEGs).
-2. Classify each as: **operator deliverable** (e.g. `_events.csv`, `_15min.csv`, `_processed.mp4`), **runtime required** (checkpoint / status for resume), **debug/ephemeral**, or **orchestrator-only**.
-3. Strategy options (pick deliberately, document):
-   - delete ephemerals on `COMPLETED`;
-   - move intermediates under e.g. `{stem}/.work/` or `prescan/` / `_meta/`;
-   - keep only what resume / job status / re-review needs, with a clear directory layout.
-4. Do not delete anything needed for PAUSED resume or audit without an ADR/docs update.
+**Decision (2026-08-22):** Keep layout — see **ADR 003**. Deliverables stay flat; resume/orchestrator sidecars under `_meta/`; delete only the job’s prescan preview JPEG on COMPLETED. Never wipe incomplete checkpoints (6.2). Legacy flat `{stem}.checkpoint.json` remains readable. No mass delete of historical COMPLETED trees; no S32 column drops.
 
-**Scope:** Lane B/C (+ docs). Design before mass delete.
+**Work (done):**
+1. Inventory every path written from intake → prescan → run → aggregate.
+2. Classify: operator deliverable / resume-required / ephemeral / orchestrator-only.
+3. Implemented `_meta/{stem}/` + `_meta/jobs/` + COMPLETED preview cleanup + legacy resolve.
+
+**Scope:** Lane B/C (+ docs). Design before mass delete — satisfied via ADR (no unchecked wipe).
 
 ---
 
@@ -404,6 +402,7 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | **S29 (F024) fixed:** ADR 003 keep layout — deliverables flat; `_meta/{stem}/` + `_meta/jobs/`; legacy checkpoint resolve for 6.2; COMPLETED deletes prescan JPEG only |
 | 2026-08-22 | **S30 (F025) fixed:** job start-fresh/resume mutate + `GET /jobs` healthy; 502 was proxy during engine-down blip + unhandled `refreshJobs`; UI banner + GET retry + compose `nofile` 65536 |
 | 2026-08-22 | **S31 (F026) fixed:** prescan review — single Cancel dismiss; primary **Confirm** / **Confirming…** (with Step 6.11 `render_video` toggle) |
 | 2026-08-22 | **S33 (F028) fixed:** `Pedestrian.aggregate: true`; `_15min` = vehicles + pedestrians; tests + `hiv000001_inframe` count match |

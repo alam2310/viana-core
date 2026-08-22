@@ -277,6 +277,29 @@ def test_post_jobs_409_on_incomplete_checkpoint(client: TestClient, tmp_path: Pa
     assert CHECKPOINT_CONFLICT in response.json()["detail"]
 
 
+def test_post_jobs_409_on_legacy_flat_checkpoint(client: TestClient, tmp_path: Path) -> None:
+    """Pre-S29 flat checkpoint must still 409 (no silent resume)."""
+    from viana.io.paths import legacy_artifact_paths
+
+    output_dir = project_output_dir(tmp_path, "nh48")
+    ckpt = legacy_artifact_paths(output_dir, STEM)["checkpoint"]
+    save_checkpoint(
+        ckpt,
+        Checkpoint(
+            job_id="job_old",
+            project_id="nh48",
+            source_video_path=Path(SOURCE),
+            video_stem=STEM,
+            current_frame=10,
+            total_frames=100,
+            saved_at="2026-03-15T10:00:00Z",
+        ),
+    )
+    response = client.post("/jobs", json=VALID_SUBMIT)
+    assert response.status_code == 409
+    assert CHECKPOINT_CONFLICT in response.json()["detail"]
+
+
 def test_start_fresh_allowed_with_checkpoint(client: TestClient, tmp_path: Path) -> None:
     """start_fresh=true bypasses 409 and spawns viana run."""
     output_dir = project_output_dir(tmp_path, "nh48")

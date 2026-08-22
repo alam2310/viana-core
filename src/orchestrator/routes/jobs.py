@@ -14,7 +14,7 @@ from orchestrator.models import JobStatus, JobSubmitRequest, JobSubmitResponse
 from orchestrator.workers.pool import get_pool
 from viana.config.job import JobIntakeRequest, JobIntakeResponse, JobPrescanConfirmRequest
 from viana.io.checkpoint import load_checkpoint
-from viana.io.paths import artifact_paths
+from viana.io.paths import resolve_artifact
 
 logger = get_logger(__name__)
 
@@ -91,7 +91,7 @@ def aggregate_job(job_id: str) -> dict[str, object]:
     """Rebuild `_15min.csv` from events (CLI `viana aggregate`)."""
     pool = get_pool()
     job = pool.get_job(job_id)
-    ckpt = artifact_paths(job.output_dir, job.source_video_path.stem)["checkpoint"]
+    ckpt = resolve_artifact(job.output_dir, job.source_video_path.stem, "checkpoint")
     partial = False
     if ckpt.is_file():
         checkpoint = load_checkpoint(ckpt)

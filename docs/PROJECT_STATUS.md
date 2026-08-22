@@ -1,7 +1,7 @@
 # Project Status (Living Document)
 
 **Last updated:** 2026-08-22  
-**Current focus:** **Step 6** — hardening + remaining stabilization polish (**S29, S32**; see `docs/steps/TRACKER.md`)  
+**Current focus:** **Step 6** — hardening + remaining stabilization polish (**S32**; see `docs/steps/TRACKER.md`)  
 **Post-v0.1 plan:** `docs/steps/PLAN.md` · **Agent checklist:** `docs/steps/AGENT_PROGRESS.md`  
 **API blocker:** none (S07 corner ROI OCR fixed 2026-08-19 — Step 5 complete).  
 **Phase 0 closed:** 2026-08-18 — see `docs/PHASE_0_SIGNOFF.md`  
@@ -40,7 +40,7 @@
 
 **Goals (Steps 1–5):** Backend prescan lifecycle → UI redesign → verify `{stem}_15min.csv`.
 
-**Parked / remaining Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md). Open Seq: [`STABILIZATION_BACKLOG.md`](steps/STABILIZATION_BACKLOG.md) (**S29, S32**).
+**Parked / remaining Step 6** in [`docs/steps/STEP_6_HARDENING.md`](steps/STEP_6_HARDENING.md). Open Seq: [`STABILIZATION_BACKLOG.md`](steps/STABILIZATION_BACKLOG.md) (**S32**).
 
 **Idea dump (manual review only):** [`docs/steps/IDEA_DUMP.md`](steps/IDEA_DUMP.md) — not a work queue; agents must not self-assign. Promoted & done: I001→**6.8**, I003→**6.9**, I002→**6.10**, I006→**6.11**. Dump only: I004 (demoted), I005 (soft subs).
 
@@ -48,10 +48,9 @@
 
 ## Next (Step 6 + open Seq)
 
-1. **S29** — output layout / leftover artifacts after COMPLETED.
-2. **S32** — CSV schema trim (`_events` / `_15min`).
-3. **6.2** pause/resume UX (checkpoint path; S30 502 triage done).
-4. **6.5** extra clip → **6.4** Playwright → **6.6** GPU CI.
+1. **S32** — CSV schema trim (`_events` / `_15min`).
+2. **6.2** pause/resume UX (checkpoint path; S30 502 triage done; S29 keep layout preserves incomplete checkpoints).
+3. **6.5** extra clip → **6.4** Playwright → **6.6** GPU CI.
 
 ## Still open on Step 6
 
@@ -80,6 +79,7 @@
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | **S29 (F024):** ADR 003 keep layout — flat deliverables; `_meta/{stem}/` sidecars; legacy checkpoint resolve for 6.2; COMPLETED deletes prescan JPEG only |
 | 2026-08-22 | **S30 (F025):** start-fresh/resume mutate + `GET /jobs` healthy; 502 = proxy while engine down + unhandled `refreshJobs`; UI banner + GET retry + compose `nofile` |
 | 2026-08-22 | **S31 + 6.11 complete** — prescan Confirm/Confirming…; `render_video` toggle (default true); `test_video` false skips `_processed.mp4` |
 | 2026-08-22 | **S33 (F028) fixed:** Pedestrian included in `_15min.csv` (`aggregate: true`); schema/docs say vehicles + pedestrians |

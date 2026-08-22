@@ -1,4 +1,4 @@
-.PHONY: help install test test-training engine-cli api-dev ui-dev lint typecheck format boundaries
+.PHONY: help install test test-training engine-cli api-dev ui-dev lint typecheck format boundaries check-status-sync
 
 help:
 	@echo "ViAna monorepo targets:"
@@ -9,6 +9,7 @@ help:
 	@echo "  make typecheck    - mypy on viana + orchestrator"
 	@echo "  make format       - ruff format"
 	@echo "  make boundaries   - import-linter contracts"
+	@echo "  make check-status-sync - verify TRACKER/backlog/PROJECT_STATUS alignment"
 	@echo "  make engine-cli   - show viana CLI help"
 	@echo "  make api-dev      - run FastAPI orchestrator (dev)"
 	@echo "  make ui-dev       - run Next.js UI (requires npm in apps/web)"
@@ -34,6 +35,9 @@ format:
 
 boundaries:
 	lint-imports
+
+check-status-sync:
+	python3 scripts/check_status_sync.py
 
 engine-cli:
 	python -m viana --help

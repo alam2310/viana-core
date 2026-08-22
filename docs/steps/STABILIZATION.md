@@ -3,11 +3,11 @@
 **Purpose:** Record bugs and optimizations found during Step 4 acceptance **without** starting Step 5 or reopening full Steps 2–3. After Step 5 completed, the same backlog continues for **Step 6 polish**.
 
 **Living backlog (SoT for Seq status):** [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md)  
-**Execution path:** full table in backlog (S01–S08, S10–S33; S09 → Step 6.7)  
-**Tracker mirror:** [`TRACKER.md`](TRACKER.md) § 4.stab — keep in sync when closing Seq  
+**Execution path:** full table in backlog (S01–S08, S10–S36; S09 → Step 6.7)  
+**Tracker mirror:** [`TRACKER.md`](TRACKER.md) § 4.stab — **must** match backlog on every Seq change — see [`STATUS_SYNC.md`](../governance/STATUS_SYNC.md)  
 **Triage owner:** Planning chat (human + coordinator agent) — assigns lane and kickoff prompt.
 
-**Status (2026-08-22):** Step 5 ✅. Seq polish complete (S29–S33). Parked: S20/S24.
+**Status (2026-08-22):** Step 5 ✅. Open polish: **S34–S36**. Parked: S20/S24.
 
 ---
 
@@ -31,6 +31,7 @@ When you find a defect during Step 4 stabilization:
 5. Set **Depends** when work requires a prior Seq (e.g. UI proxy depends on API endpoint).
 6. Do **not** mark Step 5 started or update `TRACKER.md` Step 5 until blocker rows are cleared.
 7. Pick up work from the **first open Seq** you are in-lane for, unless coordinator assigns a specific row.
+8. **On every Seq open/close:** follow [`STATUS_SYNC.md`](../governance/STATUS_SYNC.md) — update backlog + TRACKER mirror + PROJECT_STATUS in the **same commit**; run `make check-status-sync`.
 
 ### 2. Stay in your lane
 

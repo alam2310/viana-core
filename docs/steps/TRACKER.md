@@ -85,7 +85,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | 4.3 Live monitor + telemetry | ✅ | `features/monitor/`, `features/telemetry/` |
 | 4.4 Completed artifacts | ✅ | `features/queue/job-queue-table.tsx` |
 | 4.5 Polish + docs | ✅ | `apps/web/`, `docs/ui/COMPONENT_MAP.md` |
-| **4.stab** Stabilization path | 🔄 Open: **S32**; S29+S30+S31+S33 fixed; parked S20/S24 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
+| **4.stab** Stabilization path | 🔄 Open: **S34–S36**; S29–S33 fixed; parked S20/S24 | [`STABILIZATION_BACKLOG.md`](STABILIZATION_BACKLOG.md) |
 
 ### Stabilization execution path (mirror — SoT is backlog)
 
@@ -121,8 +121,11 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | S29 | F024 — excess leftovers in output dir after COMPLETED | B/C | **fixed** |
 | S30 | F025 — API 502 on restart/resume from queue | A/B | **fixed** |
 | S31 | F026 — prescan Close vs Confirm | A | **fixed** |
-| S32 | F027 — trim raw events + 15-min CSV columns | C/D | **open** |
+| S32 | F027 — trim raw events + 15-min CSV columns | C/D | **fixed** |
 | S33 | F028 — Pedestrian missing from `_15min.csv` | C | fixed |
+| S34 | F029 — job queue/history lost after container restart | B | **open** |
+| S35 | F030 — output artifacts owned by root (container user) | B/C | **open** |
+| S36 | F031 — Failed + Restart when output already exists on disk | A/B | **open** |
 | ~~S09~~ | F006 — intake path validation | B | **fixed (6.7)** |
 
 ---
@@ -163,6 +166,8 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | **S32 (F027) fixed** — trimmed `_events` / `_15min` columns; open Seq **S34–S36** |
+| 2026-08-22 | Added **S34–S36** to mirror (F029 persist jobs, F030 root ownership, F031 false Failed) |
 | 2026-08-22 | Promoted **I008 → 6.13** — project/intake UX re-discovery (camera-folder sources, layout, de-emphasize `project_id`) |
 | 2026-08-22 | **6.2 complete** — operator pause/resume UX; `POST /jobs/{id}/pause`; queue Cancel (was Stop); `PRESCAN_FAILED` slot-2 Retry prescan |
 | 2026-08-22 | **S30 (F025) fixed** — start-fresh/resume mutate healthy; 502 was engine-down proxy blip + unhandled `refreshJobs`; UI harden + compose `nofile` |

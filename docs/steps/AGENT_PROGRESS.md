@@ -78,6 +78,19 @@ Step **5 is complete**. Remaining open Seq rows are **polish** during Step 6.
 3. Historical gate: Step 5 required **S07** (F001) `fixed` or `deferred` — done.
 4. Assign next open Seq to a lane chat (A UI / B API / C engine / D contract).
 
+### On closing or opening a Seq (mandatory)
+
+Same commit as the fix (or doc-only sync commit) — see [`STATUS_SYNC.md`](../governance/STATUS_SYNC.md):
+
+| # | File |
+|---|------|
+| 1 | `STABILIZATION_BACKLOG.md` — execution path + summary + changelog |
+| 2 | `TRACKER.md` — § 4.stab one-liner + mirror table row(s) + changelog |
+| 3 | `PROJECT_STATUS.md` — Current focus + Open Seq + Next |
+| 4 | `make check-status-sync` — must pass |
+
+**Never** mark a Seq `fixed` in the backlog only.
+
 ---
 
 ## On completing Step 4 — UI implementation
@@ -121,6 +134,8 @@ Per item **6.1–6.13** in `TRACKER.md`. Mark Step 6 ✅ when all done or deferr
 | File | Step |
 |------|------|
 | `TRACKER.md`, `PROJECT_STATUS.md` | All |
+| `docs/governance/STATUS_SYNC.md` | When opening/closing Seq or fixing drift |
+| `make check-status-sync` | Before commit when status docs change |
 | `packages/contracts/*` | 2 |
 | `src/orchestrator/routes/`, models | 2–3 |
 | `src/viana/stages/prescan.py` | 3 |

@@ -42,6 +42,7 @@ docs/               → plans, status, UI specs, governance, Steps, ADRs
 6. **No inline 15-min aggregation in the GPU loop** — events CSV first, aggregate separately (ADR 001).
 7. **Geometry** — lines must be within frame bounds; mandatory on every run.
 8. **Idea dump is not work** — `docs/steps/IDEA_DUMP.md` is for **manual review only**. Do not implement or prioritize items from it unless the user **explicitly names an idea ID**.
+9. **Status docs stay in sync** — Seq status SoT is `STABILIZATION_BACKLOG.md`. On every Seq open/close, update backlog + `TRACKER.md` mirror + `PROJECT_STATUS.md` in the same commit; run `make check-status-sync`. See `docs/governance/STATUS_SYNC.md`.
 
 ## 5. What is implemented today
 

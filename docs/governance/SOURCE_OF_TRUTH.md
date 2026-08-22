@@ -26,6 +26,7 @@ When two documents disagree, **this table wins**.
 | **Parked ideas (manual review)** | `docs/steps/IDEA_DUMP.md` | **Not** a work queue; agents ignore unless user names an idea ID |
 | **Current Step / Step checklist** | `docs/steps/TRACKER.md` | Mirror only; keep Seq table synced with backlog |
 | **Stabilization Seq status** | `docs/steps/STABILIZATION_BACKLOG.md` | SoT for open/fixed/parked Seq |
+| **Status doc sync rules** | `docs/governance/STATUS_SYNC.md` | Mandatory checklist + `make check-status-sync` |
 | **Architecture decisions** | `docs/adr/*.md` | |
 | **Production model weights** | `models/v1/itva_medium_1088p.pt` | |
 | **Pedestrian weights** | `models/pretrained/yolo11l.pt` | |

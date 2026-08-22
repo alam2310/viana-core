@@ -13,9 +13,9 @@
 
 | Blockers open | Blockers fixed | Polish open | Parked | Path done (fixed + parked) |
 |---------------|----------------|-------------|---------|----------------------------|
-| 0 | 1 (S07) | 3 | 2 (S20, S24) | **32 / 35** active |
+| 0 | 1 (S07) | 3 (S34–S36) | 2 (S20, S24) | **33 / 36** active |
 
-**Counts:** Active Seq = S01–S08 + S10–S36 (**35**). **S09** closed in Step 6.7 — not counted. Step 5 is complete; open polish: **S34**, **S35**, **S36**.
+**Counts:** Active Seq = S01–S08 + S10–S36 + ~~S09~~ (**36** rows). **S09** closed in Step 6.7 — still listed for history. Step 5 is complete; open polish: **S34**, **S35**, **S36**.
 
 ---
 
@@ -488,6 +488,7 @@ Badge `title` uses `STATUS_HINTS` (e.g. READY = “Confirmed — waiting for a G
 
 | Date | Change |
 |------|--------|
+| 2026-08-22 | Governance: [`STATUS_SYNC.md`](../governance/STATUS_SYNC.md) + `scripts/check_status_sync.py` / `make check-status-sync` — mandatory sync when Seq changes |
 | 2026-08-22 | Added **S36 (F031)** correct job status when output files already exist (avoid Failed + Restart Overwrite) |
 | 2026-08-22 | Added **S34 (F029)** persist job queue/history across container restart |
 | 2026-08-22 | Added **S35 (F030)** investigate root-owned output artifacts; container user/privileges |

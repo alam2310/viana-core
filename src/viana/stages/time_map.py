@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import bisect
 import json
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from viana.config.job import JobMetadata
 from viana.io.csv_schema import WallTimeSource
@@ -93,6 +94,9 @@ class TimeMap(BaseModel):
     user_start_date: str | None = None
     user_start_time: str | None = None
 
+    _sorted_anchors: list[TimeAnchor] = PrivateAttr(default_factory=list)
+    _sorted_keys: list[float] = PrivateAttr(default_factory=list)
+
     def resolve(self, video_pts_ms: float) -> tuple[str | None, WallTimeSource, float | None]:
         """Return ``(wall_time_iso, source, ocr_confidence)`` for a video timestamp."""
         if self.anchors:
@@ -104,20 +108,27 @@ class TimeMap(BaseModel):
         return format_wall_time(wall), "user_fallback", None
 
     def _from_anchors(self, video_pts_ms: float) -> tuple[str | None, WallTimeSource, float | None]:
-        ordered = sorted(self.anchors, key=lambda item: item.video_pts_ms)
+        if len(self.anchors) != len(self._sorted_anchors):
+            self._sorted_anchors = sorted(self.anchors, key=lambda item: item.video_pts_ms)
+            self._sorted_keys = [a.video_pts_ms for a in self._sorted_anchors]
+
+        ordered = self._sorted_anchors
         if len(ordered) == 1:
             anchor = ordered[0]
             base = parse_wall_time(anchor.wall_time)
             wall = base + timedelta(milliseconds=video_pts_ms - anchor.video_pts_ms)
             return format_wall_time(wall), anchor.source, anchor.ocr_confidence
-        left = ordered[0]
-        right = ordered[-1]
-        for item in ordered:
-            if item.video_pts_ms <= video_pts_ms:
-                left = item
-            if item.video_pts_ms >= video_pts_ms:
-                right = item
-                break
+
+        idx = bisect.bisect_right(self._sorted_keys, video_pts_ms)
+
+        if idx == 0:
+            left = right = ordered[0]
+        elif idx == len(ordered):
+            left = right = ordered[-1]
+        else:
+            left = ordered[idx - 1]
+            right = ordered[idx]
+
         if left.video_pts_ms == right.video_pts_ms:
             return left.wall_time, left.source, left.ocr_confidence
         span = right.video_pts_ms - left.video_pts_ms

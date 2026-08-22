@@ -13,3 +13,5 @@
 * **Stale Cached State Hazards:** Never read global state from a localized variable cache outside of a thread lock boundary while yielding or blocking. This explicitly leads to race condition states when multiple threads manipulate the process pool simultaneously, particularly breaking GPU allocation isolation constraints. Always access up-to-date state synchronously under the thread lock right when it is needed. Prefer updating occupancy caches inside the status setter under the same RLock.
 * **Batch under one lock:** For `_drain_prescan`, compute available slots once and collect a batch of jobs before releasing the lock and starting threads — avoids O(K×N) rescans in a `while True` loop.
 - Replaced recursive `rglob` with targeted `glob` in `resolve_preview_path`
+## TimeMap Optimization using bisect
+Using `bisect` for repeated range lookups on a progressively growing list drops the lookup time from O(N log N) to O(log N) compared to dynamic sorting and linear scanning. This optimization was applied to `TimeMap._from_anchors` to improve timestamp interpolation efficiency during processing.

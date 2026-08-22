@@ -8,7 +8,6 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
   PRESCAN_PENDING: "Queued (PS)",
   PRESCAN_RUNNING: "Pre-scanning",
   PRESCAN_FAILED: "Prescan failed",
-  CHECKPOINT_EXISTS: "Partial",
   AWAITING_REVIEW: "Needs review",
   READY: "Queued (GPU)",
   PROCESSING: "Processing",
@@ -22,8 +21,6 @@ export const STATUS_HINTS: Record<JobStatus, string> = {
   PRESCAN_PENDING: "Waiting for a prescan worker",
   PRESCAN_RUNNING: "Prescan is sampling the video",
   PRESCAN_FAILED: "Prescan error — retry or inspect the message",
-  CHECKPOINT_EXISTS:
-    "Prior run checkpoint on disk — Restart (Overwrite) to re-process, or Cancel",
   AWAITING_REVIEW: "Confirm geometry and metadata before processing",
   READY: "Confirmed — waiting for a GPU slot",
   PROCESSING: "Engine running on GPU",
@@ -41,8 +38,6 @@ export const STATUS_BADGE_CLASS: Record<JobStatus, string> = {
     "bg-violet-200 text-violet-900 dark:bg-violet-900 dark:text-violet-100",
   PRESCAN_FAILED:
     "bg-rose-200 text-rose-900 dark:bg-rose-950 dark:text-rose-100",
-  CHECKPOINT_EXISTS:
-    "bg-teal-200 text-teal-950 dark:bg-teal-900 dark:text-teal-100",
   AWAITING_REVIEW:
     "bg-amber-200 text-amber-950 dark:bg-amber-900 dark:text-amber-100",
   READY: "bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100",
@@ -78,8 +73,8 @@ export function canRetryPrescan(status: JobStatus): boolean {
 }
 
 export function canStartFresh(status: JobStatus): boolean {
-  // PAUSED: Resume + Cancel only — Restart (Overwrite) stays off (operator resume path).
-  return status === "FAILED" || status === "CHECKPOINT_EXISTS";
+  // PAUSED: Resume + Cancel only — Restart (Overwrite) stays off.
+  return status === "FAILED";
 }
 
 export function canPause(status: JobStatus): boolean {

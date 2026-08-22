@@ -24,7 +24,7 @@ export const STATUS_HINTS: Record<JobStatus, string> = {
   AWAITING_REVIEW: "Confirm geometry and metadata before processing",
   READY: "Confirmed — waiting for a GPU slot",
   PROCESSING: "Engine running on GPU",
-  PAUSED: "Processing paused",
+  PAUSED: "Processing paused — resume from checkpoint",
   COMPLETED: "Finished successfully",
   FAILED: "Processing failed",
   CANCELLED: "Cancelled",
@@ -65,7 +65,7 @@ export function statusBadgeClass(status: JobStatus): string {
 }
 
 export function isReviewable(status: JobStatus): boolean {
-  return status === "AWAITING_REVIEW" || status === "READY" || status === "PRESCAN_FAILED";
+  return status === "AWAITING_REVIEW" || status === "READY";
 }
 
 export function canRetryPrescan(status: JobStatus): boolean {
@@ -76,6 +76,14 @@ export function canStartFresh(status: JobStatus): boolean {
   return status === "PAUSED" || status === "FAILED";
 }
 
+export function canPause(status: JobStatus): boolean {
+  return status === "PROCESSING";
+}
+
+export function canResume(job: JobStatusResponse): boolean {
+  return job.status === "PAUSED" && job.checkpoint_exists;
+}
+
 export function canOpenOutput(status: JobStatus): boolean {
   return status === "COMPLETED";
 }
@@ -84,16 +92,9 @@ export function isCancellable(status: JobStatus): boolean {
   return status !== "COMPLETED" && status !== "CANCELLED";
 }
 
-/** Pause from operator stop is resumable; engine failure parked as PAUSED is not. */
+/** Operator pause saves checkpoint; engine failure parked as PAUSED may not be resumable. */
 export function isResumablePause(job: JobStatusResponse): boolean {
-  if (job.status !== "PAUSED") {
-    return false;
-  }
-  const message = job.error_message?.trim() ?? "";
-  if (!message) {
-    return true;
-  }
-  return /^(worker cancelled|interrupted)$/i.test(message);
+  return canResume(job);
 }
 
 export function isActiveStatus(status: JobStatus): boolean {

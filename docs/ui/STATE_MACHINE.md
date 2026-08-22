@@ -19,8 +19,8 @@ stateDiagram-v2
 | State | UI shows | Actions |
 |-------|----------|---------|
 | PENDING | Queue position | Cancel |
-| PROCESSING | Progress bar, optional telemetry | Cancel |
-| PAUSED | **Flash / highlight** video | Resume, Start fresh |
+| PROCESSING | Progress bar, optional telemetry | Pause, Cancel |
+| PAUSED | **Flash / highlight** video | Resume, Start fresh, Cancel |
 | COMPLETED | Output file links | Re-aggregate |
 | FAILED | Error message | Start fresh (if checkpoint) |
 | CANCELLED | — | Remove from queue view |

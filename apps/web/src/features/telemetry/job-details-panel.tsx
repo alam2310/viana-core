@@ -9,6 +9,11 @@ import {
 } from "@/features/telemetry/live-crossings";
 import { progressFromTelemetry } from "@/features/telemetry/telemetry-formatters";
 import {
+  canPause,
+  canResume,
+  canRetryPrescan,
+  canStartFresh,
+  isCancellable,
   statusBadgeClass,
   statusHint,
   statusLabel,
@@ -104,10 +109,22 @@ export function JobDetailsPanel({
   job,
   mountConfig,
   messages,
+  busy = false,
+  onPause,
+  onResume,
+  onRetryPrescan,
+  onStartFresh,
+  onCancel,
 }: {
   job: JobStatusResponse | null;
   mountConfig: MountConfig | null;
   messages: TelemetryMessage[];
+  busy?: boolean;
+  onPause?: (jobId: string) => void;
+  onResume?: (jobId: string) => void;
+  onRetryPrescan?: (jobId: string) => void;
+  onStartFresh?: (jobId: string) => void;
+  onCancel?: (jobId: string) => void;
 }) {
   if (!job) {
     return (
@@ -136,6 +153,18 @@ export function JobDetailsPanel({
     typeof totalFrames === "number" ? String(totalFrames) : "—";
   const crossingsLabel =
     typeof crossingCount === "number" ? String(crossingCount) : "—";
+
+  const showPause = canPause(job.status);
+  const showResume = canResume(job);
+  const showRetryPrescan = canRetryPrescan(job.status);
+  const showStartFresh = canStartFresh(job.status);
+  const showCancel = isCancellable(job.status);
+  const hasActions =
+    showPause ||
+    showResume ||
+    showRetryPrescan ||
+    showStartFresh ||
+    showCancel;
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -179,6 +208,61 @@ export function JobDetailsPanel({
         </p>
 
         <LiveCrossings job={job} messages={messages} />
+
+        {hasActions ? (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {showResume && onResume ? (
+              <button
+                type="button"
+                className="rounded border border-border bg-accent px-2.5 py-1 text-xs font-medium text-foreground hover:bg-card-hover disabled:opacity-50"
+                disabled={busy}
+                onClick={() => onResume(job.job_id)}
+              >
+                Resume
+              </button>
+            ) : null}
+            {showPause && onPause ? (
+              <button
+                type="button"
+                className="rounded border border-border bg-accent px-2.5 py-1 text-xs font-medium text-foreground hover:bg-card-hover disabled:opacity-50"
+                disabled={busy}
+                onClick={() => onPause(job.job_id)}
+              >
+                Pause
+              </button>
+            ) : null}
+            {showRetryPrescan && onRetryPrescan ? (
+              <button
+                type="button"
+                className="rounded border border-border bg-accent px-2.5 py-1 text-xs font-medium text-foreground hover:bg-card-hover disabled:opacity-50"
+                disabled={busy}
+                onClick={() => onRetryPrescan(job.job_id)}
+              >
+                Retry prescan
+              </button>
+            ) : null}
+            {showStartFresh && onStartFresh ? (
+              <button
+                type="button"
+                className="rounded border border-border bg-accent px-2.5 py-1 text-xs font-medium text-foreground hover:bg-card-hover disabled:opacity-50"
+                disabled={busy}
+                onClick={() => onStartFresh(job.job_id)}
+              >
+                Restart (Overwrite)
+              </button>
+            ) : null}
+            {showCancel && onCancel ? (
+              <button
+                type="button"
+                className="rounded border border-red-300 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-800 hover:opacity-90 disabled:opacity-50 dark:border-red-800 dark:bg-red-950 dark:text-red-200"
+                disabled={busy}
+                onClick={() => onCancel(job.job_id)}
+              >
+                Cancel
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {job.status === "COMPLETED" && csvHostPath ? (
           <details className="rounded border border-border">

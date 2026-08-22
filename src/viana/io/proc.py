@@ -34,6 +34,21 @@ def close_stdio(proc: Any) -> None:
             pass
 
 
+def interrupt_process_tree(proc: Any) -> None:
+    """Send SIGINT to the worker session (operator pause — engine saves checkpoint)."""
+    if getattr(proc, "poll", None) is not None:
+        try:
+            if proc.poll() is not None:
+                return
+        except OSError:
+            pass
+    pid = getattr(proc, "pid", None)
+    if isinstance(pid, int) and pid > 0:
+        _signal_group(pid, signal.SIGINT)
+    else:
+        _call(proc, "terminate")
+
+
 def terminate_process_tree(
     proc: Any,
     *,

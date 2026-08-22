@@ -334,6 +334,26 @@ export async function getJob(jobId: string): Promise<JobStatusResponse> {
   return requestJson<JobStatusResponse>(`/jobs/${encodeURIComponent(jobId)}`);
 }
 
+export async function pauseJob(jobId: string): Promise<JobSubmitResponse> {
+  if (USE_MOCKS) {
+    const job = mockGetJob(jobId);
+    if (!job) {
+      throw new ApiClientError("Job not found", 404);
+    }
+    return {
+      job_id: job.job_id,
+      status: "PROCESSING",
+      gpu_device: job.gpu_device ?? "cuda:0",
+      queue_position: 0,
+      output_dir: job.output_dir,
+    };
+  }
+  return requestJson<JobSubmitResponse>(
+    `/jobs/${encodeURIComponent(jobId)}/pause`,
+    { method: "POST" },
+  );
+}
+
 export async function resumeJob(jobId: string): Promise<JobSubmitResponse> {
   if (USE_MOCKS) {
     const job = mockResumeJob(jobId);
@@ -477,6 +497,7 @@ export const apiClient = {
   submitJob,
   listJobs,
   getJob,
+  pauseJob,
   resumeJob,
   startFreshJob,
   cancelJob,

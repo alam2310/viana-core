@@ -18,6 +18,9 @@ import {
   getHealth,
   intakeJobs,
   listJobs,
+  pauseJob,
+  resumeJob,
+  retryPrescan,
   startFreshJob,
   subscribeJobTelemetry,
 } from "@/lib/api-client";
@@ -284,7 +287,70 @@ export function Dashboard() {
     }
   }
 
-  async function onStop(jobId: string) {
+  async function onResume(jobId: string) {
+    setBusyId(jobId);
+    setError(null);
+    try {
+      await resumeJob(jobId);
+      const refreshed = await refreshJobs();
+      if (!refreshed) {
+        setError(
+          "Resume accepted, but the job list could not be refreshed. It should update shortly.",
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onPause(jobId: string) {
+    setBusyId(jobId);
+    setError(null);
+    try {
+      await pauseJob(jobId);
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 250);
+        });
+        const latest = await getJob(jobId);
+        if (latest.status === "PAUSED") {
+          await refreshJobs();
+          return;
+        }
+        if (latest.status !== "PROCESSING") {
+          await refreshJobs();
+          return;
+        }
+      }
+      await refreshJobs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onRetryPrescan(jobId: string) {
+    setBusyId(jobId);
+    setError(null);
+    try {
+      await retryPrescan(jobId);
+      const refreshed = await refreshJobs();
+      if (!refreshed) {
+        setError(
+          "Retry prescan accepted, but the job list could not be refreshed. It should update shortly.",
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onCancel(jobId: string) {
     setBusyId(jobId);
     setError(null);
     try {
@@ -295,11 +361,6 @@ export function Dashboard() {
         });
         const latest = await getJob(jobId);
         if (latest.status === "CANCELLED") {
-          await refreshJobs();
-          return;
-        }
-        if (latest.status === "PAUSED") {
-          await cancelJob(jobId);
           await refreshJobs();
           return;
         }
@@ -412,8 +473,11 @@ export function Dashboard() {
           selectedJobId={selectedJobId}
           onSelectJob={(job) => setSelectedJobId(job.job_id)}
           onReview={setReviewJob}
+          onPause={(id) => void onPause(id)}
+          onResume={(id) => void onResume(id)}
+          onRetryPrescan={(id) => void onRetryPrescan(id)}
           onStartFresh={(id) => void onStartFresh(id)}
-          onStop={(id) => void onStop(id)}
+          onCancel={(id) => void onCancel(id)}
           onOpenOutput={(job) => {
             if (!mountConfig || !job.output_dir) {
               return;
@@ -429,6 +493,12 @@ export function Dashboard() {
           job={selectedJob}
           mountConfig={mountConfig}
           messages={telemetry}
+          busy={busyId !== null && selectedJob !== null && busyId === selectedJob.job_id}
+          onPause={(id) => void onPause(id)}
+          onResume={(id) => void onResume(id)}
+          onRetryPrescan={(id) => void onRetryPrescan(id)}
+          onStartFresh={(id) => void onStartFresh(id)}
+          onCancel={(id) => void onCancel(id)}
         />
       </div>
 

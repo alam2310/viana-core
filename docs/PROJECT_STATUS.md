@@ -49,8 +49,8 @@
 ## Next (Step 6 + open Seq)
 
 1. **S32** — CSV schema trim (`_events` / `_15min`).
-2. **6.2** pause/resume UX (checkpoint path; S30 502 triage done; S29 keep layout preserves incomplete checkpoints).
-3. **6.5** extra clip → **6.4** Playwright → **6.6** GPU CI.
+2. **6.12** Track pedestrians toggle (**I007**).
+3. **6.4** Playwright → **6.5** extra clip → **6.6** GPU CI.
 
 ## Still open on Step 6
 
@@ -58,7 +58,7 @@
 |------|--------|
 | 6.12 Track pedestrians toggle (**I007**) | Prescan checkbox `track_pedestrians`; skip pedestrian YOLO + exclude from `_15min.csv` when false; schema/API/engine/E2E |
 | 6.13 Project/intake UX re-discovery (**I008**) | Discovery first: camera-folder source picker + analytics type row; output folder widget; simplify `project_id` |
-| 6.2 Pause / resume / PAUSED UX | After S30; needs checkpoint path |
+| 6.2 Pause / resume / PAUSED UX | ✅ — operator pause, resume, prescan retry on `PRESCAN_FAILED` |
 | 6.4 Browser / Playwright | After S31/6.11 (both done) |
 | 6.5 Extra camera clip | Beyond `hiv000001` |
 | 6.6 GPU tests in CI | No GPU in GitHub Actions |
@@ -82,7 +82,7 @@
 | Date | Change |
 |------|--------|
 | 2026-08-22 | Idea dump: **I008 → Step 6.13** — project/intake UX re-discovery (camera-folder sources, layout, simplify `project_id`) |
-| 2026-08-22 | Idea dump: **I007 → Step 6.12** — prescan `track_pedestrians` toggle; skip pedestrian detect + exclude from `_15min.csv`; contracts/API/engine/E2E |
+| 2026-08-22 | **6.2 complete** — `POST /jobs/{id}/pause` (SIGINT + checkpoint → `PAUSED`); queue Pause/Resume/Retry prescan; Stop → Cancel; S30 refreshJobs pattern; tests `test_s62_pause.py` |
 | 2026-08-22 | **S29 (F024):** ADR 003 keep layout — flat deliverables; `_meta/{stem}/` sidecars; legacy checkpoint resolve for 6.2; COMPLETED deletes prescan JPEG only |
 | 2026-08-22 | **S30 (F025):** start-fresh/resume mutate + `GET /jobs` healthy; 502 = proxy while engine down + unhandled `refreshJobs`; UI banner + GET retry + compose `nofile` |
 | 2026-08-22 | **S31 + 6.11 complete** — prescan Confirm/Confirming…; `render_video` toggle (default true); `test_video` false skips `_processed.mp4` |

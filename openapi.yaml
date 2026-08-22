@@ -216,6 +216,27 @@ paths:
         "501":
           description: Not implemented (Phase 6; blocked on Phase 5 engine)
 
+  /jobs/{job_id}/pause:
+    post:
+      summary: Cooperative pause (SIGINT worker, checkpoint, PAUSED)
+      operationId: pauseJob
+      tags: [jobs]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pause requested (job may remain PROCESSING until checkpoint flush)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSubmitResponse"
+        "409":
+          description: Job not processing or pause already in progress
+
   /jobs/{job_id}/resume:
     post:
       summary: Explicit resume from checkpoint

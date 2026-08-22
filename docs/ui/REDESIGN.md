@@ -140,13 +140,13 @@ Legacy `PENDING` removed.
 
 ### Row actions
 
-Non-completed rows always render **Review**, **Restart (Overwrite)**, **Stop** in that order. Disabled (muted) when N/A so Stop does not shift. **Retry prescan**, **Resume**, and **Monitor** are not queue actions (I001).
+Non-completed rows always render **Review / Pause / Resume**, **Restart**, **Cancel** in that order (slot 1 label swaps by status). Disabled (muted) when N/A. **Retry prescan** uses slot 2 on `PRESCAN_FAILED` (no review dialog). **Monitor** is not a queue action (I001).
 
 | Slot | Action | Enabled when |
 |------|--------|----------------|
-| 1 | **Review** | `AWAITING_REVIEW`, `READY`, `PRESCAN_FAILED` |
-| 2 | **Restart (Overwrite)** | `PAUSED`, `FAILED` |
-| 3 | **Stop** | Not `COMPLETED` / `CANCELLED` |
+| 1 | **Review** / **Pause** / **Resume** | Review: `AWAITING_REVIEW`, `READY`; Pause: `PROCESSING`; Resume: `PAUSED` + checkpoint |
+| 2 | **Restart** | Retry prescan: `PRESCAN_FAILED`; Restart (Overwrite): `PAUSED`, `FAILED` |
+| 3 | **Cancel** | Not `COMPLETED` / `CANCELLED` |
 
 **Completed row:** only **Open output** (no Review / Restart / Stop).
 

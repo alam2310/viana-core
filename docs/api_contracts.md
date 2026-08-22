@@ -158,9 +158,10 @@ Response: full `JobStatus` with `confirmed_metadata` and `confirmed_task_paramet
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/jobs/{id}/resume` | Explicit resume from checkpoint |
+| POST | `/jobs/{id}/pause` | Cooperative pause → checkpoint → `PAUSED` |
+| POST | `/jobs/{id}/resume` | Explicit resume from checkpoint (`PAUSED` only) |
 | POST | `/jobs/{id}/start-fresh` | Delete checkpoint, restart |
-| DELETE | `/jobs/{id}` | Cancel worker |
+| DELETE | `/jobs/{id}` | Cancel job |
 | POST | `/jobs/{id}/aggregate` | Re-build `_15min.csv` |
 | WS | `/ws/jobs` | Telemetry stream |
 

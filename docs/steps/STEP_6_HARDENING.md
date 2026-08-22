@@ -15,7 +15,7 @@
 | Item | Work | Chat |
 |------|------|------|
 | **6.1** | Bake `trackers` + `numpy<2` in Docker image | ✅ API / DevOps |
-| **6.2** | Pause / resume / PAUSED UX | UI (+ API) |
+| **6.2** | Pause / resume / PAUSED UX | ✅ UI (+ API) |
 | **6.3** | Faster DELETE → CANCELLED | ✅ API |
 | **6.4** | Browser / Playwright click-through | UI / QA |
 | **6.5** | Extra camera clip validation | Engine / QA |
@@ -43,7 +43,7 @@ Mark each item ✅ in `TRACKER.md`. When all done or deferred, mark Step 6 ✅.
 | Date | Note |
 |------|------|
 | 2026-08-22 | Promoted **I008 → 6.13** — project/intake UX re-discovery (Step 1-style discovery before build); camera-folder source flow; simplify `project_id`. |
-| 2026-08-22 | Promoted **I007 → 6.12** — `track_pedestrians` in prescan review; skip pedestrian model + exclude Pedestrian from aggregate when false; contracts/API/engine/E2E. |
+| 2026-08-22 | **6.2 complete:** `POST /jobs/{id}/pause` (SIGINT → checkpoint → `PAUSED`); UI queue Pause/Resume, `PRESCAN_FAILED` Retry prescan (slot 2), Cancel (was Stop); resume `PAUSED` only; S30 refreshJobs; `test_s62_pause.py`. |
 | 2026-08-22 | **6.11 complete (I006 / S31):** `render_video` checkbox in prescan review (default true); Confirm/Confirming…; no schema change. Verified `test_video` COMPLETED with false → no `_processed.mp4`. |
 | 2026-08-22 | Doc sync: mark **6.8–6.10** ✅ in ordered backlog (already complete in TRACKER). |
 | 2026-08-21 | Promoted **I006 → 6.11** (`render_video` toggle in prescan review; field already in contracts/engine). |

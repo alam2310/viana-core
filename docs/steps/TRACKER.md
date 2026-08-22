@@ -144,7 +144,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | Item | Work | Status |
 |------|------|--------|
 | 6.1 | Docker image bake (`trackers==2.6.0 --no-deps` + `numpy<2`) | ✅ |
-| 6.2 | Pause / resume UX | ⬜ |
+| 6.2 | Pause / resume UX | ✅ |
 | 6.3 | Faster cancel | ✅ |
 | 6.4 | Playwright | ⬜ |
 | 6.5 | Extra camera clip | ⬜ |
@@ -164,7 +164,7 @@ Detail: [`STEP_3_ENGINE_AND_ORCHESTRATOR.md`](STEP_3_ENGINE_AND_ORCHESTRATOR.md)
 | Date | Change |
 |------|--------|
 | 2026-08-22 | Promoted **I008 → 6.13** — project/intake UX re-discovery (camera-folder sources, layout, de-emphasize `project_id`) |
-| 2026-08-22 | Promoted **I007 → 6.12** — prescan `track_pedestrians` checkbox; skip pedestrian detect + `_15min.csv` rows when false; new API field + E2E |
+| 2026-08-22 | **6.2 complete** — operator pause/resume UX; `POST /jobs/{id}/pause`; queue Cancel (was Stop); `PRESCAN_FAILED` slot-2 Retry prescan |
 | 2026-08-22 | **S30 (F025) fixed** — start-fresh/resume mutate healthy; 502 was engine-down proxy blip + unhandled `refreshJobs`; UI harden + compose `nofile` |
 | 2026-08-22 | **6.11 + S31 complete** — prescan Confirm + `render_video` toggle (default true); short run `test_video` with false skips `_processed.mp4` |
 | 2026-08-22 | **S33 (F028) fixed** — Pedestrian in `_15min.csv` (`aggregate: true`); vehicles + pedestrians documented |

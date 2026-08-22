@@ -6,12 +6,17 @@ import type { JobStatusResponse } from "@viana/contracts";
 import {
   IconCancel,
   IconFolder,
+  IconPause,
   IconRestart,
+  IconResume,
   IconReview,
   RoundIconButton,
 } from "@/components/ui/icon-button";
 import {
   canOpenOutput,
+  canPause,
+  canResume,
+  canRetryPrescan,
   canStartFresh,
   isCancellable,
   isReviewable,
@@ -87,8 +92,11 @@ export function JobQueueTable({
   selectedJobId,
   onSelectJob,
   onReview,
+  onPause,
+  onResume,
+  onRetryPrescan,
   onStartFresh,
-  onStop,
+  onCancel,
   onOpenOutput,
 }: {
   jobs: JobStatusResponse[];
@@ -96,8 +104,11 @@ export function JobQueueTable({
   selectedJobId: string | null;
   onSelectJob: (job: JobStatusResponse) => void;
   onReview: (job: JobStatusResponse) => void;
+  onPause: (jobId: string) => void;
+  onResume: (jobId: string) => void;
+  onRetryPrescan: (jobId: string) => void;
   onStartFresh: (jobId: string) => void;
-  onStop: (jobId: string) => void;
+  onCancel: (jobId: string) => void;
   onOpenOutput: (job: JobStatusResponse) => void;
 }) {
   // ⚡ Bolt: Memoize the sorted list to prevent expensive O(N log N) sorting on every dashboard re-render (which happens frequently due to polling/telemetry).
@@ -190,9 +201,25 @@ export function JobQueueTable({
               const paused = job.status === "PAUSED";
               const busy = busyId === job.job_id;
               const review = isReviewable(job.status);
+              const pause = canPause(job.status);
+              const resume = canResume(job);
+              const retryPrescan = canRetryPrescan(job.status);
               const startFresh = canStartFresh(job.status);
               const openOutput = canOpenOutput(job.status);
-              const stop = isCancellable(job.status);
+              const cancel = isCancellable(job.status);
+
+              const slot1Label = resume
+                ? "Resume"
+                : pause
+                  ? "Pause"
+                  : "Review Prescan";
+              const slot1Enabled = resume || pause || review;
+              const slot1Variant = resume || pause ? "accent" : "info";
+
+              const slot2Label = retryPrescan
+                ? "Retry prescan"
+                : "Restart (Overwrite)";
+              const slot2Enabled = retryPrescan || startFresh;
               return (
                 <tr
                   key={job.job_id}
@@ -278,29 +305,49 @@ export function JobQueueTable({
                       ) : (
                         <>
                           <RoundIconButton
-                            label="Review Prescan"
-                            variant="info"
+                            label={slot1Label}
+                            variant={slot1Variant}
                             size="xs"
-                            disabled={!review}
-                            onClick={() => onReview(job)}
+                            disabled={!slot1Enabled || busy}
+                            onClick={() => {
+                              if (resume) {
+                                onResume(job.job_id);
+                              } else if (pause) {
+                                onPause(job.job_id);
+                              } else {
+                                onReview(job);
+                              }
+                            }}
                           >
-                            <IconReview size={14} />
+                            {resume ? (
+                              <IconResume size={14} />
+                            ) : pause ? (
+                              <IconPause size={14} />
+                            ) : (
+                              <IconReview size={14} />
+                            )}
                           </RoundIconButton>
                           <RoundIconButton
-                            label="Restart (Overwrite)"
+                            label={slot2Label}
                             variant="accent"
                             size="xs"
-                            disabled={!startFresh || busy}
-                            onClick={() => onStartFresh(job.job_id)}
+                            disabled={!slot2Enabled || busy}
+                            onClick={() => {
+                              if (retryPrescan) {
+                                onRetryPrescan(job.job_id);
+                              } else {
+                                onStartFresh(job.job_id);
+                              }
+                            }}
                           >
                             <IconRestart size={14} />
                           </RoundIconButton>
                           <RoundIconButton
-                            label="Stop Job"
+                            label="Cancel Job"
                             size="xs"
                             variant="danger"
-                            disabled={!stop || busy}
-                            onClick={() => onStop(job.job_id)}
+                            disabled={!cancel || busy}
+                            onClick={() => onCancel(job.job_id)}
                           >
                             <IconCancel size={14} />
                           </RoundIconButton>

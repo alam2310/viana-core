@@ -67,6 +67,12 @@ def get_job(job_id: str) -> JobStatus:
     return pool.to_status(pool.get_job(job_id))
 
 
+@router.post("/jobs/{job_id}/pause", response_model=JobSubmitResponse)
+def pause_job(job_id: str) -> JobSubmitResponse:
+    """Cooperative pause: SIGINT worker, save checkpoint, transition to ``PAUSED``."""
+    return get_pool().pause(job_id)
+
+
 @router.post("/jobs/{job_id}/resume", response_model=JobSubmitResponse)
 def resume_job(job_id: str) -> JobSubmitResponse:
     """Explicit resume from checkpoint (never silent)."""

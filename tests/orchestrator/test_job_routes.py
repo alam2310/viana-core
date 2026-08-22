@@ -112,6 +112,12 @@ class HoldPopen:
         self.returncode = -15
         self._done.set()
 
+    def interrupt(self) -> None:
+        """Simulate SIGINT (operator pause) — no RunResult on stdout."""
+        self.returncode = -2
+        self.stdout = io.StringIO("")
+        self._done.set()
+
     def kill(self) -> None:
         self.returncode = -9
         self._done.set()

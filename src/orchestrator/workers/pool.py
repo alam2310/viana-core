@@ -45,7 +45,7 @@ from viana.config.job import (
 )
 from viana.io.checkpoint import load_checkpoint, utc_now_iso
 from viana.io.paths import job_config_path, resolve_artifact
-from viana.io.proc import close_stdio, open_fd_count, terminate_process_tree
+from viana.io.proc import close_stdio, interrupt_process_tree, open_fd_count, terminate_process_tree
 
 logger = get_logger(__name__)
 
@@ -97,6 +97,7 @@ class JobRecord:
     video_duration_sec: float | None = None
     processing_started_monotonic: float | None = None
     processing_ended_monotonic: float | None = None
+    pause_requested: bool = False
 
 
 class WorkerPool:
@@ -405,11 +406,30 @@ class WorkerPool:
         )
         return self.to_submit_response(current)
 
+    def pause(self, job_id: str) -> JobSubmitResponse:
+        """Request a cooperative pause: SIGINT worker, checkpoint, then ``PAUSED``."""
+        job = self.get_job(job_id)
+        proc: Popen[str] | None = None
+        with self._lock:
+            if job.status != "PROCESSING":
+                conflict(f"job status {job.status} cannot pause")
+            if job.pause_requested:
+                conflict("pause already in progress")
+            proc = job.process
+            if proc is None or proc.poll() is not None:
+                conflict("job is not running")
+            job.pause_requested = True
+        interrupt_process_tree(proc)
+        logger.info("job_pause_requested", job_id=job_id)
+        return self.to_submit_response(self.get_job(job_id))
+
     def resume(self, job_id: str) -> JobSubmitResponse:
         """Explicit resume: ``viana resume`` with resume=true."""
         job = self.get_job(job_id)
         if job.status == "PROCESSING":
             conflict("job is already processing")
+        if job.status != "PAUSED":
+            bad_request(f"job status {job.status} cannot resume")
         if job.submit is None:
             bad_request("job has no submit payload; confirm prescan first")
         ckpt_path = resolve_artifact(job.output_dir, job.source_video_path.stem, "checkpoint")
@@ -472,6 +492,7 @@ class WorkerPool:
             was_processing = job.status == "PROCESSING"
             was_prescan = job.status in PRESCAN_PHASE_STATUSES
             proc = job.process
+            job.pause_requested = False
             self._set_job_status(job, "CANCELLED")
             job.queue_position = 0
             if was_processing:
@@ -823,14 +844,23 @@ class WorkerPool:
             if job is None:
                 return
             if job.status == "CANCELLED":
+                job.pause_requested = False
                 _release_gpu_slot(job)
                 return
+            pause_requested = job.pause_requested
+            job.pause_requested = False
             ckpt_path = resolve_artifact(job.output_dir, job.source_video_path.stem, "checkpoint")
             result = _parse_run_result(stdout)
             terminal = False
             if result is not None:
                 status = result.get("status")
                 if status in {"COMPLETED", "FAILED", "CANCELLED"}:
+                    if status == "CANCELLED" and pause_requested:
+                        if _has_incomplete_checkpoint(ckpt_path):
+                            self._set_job_status(job, "PAUSED")
+                            job.error_message = "interrupted"
+                            _release_gpu_slot(job)
+                            return
                     self._set_job_status(job, status)
                     err = result.get("error_message")
                     job.error_message = err if isinstance(err, str) else None
@@ -847,7 +877,9 @@ class WorkerPool:
                             checkpoint = None
                         if checkpoint is not None and not checkpoint.is_complete():
                             self._set_job_status(job, "PAUSED")
-                            job.error_message = "worker cancelled"
+                            job.error_message = (
+                                "interrupted" if pause_requested else "worker cancelled"
+                            )
                             _release_gpu_slot(job)
                             return
                     self._set_job_status(job, "CANCELLED")
@@ -871,6 +903,17 @@ class WorkerPool:
             _release_gpu_slot(job)
         if aggregate_target is not None:
             self._auto_aggregate(aggregate_target)
+
+
+def _has_incomplete_checkpoint(ckpt_path: Path) -> bool:
+    """True when a resume-eligible checkpoint exists on disk."""
+    if not ckpt_path.is_file():
+        return False
+    try:
+        checkpoint = load_checkpoint(ckpt_path)
+    except (OSError, ValueError):
+        return False
+    return not checkpoint.is_complete()
 
 
 def _compute_eta_sec(current: int, total: int, fps: float | None) -> float | None:

@@ -201,7 +201,6 @@ export function JobQueueTable({
           <tbody>
             {pageJobs.map((job) => {
               const pct = progressPct(job);
-              const paused = job.status === "PAUSED";
               const busy = busyId === job.job_id;
               const review = isReviewable(job.status);
               const pause = canPause(job.status);
@@ -228,7 +227,6 @@ export function JobQueueTable({
                   key={job.job_id}
                   className={cn(
                     "cursor-pointer border-b border-border align-middle hover:bg-card-hover",
-                    paused && "bg-row-paused",
                     selectedJobId === job.job_id && "bg-row-selected",
                   )}
                   onClick={() => onSelectJob(job)}
